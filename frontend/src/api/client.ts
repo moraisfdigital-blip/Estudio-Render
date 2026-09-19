@@ -229,6 +229,8 @@ export type Photo = {
   checksum_sha256: string
   created_at: string
   original_url: string
+  /** Fase 5: já tem escala? O grid mostra "não calibrado" sem abrir foto por foto. */
+  calibrated: boolean
 }
 
 /** Limites de upload publicados pelo servidor — nada de tamanho/tipo chumbado aqui. */
@@ -293,5 +295,60 @@ export async function deletePhoto(photoId: string): Promise<void> {
  */
 export async function fetchPhotoBlob(photoId: string): Promise<Blob> {
   const { data } = await api.get<Blob>(`/photos/${photoId}/original`, { responseType: 'blob' })
+  return data
+}
+
+// ---- Fase 5: calibração de escala ------------------------------------
+// Dois pontos que o usuário marcou sobre a foto original + a medida real que
+// ele informou. O fator `pixels_per_unit` é calculado no SERVIDOR e só volta de
+// lá: o frontend nunca envia escala pronta, e nada aqui preenche `real_length`
+// sozinho — medida é informação humana, nunca estimada.
+
+export type CalibrationUnit = 'm' | 'cm'
+
+export const CALIBRATION_UNITS: { value: CalibrationUnit; label: string; short: string }[] = [
+  { value: 'm', label: 'metros', short: 'm' },
+  { value: 'cm', label: 'centímetros', short: 'cm' },
+]
+
+/** Coordenada em pixels da foto original (origem no canto superior esquerdo). */
+export type CalibrationPoint = { x: number; y: number }
+
+export type Calibration = {
+  photo_id: string
+  tenant_id: string
+  /** `false` é o estado inicial normal da foto — "não calibrado", não erro. */
+  calibrated: boolean
+  point_a: CalibrationPoint | null
+  point_b: CalibrationPoint | null
+  real_length: number | null
+  unit: string | null
+  pixel_distance: number | null
+  pixels_per_unit: number | null
+  pixels_per_meter: number | null
+  /** Sempre `user_measured` quando calibrado. */
+  source: string | null
+  image_width: number | null
+  image_height: number | null
+  updated_at: string | null
+}
+
+export type CalibrationInput = {
+  point_a: CalibrationPoint
+  point_b: CalibrationPoint
+  real_length: number
+  unit: CalibrationUnit
+}
+
+export async function getCalibration(photoId: string): Promise<Calibration> {
+  const { data } = await api.get<Calibration>(`/photos/${photoId}/calibration`)
+  return data
+}
+
+export async function saveCalibration(
+  photoId: string,
+  input: CalibrationInput,
+): Promise<Calibration> {
+  const { data } = await api.put<Calibration>(`/photos/${photoId}/calibration`, input)
   return data
 }

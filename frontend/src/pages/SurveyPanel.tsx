@@ -12,6 +12,7 @@ import {
   type MediaLimits,
   type Photo,
 } from '../api/client'
+import CalibrationDialog from '../components/CalibrationDialog'
 import PhotoThumb from '../components/PhotoThumb'
 import { Button, EmptyState, ErrorNotice, Field, Loading, inputClass } from '../components/ui'
 import { useResource } from '../hooks/useResource'
@@ -130,6 +131,9 @@ function AreaPhotos({
   const [uploadErrors, setUploadErrors] = useState<UploadError[]>([])
   const [removing, setRemoving] = useState<string | null>(null)
   const [opening, setOpening] = useState<string | null>(null)
+  // Fase 5: a calibração acontece num overlay sobre a foto original, em cima
+  // desta mesma tela — o levantamento não muda de contexto para medir a escala.
+  const [calibrating, setCalibrating] = useState<Photo | null>(null)
 
   const maxBytes = limits.max_upload_mb * 1024 * 1024
   const accepted = limits.accepted_labels.join(', ')
@@ -324,6 +328,24 @@ function AreaPhotos({
                 >
                   sha256 {photo.checksum_sha256.slice(0, 16)}…
                 </p>
+                {/* Estado da escala visível no grid: quem está em campo precisa
+                    saber de relance o que ainda falta calibrar. */}
+                <span
+                  className={`w-fit rounded-full border px-2 py-0.5 text-[10px] ${
+                    photo.calibrated
+                      ? 'border-neutral-600 text-neutral-300'
+                      : 'border-dashed border-neutral-700 text-neutral-500'
+                  }`}
+                >
+                  {photo.calibrated ? 'Escala calibrada' : 'Não calibrada'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCalibrating(photo)}
+                  className="w-fit text-xs text-neutral-400 underline-offset-2 transition hover:text-neutral-100 hover:underline"
+                >
+                  {photo.calibrated ? 'Conferir escala' : 'Calibrar escala'}
+                </button>
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <button
                     type="button"
@@ -346,6 +368,20 @@ function AreaPhotos({
             </li>
           ))}
         </ul>
+      )}
+
+      {calibrating && (
+        <CalibrationDialog
+          photo={calibrating}
+          onClose={() => setCalibrating(null)}
+          onSaved={(calibration) =>
+            patch((current) =>
+              current.map((item) =>
+                item.id === calibration.photo_id ? { ...item, calibrated: true } : item,
+              ),
+            )
+          }
+        />
       )}
     </div>
   )

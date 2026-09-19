@@ -19,6 +19,10 @@ class PhotoOut(BaseModel):
     created_at: datetime
     # URL relativa do original, para o `<img>` do grid não montar path na mão.
     original_url: str
+    # Fase 5: o grid precisa mostrar "não calibrado" sem abrir foto por foto.
+    # É só o estado (existe/não existe calibração) — o fator em si vem da rota
+    # de calibração.
+    calibrated: bool = False
 
 
 class MediaLimitsOut(BaseModel):

@@ -14,8 +14,9 @@ fallback de SPA para qualquer outra rota.
 ```
 backend/app/main.py      FastAPI: /api + estáticos + fallback SPA
 backend/app/core/        config (pydantic-settings) e Mongo (Motor)
-backend/app/api/         routers (health, auth, tenants, clients, locations, projects, areas, photos)
+backend/app/api/         routers (health, auth, tenants, clients, locations, projects, areas, photos, calibrations)
 backend/app/core/media.py storage dos originais em disco (imutável)
+backend/app/core/imagesize.py dimensões do original lidas do cabeçalho (só leitura)
 backend/app/models/      documentos do Mongo — todos com tenant_id
 backend/app/schemas/     contratos Pydantic de entrada/saída
 backend/app/adapters/    ganchos de integração (image_gen, pdf) — mock
@@ -203,6 +204,101 @@ Decisões desta fatia:
   do servidor, então nome de arquivo malicioso não vira path traversal.
 - **Nada de medida estimada aqui.** Esta fase grava foto e metadados de arquivo;
   medida só existe a partir da Fase 6, sempre com `source` explícito.
+
+## Calibração de escala
+
+Duas marcações do usuário sobre a foto **original** e a medida real entre elas.
+Com isso o servidor calcula o fator que as próximas fases usam para converter
+pixel em medida.
+
+| Método | Rota | Botão |
+| --- | --- | --- |
+| GET | `/api/photos/{id}/calibration` | Carregar calibração |
+| PUT | `/api/photos/{id}/calibration` | Salvar dois pontos + medida real + unidade |
+
+Corpo do `PUT` — exatamente quatro campos:
+
+```json
+{
+  "point_a": { "x": 520.0, "y": 560.0 },
+  "point_b": { "x": 1080.0, "y": 700.0 },
+  "real_length": 2.0,
+  "unit": "m"
+}
+```
+
+Resposta (o fator vem calculado do servidor):
+
+```json
+{
+  "photo_id": "...", "tenant_id": "...", "calibrated": true,
+  "point_a": { "x": 520.0, "y": 560.0 },
+  "point_b": { "x": 1080.0, "y": 700.0 },
+  "real_length": 2.0, "unit": "m",
+  "pixel_distance": 577.041593,
+  "pixels_per_unit": 288.520797,
+  "pixels_per_meter": 288.520797,
+  "source": "user_measured",
+  "image_width": 1600, "image_height": 1200,
+  "updated_at": "..."
+}
+```
+
+`pixels_per_unit = distância_euclidiana_em_pixels / real_length`, calculado em
+`backend/app/models/calibration.py`.
+
+### A regra inegociável: a IA não informa medida
+
+`real_length` só entra por digitação do usuário. Nenhuma IA, heurística, EXIF ou
+"chute razoável" preenche esse campo — e isso é imposto pela API, não só pela
+tela:
+
+- o schema de entrada tem `extra="forbid"`: um cliente que tente enviar
+  `pixels_per_unit`, `pixel_distance` ou `source` recebe `422`, em vez de ter o
+  valor aceito calado;
+- `source` é gravado sempre como `user_measured` pelo modelo; não existe caminho
+  no código que escreva outro valor;
+- sem calibração, as medidas da Fase 6 nascem como `estimated` e são **rotuladas
+  na tela** — estimativa nunca vira fato.
+
+Se um dia o produto pedir "sugerir medida automaticamente", isso muda a regra do
+blueprint e é decisão do Owner — não se resolve dentro deste endpoint.
+
+### Decisões desta fatia
+
+- **`GET` sem calibração responde `200` com `calibrated: false`**, não `404`.
+  Foto sem escala é o estado inicial normal de toda foto; com `404` nos dois
+  casos a tela não distinguiria "ainda não calibrada" de "essa foto não é sua".
+- **Unidades aceitas: `m` e `cm`.** Cobrem levantamento de fachada e de peça. A
+  resposta traz `pixels_per_unit` na unidade escolhida (é o número que o usuário
+  confere na tela) e `pixels_per_meter` normalizado, para as fases seguintes não
+  dependerem de qual unidade foi digitada naquele dia.
+- **Uma calibração por foto** (índice único `tenant_id` + `photo_id`): o `PUT` é
+  upsert, recalibrar **corrige** o mesmo registro em vez de empilhar escalas
+  concorrentes.
+- **Pontos são validados contra as dimensões reais do original.** Ponto fora da
+  foto → `422`. As dimensões vêm de `backend/app/core/imagesize.py`, um leitor de
+  cabeçalho JPEG/PNG/WebP em Python puro — o arquivo é aberto **só para leitura**
+  e nenhuma dependência de processamento de imagem entra na instalação.
+- **Distância mínima de 8 px entre os pontos** (`422` abaixo disso): dois cliques
+  colados transformariam um pixel de erro de clique em dezenas de por cento de
+  erro na medida final.
+- **Overlay em SVG puro**, sem biblioteca de canvas. O `viewBox` é o tamanho
+  natural da foto, então cada ponto já nasce em coordenada de pixel do original;
+  os marcadores são escalados pelo fator tela→original para ficarem do mesmo
+  tamanho visual numa foto de 640 px e numa de 4032 px. Dá para arrastar o
+  marcador e ajustar com as setas do teclado (Shift = 10 px).
+- **`GET /api/photos/{id}` e `GET /api/areas/{id}/photos` passam a devolver
+  `calibrated`**, para o grid mostrar "Não calibrada" sem abrir foto por foto.
+- **422 do Pydantic com valor não finito** (`inf`, `NaN`) agora é serializado
+  como texto no corpo de erro (`app/main.py`). Antes, a validação recusava certo
+  mas o encoder JSON estourava e o cliente recebia `500` no lugar do `422`.
+
+### O original continua intocado
+
+A calibração é um documento novo no Mongo (`calibrations`). O arquivo da foto é
+aberto apenas para leitura, e só para descobrir largura e altura. Nenhum byte do
+original é reescrito — conferido com SHA-256 antes e depois.
 
 ## Verificar que subiu
 

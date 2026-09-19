@@ -23,6 +23,7 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.ids import parse_object_id
 from app.core.tenancy import TenantScope
+from app.models import calibration as calibration_model
 from app.models import photo as photo_model
 from app.schemas.photo import MediaLimitsOut, PhotoOut
 
@@ -36,7 +37,7 @@ FILE_GONE = "O arquivo original desta foto não está acessível no storage."
 CHUNK_SIZE = 1024 * 256
 
 
-def _to_out(doc: dict[str, Any]) -> PhotoOut:
+def _to_out(doc: dict[str, Any], calibrated: bool = False) -> PhotoOut:
     photo_id = str(doc["_id"])
     return PhotoOut(
         id=photo_id,
@@ -49,10 +50,21 @@ def _to_out(doc: dict[str, Any]) -> PhotoOut:
         checksum_sha256=doc["checksum_sha256"],
         created_at=as_utc(doc["created_at"]),
         original_url=f"/api/photos/{photo_id}/original",
+        calibrated=calibrated,
     )
 
 
-async def _get_photo_doc(scope: TenantScope, photo_id: str) -> dict[str, Any]:
+async def _calibrated_ids(scope: TenantScope, photo_ids: list[str]) -> set[str]:
+    """Quais dessas fotos já têm escala — numa query só, em vez de uma por foto."""
+    if not photo_ids:
+        return set()
+    cursor = get_db()[calibration_model.COLLECTION].find(
+        scope.filter(photo_id={"$in": photo_ids}), {"photo_id": 1}
+    )
+    return {doc["photo_id"] async for doc in cursor}
+
+
+async def get_photo_doc(scope: TenantScope, photo_id: str) -> dict[str, Any]:
     """Foto ativa do tenant ou 404. Soft-deleted responde 404 como se não existisse."""
     oid = parse_object_id(photo_id, detail=NOT_FOUND)
     doc = await get_db()[photo_model.COLLECTION].find_one(scope.filter(_id=oid, deleted_at=None))
@@ -167,12 +179,16 @@ async def list_area_photos(area_id: str, scope: CurrentScope) -> list[PhotoOut]:
         .find(scope.filter(area_id=area_id, deleted_at=None))
         .sort("created_at", -1)
     )
-    return [_to_out(doc) async for doc in cursor]
+    docs = [doc async for doc in cursor]
+    calibrated = await _calibrated_ids(scope, [str(doc["_id"]) for doc in docs])
+    return [_to_out(doc, str(doc["_id"]) in calibrated) for doc in docs]
 
 
 @router.get("/photos/{photo_id}", response_model=PhotoOut)
 async def get_photo(photo_id: str, scope: CurrentScope) -> PhotoOut:
-    return _to_out(await _get_photo_doc(scope, photo_id))
+    doc = await get_photo_doc(scope, photo_id)
+    calibrated = await _calibrated_ids(scope, [photo_id])
+    return _to_out(doc, photo_id in calibrated)
 
 
 @router.get("/photos/{photo_id}/original")
@@ -182,7 +198,7 @@ async def get_photo_original(photo_id: str, scope: CurrentScope, request: Reques
     O `ETag` é o próprio SHA-256 do upload: o cliente que já tem esse hash
     recebe 304 e o navegador nunca serve uma versão diferente sob o mesmo id.
     """
-    doc = await _get_photo_doc(scope, photo_id)
+    doc = await get_photo_doc(scope, photo_id)
 
     try:
         path = media.resolve(doc["storage_key"])

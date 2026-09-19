@@ -1,15 +1,19 @@
 """Render Artelux — single-service: FastAPI serve /api e o build do React com fallback SPA."""
 
 import logging
+import math
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.health import router as health_router
 from app.api.routers.areas import router as areas_router
 from app.api.routers.auth import router as auth_router
+from app.api.routers.calibrations import router as calibrations_router
 from app.api.routers.clients import router as clients_router
 from app.api.routers.locations import router as locations_router
 from app.api.routers.photos import router as photos_router
@@ -46,6 +50,28 @@ app.include_router(locations_router, prefix="/api", tags=["locations"])
 app.include_router(projects_router, prefix="/api", tags=["projects"])
 app.include_router(areas_router, prefix="/api", tags=["areas"])
 app.include_router(photos_router, prefix="/api", tags=["photos"])
+app.include_router(calibrations_router, prefix="/api", tags=["calibrations"])
+
+
+def _json_safe_float(value: float) -> float | str:
+    """`inf`/`NaN` não existem em JSON — viram texto no corpo de erro."""
+    return value if math.isfinite(value) else repr(value)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """422 do Pydantic, com o valor recusado sempre serializável.
+
+    O corpo padrão devolve o `input` que falhou. Se esse input for `inf` ou
+    `NaN` — o que a validação recusa de propósito, por exemplo num campo de
+    medida —, o encoder JSON estoura e o cliente recebe **500** no lugar do 422
+    que a validação já tinha decidido. Aqui o valor vira texto e a resposta sai
+    como o erro de validação que de fato é.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": jsonable_encoder(exc.errors(), custom_encoder={float: _json_safe_float})},
+    )
 
 
 @app.get("/api/{full_path:path}", include_in_schema=False)
