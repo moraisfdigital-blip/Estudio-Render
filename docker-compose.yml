@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB: ${MONGO_DB:-estudio_render}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-nao-usar-em-producao}
+      IMAGE_GEN_PROVIDER: ${IMAGE_GEN_PROVIDER:-mock}
+      PDF_PROVIDER: ${PDF_PROVIDER:-mock}
+      DEFAULT_TENANT_SLUG: ${DEFAULT_TENANT_SLUG:-artelux}
+      FRONTEND_DIST: /app/frontend/dist
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mongo_data:
