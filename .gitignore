@@ -1,0 +1,26 @@
+# Env
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+.npm/
+
+# Orquestração
+.orchestrator-question
+
+# SO / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
