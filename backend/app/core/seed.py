@@ -12,6 +12,7 @@ from pymongo.errors import DuplicateKeyError
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import hash_password
+from app.models import calibration as calibration_model
 from app.models import client as client_model
 from app.models import area as area_model
 from app.models import location as location_model
@@ -55,6 +56,12 @@ async def ensure_indexes() -> None:
     await db[photo_model.COLLECTION].create_index(
         [("tenant_id", 1), ("area_id", 1), ("deleted_at", 1), ("created_at", -1)],
         name="tenant_area_photo",
+    )
+    # Fase 5: uma calibração por foto. O índice único é o que torna o PUT um
+    # upsert seguro — recalibrar corrige o mesmo registro em vez de empilhar
+    # escalas concorrentes para a mesma foto.
+    await db[calibration_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("photo_id", 1)], unique=True, name="uniq_tenant_photo_calibration"
     )
 
 
