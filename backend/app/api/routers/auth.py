@@ -1,0 +1,91 @@
+"""Rotas de autenticação. Todo acesso a `users` é escopado pelo tenant da instalação."""
+
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, status
+from pymongo.errors import DuplicateKeyError
+
+from app.api.deps import CurrentUser
+from app.core.config import get_settings
+from app.core.db import get_db
+from app.core.seed import ensure_default_tenant
+from app.core.security import create_access_token, hash_password, verify_password
+from app.models import user as user_model
+from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserOut
+
+router = APIRouter()
+
+INVALID_CREDENTIALS = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="E-mail ou senha inválidos",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
+def to_user_out(doc: dict[str, Any]) -> UserOut:
+    return UserOut(
+        id=str(doc["_id"]),
+        tenant_id=doc["tenant_id"],
+        email=doc["email"],
+        name=doc["name"],
+        role=doc["role"],
+    )
+
+
+def token_response(doc: dict[str, Any]) -> TokenResponse:
+    user = to_user_out(doc)
+    return TokenResponse(
+        access_token=create_access_token(
+            user_id=user.id, tenant_id=user.tenant_id, role=user.role
+        ),
+        user=user,
+    )
+
+
+@router.post("/auth/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register(payload: RegisterRequest) -> TokenResponse:
+    """Registro interno no tenant da instalação. `owner` só existe via seed."""
+    settings = get_settings()
+    if not settings.allow_self_register:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registro fechado nesta instalação.",
+        )
+
+    tenant_id = await ensure_default_tenant()
+    doc = user_model.new_user_doc(
+        tenant_id=tenant_id,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        name=payload.name,
+        role="editor",
+    )
+
+    try:
+        result = await get_db()[user_model.COLLECTION].insert_one(doc)
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Já existe um usuário com este e-mail.",
+        ) from None
+
+    return token_response({**doc, "_id": result.inserted_id})
+
+
+@router.post("/auth/login", response_model=TokenResponse)
+async def login(payload: LoginRequest) -> TokenResponse:
+    tenant_id = await ensure_default_tenant()
+    doc = await get_db()[user_model.COLLECTION].find_one(
+        {"tenant_id": tenant_id, "email": user_model.normalize_email(payload.email)}
+    )
+    # Mesma resposta para usuário inexistente e senha errada: não revela quem existe.
+    if doc is None or not verify_password(payload.password, doc["password_hash"]):
+        raise INVALID_CREDENTIALS
+
+    return token_response(doc)
+
+
+@router.get("/auth/me", response_model=UserOut)
+async def me(user: CurrentUser) -> UserOut:
+    """Hidrata a sessão do frontend. Sem token: 401 (ver app/api/deps.py)."""
+    return to_user_out(user)

@@ -7,9 +7,16 @@ services:
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB: ${MONGO_DB:-estudio_render}
       JWT_SECRET: ${JWT_SECRET:-dev-only-nao-usar-em-producao}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-720}
       IMAGE_GEN_PROVIDER: ${IMAGE_GEN_PROVIDER:-mock}
       PDF_PROVIDER: ${PDF_PROVIDER:-mock}
       DEFAULT_TENANT_SLUG: ${DEFAULT_TENANT_SLUG:-artelux}
+      DEFAULT_TENANT_NAME: ${DEFAULT_TENANT_NAME:-ARTELUX}
+      SEED_OWNER_EMAIL: ${SEED_OWNER_EMAIL:-}
+      SEED_OWNER_PASSWORD: ${SEED_OWNER_PASSWORD:-}
+      SEED_OWNER_NAME: ${SEED_OWNER_NAME:-Owner ARTELUX}
+      ALLOW_SELF_REGISTER: ${ALLOW_SELF_REGISTER:-true}
       FRONTEND_DIST: /app/frontend/dist
     depends_on:
       mongo:
