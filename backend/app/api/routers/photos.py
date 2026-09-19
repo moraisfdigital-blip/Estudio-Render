@@ -17,13 +17,14 @@ from fastapi.responses import FileResponse, Response
 
 from app.api.deps import CurrentScope, CurrentUser
 from app.api.routers.areas import get_area_doc
-from app.core import media
+from app.core import imagesize, media
 from app.core.clock import as_utc, utcnow
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.ids import parse_object_id
 from app.core.tenancy import TenantScope
 from app.models import calibration as calibration_model
+from app.models import element as element_model
 from app.models import photo as photo_model
 from app.schemas.photo import MediaLimitsOut, PhotoOut
 
@@ -31,13 +32,14 @@ router = APIRouter()
 
 NOT_FOUND = "Foto não encontrada neste workspace."
 FILE_GONE = "O arquivo original desta foto não está acessível no storage."
+UNREADABLE = "Não foi possível ler as dimensões da foto original."
 
 # Chunk de leitura do upload. Grande o bastante para não picotar o I/O,
 # pequeno o bastante para o limite de tamanho cortar cedo.
 CHUNK_SIZE = 1024 * 256
 
 
-def _to_out(doc: dict[str, Any], calibrated: bool = False) -> PhotoOut:
+def _to_out(doc: dict[str, Any], calibrated: bool = False, element_count: int = 0) -> PhotoOut:
     photo_id = str(doc["_id"])
     return PhotoOut(
         id=photo_id,
@@ -51,6 +53,7 @@ def _to_out(doc: dict[str, Any], calibrated: bool = False) -> PhotoOut:
         created_at=as_utc(doc["created_at"]),
         original_url=f"/api/photos/{photo_id}/original",
         calibrated=calibrated,
+        element_count=element_count,
     )
 
 
@@ -64,6 +67,18 @@ async def _calibrated_ids(scope: TenantScope, photo_ids: list[str]) -> set[str]:
     return {doc["photo_id"] async for doc in cursor}
 
 
+async def _element_counts(scope: TenantScope, photo_ids: list[str]) -> dict[str, int]:
+    """Elementos ativos por foto, numa agregação só (não um count por foto)."""
+    if not photo_ids:
+        return {}
+    pipeline = [
+        {"$match": scope.filter(photo_id={"$in": photo_ids}, deleted_at=None)},
+        {"$group": {"_id": "$photo_id", "total": {"$sum": 1}}},
+    ]
+    cursor = get_db()[element_model.COLLECTION].aggregate(pipeline)
+    return {doc["_id"]: doc["total"] async for doc in cursor}
+
+
 async def get_photo_doc(scope: TenantScope, photo_id: str) -> dict[str, Any]:
     """Foto ativa do tenant ou 404. Soft-deleted responde 404 como se não existisse."""
     oid = parse_object_id(photo_id, detail=NOT_FOUND)
@@ -71,6 +86,28 @@ async def get_photo_doc(scope: TenantScope, photo_id: str) -> dict[str, Any]:
     if doc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
     return doc
+
+
+def original_dimensions(photo: dict[str, Any]) -> tuple[int, int]:
+    """Largura e altura do original, em pixels. Leitura pura: o arquivo não é tocado.
+
+    Quem marca coisa sobre a foto (calibração, elemento, e as máscaras da Fase
+    8) precisa recusar coordenada fora da imagem, e para isso precisa do
+    tamanho real do arquivo — não do que o cliente disse que ele tem.
+    """
+    try:
+        path = media.resolve(photo["storage_key"])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE) from None
+    if not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE)
+
+    try:
+        return imagesize.read_dimensions(path)
+    except imagesize.UnreadableImage:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=UNREADABLE
+        ) from None
 
 
 def _safe_filename(raw: str | None) -> str:
@@ -180,15 +217,21 @@ async def list_area_photos(area_id: str, scope: CurrentScope) -> list[PhotoOut]:
         .sort("created_at", -1)
     )
     docs = [doc async for doc in cursor]
-    calibrated = await _calibrated_ids(scope, [str(doc["_id"]) for doc in docs])
-    return [_to_out(doc, str(doc["_id"]) in calibrated) for doc in docs]
+    photo_ids = [str(doc["_id"]) for doc in docs]
+    calibrated = await _calibrated_ids(scope, photo_ids)
+    counts = await _element_counts(scope, photo_ids)
+    return [
+        _to_out(doc, str(doc["_id"]) in calibrated, counts.get(str(doc["_id"]), 0))
+        for doc in docs
+    ]
 
 
 @router.get("/photos/{photo_id}", response_model=PhotoOut)
 async def get_photo(photo_id: str, scope: CurrentScope) -> PhotoOut:
     doc = await get_photo_doc(scope, photo_id)
     calibrated = await _calibrated_ids(scope, [photo_id])
-    return _to_out(doc, photo_id in calibrated)
+    counts = await _element_counts(scope, [photo_id])
+    return _to_out(doc, photo_id in calibrated, counts.get(photo_id, 0))
 
 
 @router.get("/photos/{photo_id}/original")

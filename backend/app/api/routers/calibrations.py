@@ -26,8 +26,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 from app.api.deps import CurrentScope, CurrentUser
-from app.api.routers.photos import get_photo_doc
-from app.core import imagesize, media
+from app.api.routers.photos import get_photo_doc, original_dimensions
 from app.core.clock import as_utc, utcnow
 from app.core.db import get_db
 from app.core.tenancy import TenantScope
@@ -35,9 +34,6 @@ from app.models import calibration as calibration_model
 from app.schemas.calibration import CalibrationIn, CalibrationOut, Point
 
 router = APIRouter()
-
-FILE_GONE = "O arquivo original desta foto não está acessível no storage."
-UNREADABLE = "Não foi possível ler as dimensões da foto original."
 
 
 def _empty(photo_id: str, scope: TenantScope) -> CalibrationOut:
@@ -69,23 +65,6 @@ def _to_out(doc: dict[str, Any]) -> CalibrationOut:
     )
 
 
-def _original_dimensions(photo: dict[str, Any]) -> tuple[int, int]:
-    """Largura e altura do original. Leitura pura — o arquivo não é tocado."""
-    try:
-        path = media.resolve(photo["storage_key"])
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE) from None
-    if not path.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE)
-
-    try:
-        return imagesize.read_dimensions(path)
-    except imagesize.UnreadableImage:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=UNREADABLE
-        ) from None
-
-
 def _reject(detail: str) -> None:
     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
 
@@ -112,7 +91,7 @@ async def save_calibration(
     digitou — o cliente não consegue enviá-lo (o schema recusa campo extra).
     """
     photo = await get_photo_doc(scope, photo_id)
-    width, height = _original_dimensions(photo)
+    width, height = original_dimensions(photo)
 
     point_a = payload.point_a.as_tuple()
     point_b = payload.point_b.as_tuple()

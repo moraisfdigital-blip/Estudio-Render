@@ -15,6 +15,7 @@ from app.api.routers.areas import router as areas_router
 from app.api.routers.auth import router as auth_router
 from app.api.routers.calibrations import router as calibrations_router
 from app.api.routers.clients import router as clients_router
+from app.api.routers.elements import router as elements_router
 from app.api.routers.locations import router as locations_router
 from app.api.routers.photos import router as photos_router
 from app.api.routers.projects import router as projects_router
@@ -51,6 +52,7 @@ app.include_router(projects_router, prefix="/api", tags=["projects"])
 app.include_router(areas_router, prefix="/api", tags=["areas"])
 app.include_router(photos_router, prefix="/api", tags=["photos"])
 app.include_router(calibrations_router, prefix="/api", tags=["calibrations"])
+app.include_router(elements_router, prefix="/api", tags=["elements"])
 
 
 def _json_safe_float(value: float) -> float | str:

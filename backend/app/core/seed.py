@@ -15,6 +15,7 @@ from app.core.security import hash_password
 from app.models import calibration as calibration_model
 from app.models import client as client_model
 from app.models import area as area_model
+from app.models import element as element_model
 from app.models import location as location_model
 from app.models import photo as photo_model
 from app.models import project as project_model
@@ -62,6 +63,17 @@ async def ensure_indexes() -> None:
     # escalas concorrentes para a mesma foto.
     await db[calibration_model.COLLECTION].create_index(
         [("tenant_id", 1), ("photo_id", 1)], unique=True, name="uniq_tenant_photo_calibration"
+    )
+    # Fase 6: a lista de elementos é sempre por foto, só os ativos, na ordem em
+    # que foram marcados.
+    await db[element_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("photo_id", 1), ("deleted_at", 1), ("created_at", 1)],
+        name="tenant_photo_element",
+    )
+    # A Fase 12 (quantitativo) varre elemento por projeto; o índice já nasce aqui
+    # para essa leitura não virar varredura de coleção.
+    await db[element_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("project_id", 1), ("deleted_at", 1)], name="tenant_project_element"
     )
 
 
