@@ -14,11 +14,13 @@ fallback de SPA para qualquer outra rota.
 ```
 backend/app/main.py      FastAPI: /api + estáticos + fallback SPA
 backend/app/core/        config (pydantic-settings) e Mongo (Motor)
-backend/app/api/         routers (health, auth, tenants) e deps de autenticação
-backend/app/models/      documentos do Mongo (tenants, users) — todos com tenant_id
+backend/app/api/         routers (health, auth, tenants, clients, locations, projects)
+backend/app/models/      documentos do Mongo — todos com tenant_id
 backend/app/schemas/     contratos Pydantic de entrada/saída
 backend/app/adapters/    ganchos de integração (image_gen, pdf) — mock
-frontend/src/            React + Vite + TypeScript + Tailwind
+frontend/src/pages/      telas (login, registro, dashboard, projeto)
+frontend/src/components/ shell, primitivas de UI e seletores de cliente/local
+frontend/src/hooks/      useResource (loading / erro / pronto)
 ```
 
 Configuração 100% por env. `.env` não é versionado; use `.env.example` como base.
@@ -103,6 +105,39 @@ Rota autenticada sem token responde `401`.
 (`backend/app/api/deps.py`) e monta o filtro com `scope.filter(...)` /
 `scope.stamp(...)` (`backend/app/core/tenancy.py`). Nenhuma query de domínio
 deve montar `{"tenant_id": ...}` na mão.
+
+## Projetos, clientes e locais
+
+Um **projeto** é o container do fluxo e só existe amarrado a um **cliente** e a um
+**local**, ambos do mesmo tenant — o vínculo é revalidado no servidor a cada
+`POST`/`PATCH`, nunca aceito só porque veio no corpo do request.
+
+| Método | Rota | Botão |
+| --- | --- | --- |
+| GET | `/api/clients` | Lista / select |
+| POST | `/api/clients` | Novo cliente |
+| PATCH | `/api/clients/{id}` | Salvar cliente |
+| GET | `/api/locations` | Lista / select |
+| POST | `/api/locations` | Novo local |
+| PATCH | `/api/locations/{id}` | Salvar local |
+| GET | `/api/projects` | Dashboard |
+| POST | `/api/projects` | Criar projeto |
+| GET | `/api/projects/{id}` | Abrir projeto |
+| PATCH | `/api/projects/{id}` | Editar projeto |
+
+Decisões desta fatia:
+
+- **Local tem `client_id` opcional.** Um local pode ser cadastrado antes de se
+  saber de quem é; o vínculo que o fluxo exige é o do projeto. Criando um local
+  pelo formulário do projeto, ele já nasce ligado ao cliente escolhido.
+- **Nome é único por tenant** em `clients` e `locations` (índice sobre
+  `tenant_id` + nome normalizado). Evita dois cadastros iguais no mesmo select;
+  colisão responde `409`.
+- **Etapa do projeto** (`status`): `levantamento`, `projeto_visual`,
+  `apresentacao`, `concluido`. É só o estágio declarado pelo usuário nesta fase.
+- **`PATCH` é parcial de verdade**: campo não enviado não é apagado.
+- Referência quebrada em `client`/`location` aparece na UI como
+  "Cliente removido" em vez de derrubar a listagem.
 
 ## Verificar que subiu
 
