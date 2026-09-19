@@ -18,6 +18,11 @@ services:
       SEED_OWNER_NAME: ${SEED_OWNER_NAME:-Owner ARTELUX}
       ALLOW_SELF_REGISTER: ${ALLOW_SELF_REGISTER:-true}
       FRONTEND_DIST: /app/frontend/dist
+      MEDIA_ROOT: ${MEDIA_ROOT:-/app/var/media}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+    volumes:
+      # Original preservado: os arquivos sobrevivem a rebuild do container.
+      - media_data:/app/var/media
     depends_on:
       mongo:
         condition: service_healthy
@@ -35,3 +40,4 @@ services:
 
 volumes:
   mongo_data:
+  media_data:

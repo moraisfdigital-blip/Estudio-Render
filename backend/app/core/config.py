@@ -43,10 +43,29 @@ class Settings(BaseSettings):
     # Caminho do build do frontend, relativo à raiz do repo ou absoluto.
     frontend_dist: str = "frontend/dist"
 
+    # Fase 4 — storage de mídia. Raiz onde os originais são gravados, relativa à
+    # raiz do repo ou absoluta. Em produção aponta para um volume persistente
+    # (ou, no futuro, é trocada por um adapter S3): nunca um caminho chumbado.
+    media_root: str = "var/media"
+
+    # Limite de tamanho por foto. Fotos de levantamento feitas com celular ficam
+    # bem abaixo disso; o teto existe para não encher o volume por acidente.
+    max_upload_mb: int = 25
+
     @property
     def frontend_dist_path(self) -> Path:
         path = Path(self.frontend_dist)
         return path if path.is_absolute() else REPO_ROOT / path
+
+    @property
+    def media_root_path(self) -> Path:
+        path = Path(self.media_root)
+        return path if path.is_absolute() else REPO_ROOT / path
+
+    @property
+    def allowed_image_labels(self) -> tuple[str, ...]:
+        """Formatos aceitos, do jeito que a mensagem de erro fala com o usuário."""
+        return ("JPEG", "PNG", "WebP")
 
 
 @lru_cache

@@ -11,6 +11,10 @@ venv/
 *.egg-info/
 .pytest_cache/
 
+# Mídia enviada (Fase 4) — originais ficam em volume, nunca no repositório
+var/media/
+var/
+
 # Node
 node_modules/
 frontend/dist/

@@ -13,7 +13,9 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import hash_password
 from app.models import client as client_model
+from app.models import area as area_model
 from app.models import location as location_model
+from app.models import photo as photo_model
 from app.models import project as project_model
 from app.models import tenant as tenant_model
 from app.models import user as user_model
@@ -38,6 +40,21 @@ async def ensure_indexes() -> None:
     # Dashboard lê sempre escopado e ordenado por data de criação.
     await db[project_model.COLLECTION].create_index(
         [("tenant_id", 1), ("created_at", -1)], name="tenant_created_at"
+    )
+    # Fase 4: nome de área único dentro do projeto (não do tenant inteiro —
+    # dois projetos podem ter uma "Fachada" cada um).
+    await db[area_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("project_id", 1), ("name_key", 1)],
+        unique=True,
+        name="uniq_project_area_name",
+    )
+    await db[area_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("project_id", 1), ("created_at", 1)], name="tenant_project_area"
+    )
+    # Grid da área: só fotos ativas, mais recentes primeiro.
+    await db[photo_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("area_id", 1), ("deleted_at", 1), ("created_at", -1)],
+        name="tenant_area_photo",
     )
 
 

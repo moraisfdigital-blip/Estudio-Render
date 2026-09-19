@@ -23,6 +23,9 @@ COPY --from=frontend /build/dist ./frontend/dist
 ENV FRONTEND_DIST=/app/frontend/dist
 WORKDIR /app/backend
 
+# A raiz de mídia existe na imagem para o volume nomeado herdar o dono certo;
+# o processo roda sem privilégio e precisa escrever os originais lá.
+RUN mkdir -p /app/var/media
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
 

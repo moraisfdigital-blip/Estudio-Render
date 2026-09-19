@@ -8,9 +8,11 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.health import router as health_router
+from app.api.routers.areas import router as areas_router
 from app.api.routers.auth import router as auth_router
 from app.api.routers.clients import router as clients_router
 from app.api.routers.locations import router as locations_router
+from app.api.routers.photos import router as photos_router
 from app.api.routers.projects import router as projects_router
 from app.api.routers.tenants import router as tenants_router
 from app.core.config import get_settings
@@ -42,6 +44,8 @@ app.include_router(tenants_router, prefix="/api", tags=["tenants"])
 app.include_router(clients_router, prefix="/api", tags=["clients"])
 app.include_router(locations_router, prefix="/api", tags=["locations"])
 app.include_router(projects_router, prefix="/api", tags=["projects"])
+app.include_router(areas_router, prefix="/api", tags=["areas"])
+app.include_router(photos_router, prefix="/api", tags=["photos"])
 
 
 @app.get("/api/{full_path:path}", include_in_schema=False)

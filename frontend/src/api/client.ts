@@ -202,3 +202,96 @@ export async function updateProject(id: string, input: Partial<ProjectInput>): P
   const { data } = await api.patch<Project>(`/projects/${id}`, input)
   return data
 }
+
+// ---- Fase 4: áreas e fotos -------------------------------------------
+// O original é imutável: a API só cria e lê binário. Remover uma foto tira o
+// registro do levantamento — o arquivo original continua no storage.
+
+export type Area = {
+  id: string
+  tenant_id: string
+  project_id: string
+  name: string
+  description: string | null
+  photo_count: number
+  created_at: string
+  updated_at: string
+}
+
+export type Photo = {
+  id: string
+  tenant_id: string
+  area_id: string
+  project_id: string
+  original_filename: string
+  content_type: string
+  size_bytes: number
+  checksum_sha256: string
+  created_at: string
+  original_url: string
+}
+
+/** Limites de upload publicados pelo servidor — nada de tamanho/tipo chumbado aqui. */
+export type MediaLimits = {
+  max_upload_mb: number
+  accepted_content_types: string[]
+  accepted_labels: string[]
+}
+
+export type AreaInput = { name: string; description?: string }
+
+export async function getMediaLimits(): Promise<MediaLimits> {
+  const { data } = await api.get<MediaLimits>('/media/limits')
+  return data
+}
+
+export async function listAreas(projectId: string): Promise<Area[]> {
+  const { data } = await api.get<Area[]>(`/projects/${projectId}/areas`)
+  return data
+}
+
+export async function createArea(projectId: string, input: AreaInput): Promise<Area> {
+  const { data } = await api.post<Area>(`/projects/${projectId}/areas`, input)
+  return data
+}
+
+export async function listAreaPhotos(areaId: string): Promise<Photo[]> {
+  const { data } = await api.get<Photo[]>(`/areas/${areaId}/photos`)
+  return data
+}
+
+/**
+ * Sobe uma foto. `onProgress` recebe 0..100 para a barra de progresso —
+ * levantamento é feito em campo, com foto grande e rede ruim; a tela precisa
+ * mostrar que algo está acontecendo.
+ */
+export async function uploadPhoto(
+  areaId: string,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<Photo> {
+  const body = new FormData()
+  body.append('file', file)
+  const { data } = await api.post<Photo>(`/areas/${areaId}/photos`, body, {
+    onUploadProgress: (event) => {
+      if (!onProgress || !event.total) return
+      onProgress(Math.round((event.loaded / event.total) * 100))
+    },
+  })
+  return data
+}
+
+export async function deletePhoto(photoId: string): Promise<void> {
+  await api.delete(`/photos/${photoId}`)
+}
+
+/**
+ * Baixa o binário do original como blob.
+ *
+ * O `<img src>` puro não carrega o header Authorization, e a rota do original
+ * exige token — então a miniatura busca os bytes por aqui e vira object URL.
+ */
+export async function fetchPhotoBlob(photoId: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/photos/${photoId}/original`, { responseType: 'blob' })
+  return data
+}
