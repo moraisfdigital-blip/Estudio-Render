@@ -23,6 +23,10 @@ class PhotoOut(BaseModel):
     # É só o estado (existe/não existe calibração) — o fator em si vem da rota
     # de calibração.
     calibrated: bool = False
+    # Fase 6: quantos elementos já foram marcados nesta foto. Mesmo motivo do
+    # `calibrated` — o grid mostra o andamento do levantamento sem abrir foto
+    # por foto.
+    element_count: int = 0
 
 
 class MediaLimitsOut(BaseModel):

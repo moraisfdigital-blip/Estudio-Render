@@ -231,6 +231,8 @@ export type Photo = {
   original_url: string
   /** Fase 5: já tem escala? O grid mostra "não calibrado" sem abrir foto por foto. */
   calibrated: boolean
+  /** Fase 6: quantos elementos já foram marcados nesta foto. */
+  element_count: number
 }
 
 /** Limites de upload publicados pelo servidor — nada de tamanho/tipo chumbado aqui. */
@@ -350,5 +352,139 @@ export async function saveCalibration(
   input: CalibrationInput,
 ): Promise<Calibration> {
   const { data } = await api.put<Calibration>(`/photos/${photoId}/calibration`, input)
+  return data
+}
+
+// ---- Fase 6: elementos e medidas -------------------------------------
+// Um elemento é a peça a intervir, marcada como retângulo sobre a foto
+// original. Toda medida carrega `source`: `user_measured` ou `estimated`, e a
+// tela é obrigada a mostrar o rótulo. Nada aqui preenche medida sozinho — o
+// `scale_estimate` que vem do servidor é sugestão rotulada, não medida salva.
+
+export type ElementKind = 'placa' | 'faixa' | 'letra_caixa' | 'adesivo' | 'totem' | 'outro'
+
+export const ELEMENT_KINDS: { value: ElementKind; label: string }[] = [
+  { value: 'placa', label: 'Placa' },
+  { value: 'faixa', label: 'Faixa' },
+  { value: 'letra_caixa', label: 'Letra caixa' },
+  { value: 'adesivo', label: 'Adesivo' },
+  { value: 'totem', label: 'Totem' },
+  { value: 'outro', label: 'Outro' },
+]
+
+export type MeasurementSource = 'user_measured' | 'estimated'
+
+export const MEASUREMENT_SOURCES: { value: MeasurementSource; label: string; hint: string }[] = [
+  { value: 'user_measured', label: 'Medido em campo', hint: 'Número que saiu da trena.' },
+  { value: 'estimated', label: 'Estimativa', hint: 'Aproximação — fica rotulada como tal.' },
+]
+
+/** Retângulo em pixels da foto original (origem no canto superior esquerdo). */
+export type ElementBox = { x: number; y: number; width: number; height: number }
+
+export type Measurement = {
+  value: number
+  source: MeasurementSource
+  /** Rótulo pronto do servidor: a tela não exibe valor sem a origem do lado. */
+  source_label: string
+}
+
+export type Measurements = {
+  unit: string | null
+  width: Measurement | null
+  height: Measurement | null
+  depth: Measurement | null
+  measured_at: string | null
+  /** Alguma dimensão salva é estimativa? A lista rotula sem abrir o elemento. */
+  has_estimate: boolean
+}
+
+export type ElementConference = { status: 'pendente' | 'conferido'; at: string | null }
+
+/**
+ * Sugestão derivada do retângulo + calibração da foto. **Não é medida salva.**
+ * Vem sempre com `source: 'estimated'` e só entra no elemento se o usuário
+ * mandar salvar — aí como estimativa, nunca como medida de campo.
+ */
+export type ScaleEstimate = {
+  unit: string
+  source: 'estimated'
+  width: number
+  height: number
+}
+
+export type SurveyElement = {
+  id: string
+  tenant_id: string
+  photo_id: string
+  area_id: string
+  project_id: string
+  name: string
+  kind: ElementKind
+  kind_label: string
+  box: ElementBox
+  notes: string | null
+  measurements: Measurements
+  conference: ElementConference
+  /** Ausente quando a foto não está calibrada: sem escala não há o que estimar. */
+  scale_estimate: ScaleEstimate | null
+  created_at: string
+  updated_at: string
+}
+
+export type ElementInput = {
+  name: string
+  kind: ElementKind
+  box: ElementBox
+  notes?: string
+}
+
+export type MeasurementInput = { value: number; source: MeasurementSource }
+
+export type MeasurementsInput = {
+  unit: CalibrationUnit
+  width?: MeasurementInput
+  height?: MeasurementInput
+  depth?: MeasurementInput
+}
+
+export async function listElements(photoId: string): Promise<SurveyElement[]> {
+  const { data } = await api.get<SurveyElement[]>(`/photos/${photoId}/elements`)
+  return data
+}
+
+export async function createElement(
+  photoId: string,
+  input: ElementInput,
+): Promise<SurveyElement> {
+  const { data } = await api.post<SurveyElement>(`/photos/${photoId}/elements`, input)
+  return data
+}
+
+export async function updateElement(
+  elementId: string,
+  input: Partial<ElementInput>,
+): Promise<SurveyElement> {
+  const { data } = await api.patch<SurveyElement>(`/elements/${elementId}`, input)
+  return data
+}
+
+export async function deleteElement(elementId: string): Promise<void> {
+  await api.delete(`/elements/${elementId}`)
+}
+
+export async function saveMeasurements(
+  elementId: string,
+  input: MeasurementsInput,
+): Promise<SurveyElement> {
+  const { data } = await api.put<SurveyElement>(`/elements/${elementId}/measurements`, input)
+  return data
+}
+
+export async function setConference(
+  elementId: string,
+  status: ElementConference['status'],
+): Promise<SurveyElement> {
+  const { data } = await api.post<SurveyElement>(`/elements/${elementId}/conference`, { status })
   return data
 }

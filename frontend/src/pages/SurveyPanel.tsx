@@ -13,6 +13,7 @@ import {
   type Photo,
 } from '../api/client'
 import CalibrationDialog from '../components/CalibrationDialog'
+import ElementsDialog from '../components/ElementsDialog'
 import PhotoThumb from '../components/PhotoThumb'
 import { Button, EmptyState, ErrorNotice, Field, Loading, inputClass } from '../components/ui'
 import { useResource } from '../hooks/useResource'
@@ -134,6 +135,9 @@ function AreaPhotos({
   // Fase 5: a calibração acontece num overlay sobre a foto original, em cima
   // desta mesma tela — o levantamento não muda de contexto para medir a escala.
   const [calibrating, setCalibrating] = useState<Photo | null>(null)
+  // Fase 6: os elementos da foto abrem no mesmo lugar da calibração — marcar a
+  // peça e medir fazem parte do levantamento, não de outra tela.
+  const [listingElements, setListingElements] = useState<Photo | null>(null)
 
   const maxBytes = limits.max_upload_mb * 1024 * 1024
   const accepted = limits.accepted_labels.join(', ')
@@ -346,6 +350,17 @@ function AreaPhotos({
                 >
                   {photo.calibrated ? 'Conferir escala' : 'Calibrar escala'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setListingElements(photo)}
+                  className="w-fit text-xs text-neutral-400 underline-offset-2 transition hover:text-neutral-100 hover:underline"
+                >
+                  {photo.element_count === 0
+                    ? 'Marcar elementos'
+                    : photo.element_count === 1
+                      ? '1 elemento'
+                      : `${photo.element_count} elementos`}
+                </button>
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <button
                     type="button"
@@ -378,6 +393,20 @@ function AreaPhotos({
             patch((current) =>
               current.map((item) =>
                 item.id === calibration.photo_id ? { ...item, calibrated: true } : item,
+              ),
+            )
+          }
+        />
+      )}
+
+      {listingElements && (
+        <ElementsDialog
+          photo={listingElements}
+          onClose={() => setListingElements(null)}
+          onCountChange={(total) =>
+            patch((current) =>
+              current.map((item) =>
+                item.id === listingElements.id ? { ...item, element_count: total } : item,
               ),
             )
           }
