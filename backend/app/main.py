@@ -1,5 +1,6 @@
 """Render Artelux — single-service: FastAPI serve /api e o build do React com fallback SPA."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -7,12 +8,23 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.health import router as health_router
+from app.api.routers.auth import router as auth_router
+from app.api.routers.tenants import router as tenants_router
 from app.core.config import get_settings
 from app.core.db import close_client
+from app.core.seed import run_seed
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Índices + tenant fixo na subida. Se o Mongo ainda não respondeu, o app sobe
+    # mesmo assim: o seed é refeito sob demanda no primeiro register/login.
+    try:
+        await run_seed()
+    except Exception:
+        logger.exception("Seed inicial falhou; será refeito na primeira requisição de auth.")
     yield
     await close_client()
 
@@ -22,6 +34,8 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 # Toda a API vive sob /api — o resto do path é do frontend.
 app.include_router(health_router, prefix="/api", tags=["health"])
+app.include_router(auth_router, prefix="/api", tags=["auth"])
+app.include_router(tenants_router, prefix="/api", tags=["tenants"])
 
 
 @app.get("/api/{full_path:path}", include_in_schema=False)
