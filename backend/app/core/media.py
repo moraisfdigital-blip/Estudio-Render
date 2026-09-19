@@ -1,0 +1,167 @@
+"""Storage de mídia em disco — o lugar onde a regra de original imutável é cumprida.
+
+Contrato do blueprint: **a foto original nunca é sobrescrita nem editada**. Aqui
+isso é estrutural, não uma promessa de code review:
+
+* o arquivo é escrito **uma vez**, num diretório novo por foto, com `O_EXCL` —
+  se o caminho já existir, a escrita falha em vez de sobrescrever;
+* depois de fechado, o arquivo recebe permissão somente-leitura (no Windows,
+  o atributo read-only), então um `open(..., "wb")` distraído numa fase futura
+  estoura `PermissionError` em vez de corromper o levantamento;
+* qualquer derivado (calibração, máscara, imagem gerada) nasce em `derived/`,
+  **ao lado** do original, nunca no lugar dele;
+* `delete` remove só o registro — este módulo não expõe nenhuma função que
+  apague ou reescreva o binário do original.
+
+A raiz vem de env (`MEDIA_ROOT`). Nada de caminho de produção no código.
+"""
+
+import hashlib
+import os
+import stat
+from dataclasses import dataclass
+from pathlib import Path
+
+from app.core.config import get_settings
+
+# Assinaturas de arquivo aceitas. Confiar no `Content-Type` do navegador deixaria
+# entrar qualquer coisa renomeada para .jpg — o tipo real vem dos bytes.
+_SIGNATURES: tuple[tuple[str, str, bytes], ...] = (
+    ("image/jpeg", "jpg", b"\xff\xd8\xff"),
+    ("image/png", "png", b"\x89PNG\r\n\x1a\n"),
+    ("image/webp", "webp", b"RIFF"),  # + "WEBP" no offset 8, conferido abaixo
+)
+
+# Cabeçalho suficiente para reconhecer qualquer assinatura acima.
+SNIFF_BYTES = 16
+
+
+class UnsupportedMedia(Exception):
+    """Bytes que não são de um formato de imagem aceito."""
+
+
+class MediaTooLarge(Exception):
+    """Arquivo acima do limite configurado."""
+
+
+def sniff_image(header: bytes) -> tuple[str, str]:
+    """Devolve `(content_type, extensão)` a partir dos primeiros bytes."""
+    for content_type, extension, magic in _SIGNATURES:
+        if not header.startswith(magic):
+            continue
+        if content_type == "image/webp" and header[8:12] != b"WEBP":
+            continue
+        return content_type, extension
+    raise UnsupportedMedia
+
+
+def accepted_content_types() -> tuple[str, ...]:
+    """Tipos que o `sniff_image` reconhece — a UI usa isto no `accept` do input."""
+    return tuple(content_type for content_type, _, _ in _SIGNATURES)
+
+
+@dataclass(frozen=True, slots=True)
+class StoredFile:
+    """Resultado de uma gravação. `key` é o que vai para o banco."""
+
+    key: str
+    size_bytes: int
+    checksum_sha256: str
+
+
+def _root() -> Path:
+    return get_settings().media_root_path
+
+
+def build_original_key(*, tenant_id: str, photo_uid: str, extension: str) -> str:
+    """Caminho relativo do original dentro do MEDIA_ROOT.
+
+    Formato: `<tenant>/photos/<uid>/original.<ext>`. O tenant no topo mantém o
+    isolamento visível também no disco; a pasta por foto é o que dá um lugar
+    natural para os derivados das fases seguintes (`<uid>/derived/...`).
+    """
+    return f"{tenant_id}/photos/{photo_uid}/original.{extension}"
+
+
+def resolve(key: str) -> Path:
+    """Converte a chave do banco em caminho absoluto, preso ao MEDIA_ROOT.
+
+    Uma chave adulterada (`../../etc/passwd`) sai daqui como erro, não como
+    leitura de arquivo fora da raiz.
+    """
+    root = _root().resolve()
+    path = (root / key).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError("Chave de mídia fora do MEDIA_ROOT.")
+    return path
+
+
+def _freeze(path: Path) -> None:
+    """Tira a permissão de escrita — o original passa a ser somente-leitura."""
+    try:
+        os.chmod(path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    except OSError:
+        # Sistema de arquivos sem suporte a permissão não invalida o upload;
+        # a imutabilidade continua garantida pelo O_EXCL e pela ausência de
+        # qualquer caminho de escrita sobre o original no código.
+        pass
+
+
+async def write_original(
+    *,
+    tenant_id: str,
+    photo_uid: str,
+    extension: str,
+    chunks,
+    max_bytes: int,
+) -> StoredFile:
+    """Grava o original a partir de um iterável assíncrono de chunks.
+
+    Escreve em streaming: um upload grande nunca é carregado inteiro em memória,
+    e o limite de tamanho corta no meio do caminho em vez de depois de gastar o
+    disco. Se estourar, o arquivo parcial é removido — ele nunca chegou a ser
+    um original válido, então apagá-lo não viola a regra de imutabilidade.
+    """
+    key = build_original_key(tenant_id=tenant_id, photo_uid=photo_uid, extension=extension)
+    path = resolve(key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    digest = hashlib.sha256()
+    size = 0
+
+    # O_EXCL: se o caminho já existir, isto levanta FileExistsError em vez de
+    # truncar um original que já está no banco.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0))
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            async for chunk in chunks:
+                if not chunk:
+                    continue
+                size += len(chunk)
+                if size > max_bytes:
+                    raise MediaTooLarge
+                digest.update(chunk)
+                handle.write(chunk)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        try:
+            path.parent.rmdir()
+        except OSError:
+            pass
+        raise
+
+    _freeze(path)
+    return StoredFile(key=key, size_bytes=size, checksum_sha256=digest.hexdigest())
+
+
+def checksum_on_disk(key: str) -> str | None:
+    """SHA-256 do arquivo como ele está agora. Usado para provar que o original
+    não mudou depois de qualquer operação (inclusive o DELETE do registro)."""
+    path = resolve(key)
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
