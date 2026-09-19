@@ -22,11 +22,23 @@ class Settings(BaseSettings):
     mongo_db: str = "estudio_render"
 
     jwt_secret: str = "dev-only-nao-usar-em-producao"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 12
 
     image_gen_provider: str = "mock"
     pdf_provider: str = "mock"
 
     default_tenant_slug: str = "artelux"
+    default_tenant_name: str = "ARTELUX"
+
+    # Seed do owner de desenvolvimento. Sem senha em env, o seed não cria usuário
+    # (e o app sobe igual) — nunca há credencial chumbada no código.
+    seed_owner_email: str = ""
+    seed_owner_password: str = ""
+    seed_owner_name: str = "Owner ARTELUX"
+
+    # Registro interno aberto (Fase 2 não tem convites). Desligue quando houver convite.
+    allow_self_register: bool = True
 
     # Caminho do build do frontend, relativo à raiz do repo ou absoluto.
     frontend_dist: str = "frontend/dist"
