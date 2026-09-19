@@ -12,6 +12,9 @@ from pymongo.errors import DuplicateKeyError
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import hash_password
+from app.models import client as client_model
+from app.models import location as location_model
+from app.models import project as project_model
 from app.models import tenant as tenant_model
 from app.models import user as user_model
 
@@ -24,6 +27,17 @@ async def ensure_indexes() -> None:
     # E-mail é único *dentro* do tenant: dois tenants podem ter o mesmo e-mail.
     await db[user_model.COLLECTION].create_index(
         [("tenant_id", 1), ("email", 1)], unique=True, name="uniq_tenant_email"
+    )
+    # Fase 3: nome único por tenant evita dois cadastros idênticos no mesmo select.
+    await db[client_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("name_key", 1)], unique=True, name="uniq_tenant_client_name"
+    )
+    await db[location_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("name_key", 1)], unique=True, name="uniq_tenant_location_name"
+    )
+    # Dashboard lê sempre escopado e ordenado por data de criação.
+    await db[project_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("created_at", -1)], name="tenant_created_at"
     )
 
 
