@@ -34,10 +34,6 @@ NOT_FOUND = "Foto não encontrada neste workspace."
 FILE_GONE = "O arquivo original desta foto não está acessível no storage."
 UNREADABLE = "Não foi possível ler as dimensões da foto original."
 
-# Chunk de leitura do upload. Grande o bastante para não picotar o I/O,
-# pequeno o bastante para o limite de tamanho cortar cedo.
-CHUNK_SIZE = 1024 * 256
-
 
 def _to_out(doc: dict[str, Any], calibrated: bool = False, element_count: int = 0) -> PhotoOut:
     photo_id = str(doc["_id"])
@@ -122,13 +118,6 @@ def _safe_filename(raw: str | None) -> str:
     return name[:200] or "foto"
 
 
-async def _chunks(upload: UploadFile, first: bytes):
-    """Re-emite o cabeçalho já lido para o sniff e segue com o resto do stream."""
-    yield first
-    while chunk := await upload.read(CHUNK_SIZE):
-        yield chunk
-
-
 @router.get("/media/limits", response_model=MediaLimitsOut)
 async def get_media_limits(scope: CurrentScope) -> MediaLimitsOut:
     """Limites de upload para a tela conferir o arquivo **antes** de subir.
@@ -177,11 +166,13 @@ async def upload_photo(
 
     max_bytes = settings.max_upload_mb * 1024 * 1024
     try:
-        stored = await media.write_original(
-            tenant_id=scope.tenant_id,
-            photo_uid=uuid.uuid4().hex,
-            extension=extension,
-            chunks=_chunks(file, header),
+        stored = await media.write_once(
+            key=media.build_original_key(
+                tenant_id=scope.tenant_id,
+                photo_uid=uuid.uuid4().hex,
+                extension=extension,
+            ),
+            chunks=media.restream(file, header),
             max_bytes=max_bytes,
         )
     except media.MediaTooLarge:

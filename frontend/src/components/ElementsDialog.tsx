@@ -20,6 +20,7 @@ import {
   type Photo,
   type SurveyElement,
 } from '../api/client'
+import SpecPicker from './SpecPicker'
 import { Button, EmptyState, ErrorNotice, Field, Loading, inputClass } from '../components/ui'
 import { useResource } from '../hooks/useResource'
 
@@ -613,6 +614,11 @@ function ElementDetail({
             </p>
           )}
         </div>
+      </div>
+
+      <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
+        <p className="mb-3 text-sm text-neutral-300">Especificação</p>
+        <SpecPicker element={element} onChanged={onChanged} />
       </div>
 
       <form onSubmit={submitMeasurements} className="flex flex-col gap-4">

@@ -426,6 +426,8 @@ export type SurveyElement = {
   notes: string | null
   measurements: Measurements
   conference: ElementConference
+  /** Fase 7: material/acabamento/marca resolvidos pelo servidor. */
+  spec: ElementSpec
   /** Ausente quando a foto não está calibrada: sem escala não há o que estimar. */
   scale_estimate: ScaleEstimate | null
   created_at: string
@@ -486,5 +488,155 @@ export async function setConference(
   status: ElementConference['status'],
 ): Promise<SurveyElement> {
   const { data } = await api.post<SurveyElement>(`/elements/${elementId}/conference`, { status })
+  return data
+}
+
+// ---- Fase 7: catálogo (material, acabamento, marca) -------------------
+//
+// A cor **nunca** é definida aqui. `color_hex` vem do acabamento cadastrado no
+// servidor; este arquivo não tem paleta, mapa de cores nem valor padrão.
+// Gerenciar catálogo é do owner: o editor lê a lista e aplica no elemento.
+
+export type Material = {
+  id: string
+  tenant_id: string
+  name: string
+  description: string | null
+  /** Quantos acabamentos este material já tem — a lista mostra sem abrir. */
+  finish_count: number
+  created_at: string
+  updated_at: string
+}
+
+export type Finish = {
+  id: string
+  tenant_id: string
+  material_id: string
+  material_name: string
+  name: string
+  color_name: string
+  color_hex: string
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type BrandLogo = {
+  url: string
+  filename: string
+  content_type: string
+  size_bytes: number
+  checksum_sha256: string
+  uploaded_at: string
+}
+
+export type Brand = {
+  id: string
+  tenant_id: string
+  name: string
+  description: string | null
+  logo: BrandLogo | null
+  created_at: string
+  updated_at: string
+}
+
+/** Spec do elemento já resolvida contra o catálogo pelo servidor. */
+export type ElementSpec = {
+  material: { id: string; name: string } | null
+  finish: { id: string; name: string; color_name: string; color_hex: string } | null
+  brand: { id: string; name: string; logo_url: string | null } | null
+  applied_at: string | null
+  is_empty: boolean
+}
+
+export type MaterialInput = { name: string; description?: string }
+export type FinishInput = {
+  material_id: string
+  name: string
+  color_name: string
+  color_hex: string
+  description?: string
+}
+export type BrandInput = { name: string; description?: string }
+
+/**
+ * `null` num campo limpa aquele vínculo; campo ausente fica como está.
+ * O servidor lê quais chaves vieram, então mandar `finish_id: null` é uma
+ * instrução de apagar, não "não informado".
+ */
+export type SpecInput = {
+  material_id?: string | null
+  finish_id?: string | null
+  brand_id?: string | null
+}
+
+export async function listMaterials(): Promise<Material[]> {
+  const { data } = await api.get<Material[]>('/materials')
+  return data
+}
+
+export async function createMaterial(input: MaterialInput): Promise<Material> {
+  const { data } = await api.post<Material>('/materials', input)
+  return data
+}
+
+export async function updateMaterial(
+  id: string,
+  input: Partial<MaterialInput>,
+): Promise<Material> {
+  const { data } = await api.patch<Material>(`/materials/${id}`, input)
+  return data
+}
+
+export async function listFinishes(materialId?: string): Promise<Finish[]> {
+  const { data } = await api.get<Finish[]>('/finishes', {
+    params: materialId ? { material_id: materialId } : undefined,
+  })
+  return data
+}
+
+export async function createFinish(input: FinishInput): Promise<Finish> {
+  const { data } = await api.post<Finish>('/finishes', input)
+  return data
+}
+
+export async function updateFinish(
+  id: string,
+  input: Partial<Omit<FinishInput, 'material_id'>>,
+): Promise<Finish> {
+  const { data } = await api.patch<Finish>(`/finishes/${id}`, input)
+  return data
+}
+
+export async function listBrands(): Promise<Brand[]> {
+  const { data } = await api.get<Brand[]>('/brands')
+  return data
+}
+
+export async function createBrand(input: BrandInput): Promise<Brand> {
+  const { data } = await api.post<Brand>('/brands', input)
+  return data
+}
+
+export async function updateBrand(id: string, input: Partial<BrandInput>): Promise<Brand> {
+  const { data } = await api.patch<Brand>(`/brands/${id}`, input)
+  return data
+}
+
+export async function uploadBrandLogo(brandId: string, file: File): Promise<Brand> {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.put<Brand>(`/brands/${brandId}/logo`, form)
+  return data
+}
+
+export async function applySpec(elementId: string, input: SpecInput): Promise<SurveyElement> {
+  const { data } = await api.patch<SurveyElement>(`/elements/${elementId}/spec`, input)
+  return data
+}
+
+/** Mesma razão do original da foto: a rota exige token, e `<img src>` não manda header. */
+export async function fetchBrandLogoBlob(brandId: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/brands/${brandId}/logo`, { responseType: 'blob' })
   return data
 }

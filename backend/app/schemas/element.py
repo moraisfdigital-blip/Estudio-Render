@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.calibration import UNITS_IN_METERS
 from app.models.element import CONFERENCE_STATUSES, DIMENSIONS, KINDS, SOURCES
+from app.schemas.catalog import SpecOut
 from app.schemas.common import LongText, Name
 
 # As listas fechadas vivem no modelo; aqui viram enum de validação, sem cópia.
@@ -153,6 +154,9 @@ class ElementOut(BaseModel):
     notes: str | None = None
     measurements: MeasurementsOut
     conference: ConferenceOut
+    # Fase 7: material/acabamento/marca já resolvidos contra o catálogo, com a
+    # cor real vinda do cadastro — nunca de hex chumbado no frontend.
+    spec: SpecOut = Field(default_factory=SpecOut)
     # Ausente quando a foto não tem calibração: sem escala não há de onde
     # estimar, e a tela diz isso em vez de mostrar um número inventado.
     scale_estimate: ScaleEstimateOut | None = None
