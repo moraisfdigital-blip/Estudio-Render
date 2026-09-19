@@ -76,3 +76,129 @@ export async function getCurrentTenant(): Promise<Tenant> {
   const { data } = await api.get<Tenant>('/tenants/current')
   return data
 }
+
+// ---- Fase 3: clientes, locais e projetos -----------------------------
+// O `tenant_id` volta nos payloads só como confirmação: quem escopa é o servidor,
+// a partir do token. O frontend nunca manda tenant em lugar nenhum.
+
+export type Client = {
+  id: string
+  tenant_id: string
+  name: string
+  document: string | null
+  contact_name: string | null
+  email: string | null
+  phone: string | null
+  notes: string | null
+}
+
+export type Location = {
+  id: string
+  tenant_id: string
+  name: string
+  client_id: string | null
+  address: string | null
+  city: string | null
+  state: string | null
+  notes: string | null
+}
+
+export type ProjectStatus = 'levantamento' | 'projeto_visual' | 'apresentacao' | 'concluido'
+
+export const PROJECT_STATUSES: { value: ProjectStatus; label: string }[] = [
+  { value: 'levantamento', label: 'Levantamento' },
+  { value: 'projeto_visual', label: 'Projeto visual' },
+  { value: 'apresentacao', label: 'Apresentação' },
+  { value: 'concluido', label: 'Concluído' },
+]
+
+export type Related = { id: string; name: string }
+
+export type Project = {
+  id: string
+  tenant_id: string
+  name: string
+  status: ProjectStatus
+  status_label: string
+  description: string | null
+  client: Related | null
+  location: Related | null
+  created_at: string
+  updated_at: string
+}
+
+export type ClientInput = {
+  name: string
+  document?: string
+  contact_name?: string
+  email?: string
+  phone?: string
+  notes?: string
+}
+
+export type LocationInput = {
+  name: string
+  client_id?: string | null
+  address?: string
+  city?: string
+  state?: string
+  notes?: string
+}
+
+export type ProjectInput = {
+  name: string
+  client_id: string
+  location_id: string
+  status?: ProjectStatus
+  description?: string
+}
+
+export async function listClients(): Promise<Client[]> {
+  const { data } = await api.get<Client[]>('/clients')
+  return data
+}
+
+export async function createClient(input: ClientInput): Promise<Client> {
+  const { data } = await api.post<Client>('/clients', input)
+  return data
+}
+
+export async function updateClient(id: string, input: Partial<ClientInput>): Promise<Client> {
+  const { data } = await api.patch<Client>(`/clients/${id}`, input)
+  return data
+}
+
+export async function listLocations(): Promise<Location[]> {
+  const { data } = await api.get<Location[]>('/locations')
+  return data
+}
+
+export async function createLocation(input: LocationInput): Promise<Location> {
+  const { data } = await api.post<Location>('/locations', input)
+  return data
+}
+
+export async function updateLocation(id: string, input: Partial<LocationInput>): Promise<Location> {
+  const { data } = await api.patch<Location>(`/locations/${id}`, input)
+  return data
+}
+
+export async function listProjects(): Promise<Project[]> {
+  const { data } = await api.get<Project[]>('/projects')
+  return data
+}
+
+export async function createProject(input: ProjectInput): Promise<Project> {
+  const { data } = await api.post<Project>('/projects', input)
+  return data
+}
+
+export async function getProject(id: string): Promise<Project> {
+  const { data } = await api.get<Project>(`/projects/${id}`)
+  return data
+}
+
+export async function updateProject(id: string, input: Partial<ProjectInput>): Promise<Project> {
+  const { data } = await api.patch<Project>(`/projects/${id}`, input)
+  return data
+}

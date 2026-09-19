@@ -1,8 +1,20 @@
+import { useState } from 'react'
 import { useAuth } from '../auth/context'
+import DashboardPage from '../pages/DashboardPage'
+import ProjectDetailPage from '../pages/ProjectDetailPage'
+import ProjectFormPage from '../pages/ProjectFormPage'
 
-/** Shell autenticado: badge do workspace + identidade do usuário. */
+/** Navegação por estado — o app ainda não tem rotas; entram quando houver URL a compartilhar. */
+type View =
+  | { kind: 'dashboard' }
+  | { kind: 'new-project' }
+  | { kind: 'project'; id: string }
+  | { kind: 'edit-project'; id: string }
+
 export default function AppShell() {
   const { state, signOut } = useAuth()
+  const [view, setView] = useState<View>({ kind: 'dashboard' })
+
   if (state.kind !== 'authenticated') return null
   const { user, tenant } = state.session
 
@@ -10,12 +22,16 @@ export default function AppShell() {
     <div className="min-h-dvh bg-neutral-950 text-neutral-100">
       <header className="border-b border-neutral-800">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setView({ kind: 'dashboard' })}
+            className="flex items-center gap-3 text-left"
+          >
             <span className="text-sm font-semibold">Render Artelux</span>
             <span className="rounded-full border border-neutral-700 px-2.5 py-0.5 text-xs text-neutral-300">
               {tenant.name}
             </span>
-          </div>
+          </button>
 
           <div className="flex items-center gap-3">
             <div className="text-right">
@@ -36,12 +52,35 @@ export default function AppShell() {
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-10">
-        <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Fase 2 — auth + tenant</p>
-        <h1 className="mt-1 text-2xl font-semibold">Workspace {tenant.name}</h1>
-        <p className="mt-4 max-w-prose text-sm text-neutral-400">
-          Sessão autenticada. O dashboard de projetos entra na Fase 3 — toda entidade daqui em
-          diante nasce escopada neste workspace.
-        </p>
+        {view.kind === 'dashboard' && (
+          <DashboardPage
+            onNewProject={() => setView({ kind: 'new-project' })}
+            onOpenProject={(id) => setView({ kind: 'project', id })}
+          />
+        )}
+
+        {view.kind === 'new-project' && (
+          <ProjectFormPage
+            onDone={(project) => setView({ kind: 'project', id: project.id })}
+            onCancel={() => setView({ kind: 'dashboard' })}
+          />
+        )}
+
+        {view.kind === 'edit-project' && (
+          <ProjectFormPage
+            projectId={view.id}
+            onDone={(project) => setView({ kind: 'project', id: project.id })}
+            onCancel={() => setView({ kind: 'project', id: view.id })}
+          />
+        )}
+
+        {view.kind === 'project' && (
+          <ProjectDetailPage
+            projectId={view.id}
+            onBack={() => setView({ kind: 'dashboard' })}
+            onEdit={() => setView({ kind: 'edit-project', id: view.id })}
+          />
+        )}
       </main>
     </div>
   )
