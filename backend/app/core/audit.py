@@ -33,8 +33,13 @@ LOGIN_FALHOU = "login_falhou"
 LOGIN_BLOQUEADO = "login_bloqueado"
 REGISTRO_OK = "registro_ok"
 REGISTRO_FECHADO = "registro_fechado"
+# O e-mail duplicado não aparece para o cliente, mas aparece aqui: é o log que
+# distingue erro honesto de alguém varrendo endereços.
+REGISTRO_DUPLICADO = "registro_duplicado"
 REGISTRO_BLOQUEADO = "registro_bloqueado"
 TOKEN_INVALIDO = "token_invalido"
+TOKEN_REVOGADO = "token_revogado"
+LOGOUT = "logout"
 PAPEL_NEGADO = "papel_negado"
 
 

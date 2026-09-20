@@ -4,6 +4,7 @@ import {
   getCurrentTenant,
   getMe,
   getToken,
+  logout,
   login as loginRequest,
   register as registerRequest,
   setToken,
@@ -58,7 +59,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [loadSession],
   )
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
+    // Avisa o servidor primeiro, para o token ser revogado de verdade. Se a
+    // chamada falhar (rede fora, token já expirado), a sessão local sai do ar
+    // mesmo assim: prender alguém numa tela logada porque o logout remoto não
+    // respondeu seria pior do que o risco que ele cobre.
+    try {
+      await logout()
+    } catch {
+      // Silencioso de propósito: ver "erro ao sair" não muda nada para quem
+      // está saindo.
+    }
     setToken(null)
     setState({ kind: 'anonymous' })
   }, [])

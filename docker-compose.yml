@@ -28,12 +28,68 @@ services:
     volumes:
       # Original preservado: os arquivos sobrevivem a rebuild do container.
       - media_data:/app/var/media
+
+    # Sistema de arquivos somente-leitura. O app só precisa escrever na mídia,
+    # que é um volume montado — volumes continuam graváveis com read_only.
+    read_only: true
+    # O que sobra de escrita é temporário do processo. `noexec` fecha o truque
+    # de gravar um binário em /tmp e executá-lo.
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+
+    # Nenhuma capability: o processo roda sem privilégio e escuta numa porta
+    # alta, então não precisa de nenhuma delas.
+    cap_drop:
+      - ALL
+    security_opt:
+      # Impede que qualquer binário dentro do container ganhe privilégio via
+      # setuid — mesmo que um entre lá por uma dependência.
+      - no-new-privileges:true
+
+    # Teto de memória. A geração decodifica duas imagens de até 50 Mpx
+    # (~150 MB cada), então 1 GB dá folga real; sem teto, um pico leva o host
+    # junto em vez de derrubar só o container.
+    mem_limit: 1g
+
+    healthcheck:
+      # Usa o Python que já está na imagem: não há curl numa base slim, e
+      # instalar um só para o healthcheck aumentaria a superfície à toa.
+      # O /api/health consulta o Mongo, então isto detecta "app de pé com banco
+      # fora" — que é exatamente o caso que um health raso mascara.
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          try:
+              with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=4) as r:
+                  sys.exit(0 if r.status == 200 else 1)
+          except Exception:
+              sys.exit(1)
+      interval: 15s
+      timeout: 6s
+      retries: 3
+      start_period: 20s
+
     depends_on:
       mongo:
         condition: service_healthy
 
   mongo:
     image: mongo:7
+    # Sem `ports:` de propósito: o banco só é alcançável pela rede interna do
+    # compose. Publicá-lo no host exporia um Mongo sem autenticação.
+    cap_drop:
+      - ALL
+    cap_add:
+      # O Mongo ajusta o dono dos arquivos de dados na subida.
+      - CHOWN
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
     volumes:
       - mongo_data:/data/db
     healthcheck:

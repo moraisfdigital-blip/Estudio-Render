@@ -1048,6 +1048,17 @@ export type BudgetItemPatch = {
   notes?: string
 }
 
+/**
+ * Invalida ESTE token no servidor.
+ *
+ * Apagar o token do navegador não bastava: o JWT é autocontido e continuaria
+ * valendo até expirar para quem tivesse uma cópia. A revogação é por token,
+ * então sair num aparelho não derruba a sessão do outro.
+ */
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout')
+}
+
 export async function getTakeoff(projectId: string): Promise<Takeoff> {
   const { data } = await api.get<Takeoff>(`/projects/${projectId}/quantity-takeoff`)
   return data

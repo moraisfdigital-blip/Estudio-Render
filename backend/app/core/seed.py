@@ -11,7 +11,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.core import ratelimit
+from app.core import ratelimit, revocation
 from app.core.security import hash_password
 from app.models import calibration as calibration_model
 from app.models import catalog as catalog_model
@@ -48,6 +48,12 @@ async def ensure_indexes() -> None:
     )
     await db[ratelimit.COLLECTION].create_index(
         "at", expireAfterSeconds=60 * 60 * 24, name="ttl_auth_attempts"
+    )
+    # Tokens revogados no logout. O TTL apaga cada registro no momento em que o
+    # token que ele bloqueia expiraria sozinho — guardar mais não protege nada.
+    await db[revocation.COLLECTION].create_index("jti", unique=True, name="uniq_jti")
+    await db[revocation.COLLECTION].create_index(
+        "expires_at", expireAfterSeconds=0, name="ttl_revoked_tokens"
     )
     # Fase 3: nome único por tenant evita dois cadastros idênticos no mesmo select.
     await db[client_model.COLLECTION].create_index(

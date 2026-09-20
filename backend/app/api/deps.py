@@ -13,7 +13,7 @@ from bson.errors import InvalidId
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.core import audit
+from app.core import audit, revocation
 from app.core.db import get_db
 from app.core.security import decode_access_token
 from app.core.tenancy import TenantScope
@@ -45,6 +45,11 @@ async def get_current_user(
     if not user_id or not tenant_id:
         raise UNAUTHORIZED
 
+    # Assinatura válida não basta: o token pode ter sido revogado num logout.
+    if await revocation.is_revoked(payload.get("jti")):
+        audit.log(audit.TOKEN_REVOGADO, tenant_id=tenant_id, user_id=str(user_id))
+        raise UNAUTHORIZED
+
     try:
         oid = ObjectId(user_id)
     except (InvalidId, TypeError):
@@ -58,6 +63,25 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
+
+
+async def get_token_payload(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+) -> dict[str, Any]:
+    """Conteúdo do token em uso.
+
+    Só o logout precisa disto: para revogar **este** token é preciso saber o
+    `jti` e o `exp` dele, que o documento do usuário não carrega.
+    """
+    if credentials is None or not credentials.credentials:
+        raise UNAUTHORIZED
+    try:
+        return decode_access_token(credentials.credentials)
+    except jwt.PyJWTError:
+        raise UNAUTHORIZED from None
+
+
+TokenPayload = Annotated[dict[str, Any], Depends(get_token_payload)]
 
 
 async def get_tenant_scope(user: CurrentUser) -> TenantScope:
