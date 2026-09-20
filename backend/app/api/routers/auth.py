@@ -2,10 +2,11 @@
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pymongo.errors import DuplicateKeyError
 
 from app.api.deps import CurrentUser
+from app.core import ratelimit
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.seed import ensure_default_tenant
@@ -43,10 +44,17 @@ def token_response(doc: dict[str, Any]) -> TokenResponse:
 
 
 @router.post("/auth/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(payload: RegisterRequest) -> TokenResponse:
-    """Registro interno no tenant da instalação. `owner` só existe via seed."""
+async def register(payload: RegisterRequest, request: Request) -> TokenResponse:
+    """Registro interno no tenant da instalação. `owner` só existe via seed.
+
+    Fechado por padrão (`ALLOW_SELF_REGISTER=false`): aberto, qualquer um que
+    alcance a URL vira editor e enxerga os levantamentos do workspace.
+    """
+    await ratelimit.enforce(request, scope="register")
     settings = get_settings()
     if not settings.allow_self_register:
+        # Conta como tentativa: varrer a rota fechada também é reconhecimento.
+        await ratelimit.record_failure(request, scope="register")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Registro fechado nesta instalação.",
@@ -73,15 +81,26 @@ async def register(payload: RegisterRequest) -> TokenResponse:
 
 
 @router.post("/auth/login", response_model=TokenResponse)
-async def login(payload: LoginRequest) -> TokenResponse:
+async def login(payload: LoginRequest, request: Request) -> TokenResponse:
+    """Entra no workspace.
+
+    O limite por IP é conferido **antes** da senha: quem já estourou não gasta
+    bcrypt do servidor nem recebe qualquer sinal sobre a credencial tentada.
+    """
+    await ratelimit.enforce(request, scope="login")
+
     tenant_id = await ensure_default_tenant()
     doc = await get_db()[user_model.COLLECTION].find_one(
         {"tenant_id": tenant_id, "email": user_model.normalize_email(payload.email)}
     )
     # Mesma resposta para usuário inexistente e senha errada: não revela quem existe.
     if doc is None or not verify_password(payload.password, doc["password_hash"]):
+        await ratelimit.record_failure(request, scope="login")
         raise INVALID_CREDENTIALS
 
+    # Acertou: o histórico de erros de digitação deste IP não precisa mais
+    # pesar contra ele.
+    await ratelimit.clear(request, scope="login")
     return token_response(doc)
 
 

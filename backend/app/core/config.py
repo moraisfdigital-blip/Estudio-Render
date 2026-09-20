@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import ClassVar
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,26 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 12
 
+    # Algoritmos aceitos. A lista é fechada de propósito: `JWT_ALGORITHM=none`
+    # desliga a verificação de assinatura e transforma qualquer token forjado em
+    # token válido. Só HMAC entra porque é o que combina com um segredo
+    # simétrico — um algoritmo RS/ES aqui usaria o segredo como se fosse chave
+    # pública, que é exatamente a confusão do CVE-2026-48526 do PyJWT.
+    ALLOWED_JWT_ALGORITHMS: ClassVar[frozenset[str]] = frozenset(
+        {"HS256", "HS384", "HS512"}
+    )
+
+    @field_validator("jwt_algorithm")
+    @classmethod
+    def _algorithm_is_allowed(cls, value: str) -> str:
+        normalizado = value.strip().upper()
+        if normalizado not in cls.ALLOWED_JWT_ALGORITHMS:
+            aceitos = ", ".join(sorted(cls.ALLOWED_JWT_ALGORITHMS))
+            raise ValueError(
+                f"JWT_ALGORITHM={value!r} não é aceito. Use um de: {aceitos}."
+            )
+        return normalizado
+
     # 32 bytes é o mínimo da RFC 7518 §3.2 para HS256; abaixo disso o próprio
     # PyJWT avisa. Validar aqui transforma o aviso em recusa de subir.
     @field_validator("jwt_secret")
@@ -55,8 +76,21 @@ class Settings(BaseSettings):
     seed_owner_password: str = ""
     seed_owner_name: str = "Owner ARTELUX"
 
-    # Registro interno aberto (Fase 2 não tem convites). Desligue quando houver convite.
-    allow_self_register: bool = True
+    # Registro FECHADO por padrão. Aberto, qualquer um que alcance a URL cria
+    # conta e passa a enxergar os levantamentos e os clientes do workspace.
+    # Ligar isto é uma decisão consciente para o momento de cadastrar a equipe,
+    # não um estado em que a instalação deva viver.
+    allow_self_register: bool = False
+
+    # Tentativas de autenticação por IP dentro da janela. Estourou, a rota
+    # responde 429 antes de conferir a senha.
+    auth_rate_limit_attempts: int = 10
+    auth_rate_limit_window_minutes: int = 15
+
+    # Só ligue com um proxy confiável na frente: sem ele, `X-Forwarded-For` é
+    # um cabeçalho que o próprio atacante escolhe, e o limite por IP vira
+    # decorativo.
+    trust_proxy_headers: bool = False
 
     # Caminho do build do frontend, relativo à raiz do repo ou absoluto.
     frontend_dist: str = "frontend/dist"

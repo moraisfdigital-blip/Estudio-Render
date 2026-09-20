@@ -11,6 +11,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core.config import get_settings
 from app.core.db import get_db
+from app.core import ratelimit
 from app.core.security import hash_password
 from app.models import calibration as calibration_model
 from app.models import catalog as catalog_model
@@ -37,6 +38,16 @@ async def ensure_indexes() -> None:
     # E-mail é único *dentro* do tenant: dois tenants podem ter o mesmo e-mail.
     await db[user_model.COLLECTION].create_index(
         [("tenant_id", 1), ("email", 1)], unique=True, name="uniq_tenant_email"
+    )
+    # Tentativas de autenticação: busca por IP + janela, e TTL para o Mongo
+    # apagar o que envelheceu sem precisar de rotina de limpeza. O TTL é
+    # generoso em relação à janela para a contagem nunca perder registro que
+    # ainda deveria contar.
+    await db[ratelimit.COLLECTION].create_index(
+        [("ip", 1), ("scope", 1), ("at", -1)], name="ip_scope_at"
+    )
+    await db[ratelimit.COLLECTION].create_index(
+        "at", expireAfterSeconds=60 * 60 * 24, name="ttl_auth_attempts"
     )
     # Fase 3: nome único por tenant evita dois cadastros idênticos no mesmo select.
     await db[client_model.COLLECTION].create_index(
