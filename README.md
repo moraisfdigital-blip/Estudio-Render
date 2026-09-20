@@ -487,6 +487,46 @@ Reexportar grava um arquivo novo; o anterior continua no disco, somente-leitura.
 autentica. Um link vazado não serve para ninguém de fora da ARTELUX, e renovar
 o link invalida o anterior (é assim que se revoga um que circulou demais).
 
+## Quantitativo e orçamento (Fase 12)
+
+Fecha o fluxo do blueprint: levantamento → projeto visual → apresentação →
+**quantitativo**. As linhas saem dos elementos conferidos, com o material e o
+acabamento do catálogo.
+
+| Método | Rota | O quê |
+| --- | --- | --- |
+| GET | `/api/projects/{id}/quantity-takeoff` | Ver |
+| POST | `/api/projects/{id}/quantity-takeoff` | Gerar/atualizar |
+| POST | `/api/quantity-takeoff/{id}/items` | Linha manual |
+| PATCH | `/api/budget-items/{id}` | Preço / quantidade |
+
+### Três regras
+
+**Só elemento conferido entra.** Quantitativo é base de preço; peça marcada na
+foto e nunca conferida ainda é hipótese.
+
+**Estimativa continua estimativa.** A área vem de largura × altura e herda a
+**pior** procedência das duas: medida de campo multiplicada por estimativa é
+estimativa, e a linha sai rotulada assim. Quem fecha preço vê de onde veio o
+número.
+
+**Preço nunca é inventado.** O catálogo não guarda preço e não existe tabela
+nem média neste código. Linha sem preço fica sem preço, e o total aparece como
+**parcial** — somar zero faria um orçamento incompleto parecer fechado.
+
+### Sem medida suficiente, não há quantidade
+
+Só largura (ou nenhuma dimensão) resulta em linha **sem quantidade**, com o
+motivo escrito na própria linha — não em um número plausível. Quem souber o
+valor informa pelo PATCH, e a procedência passa a ser `user_informed`: um
+número digitado não vira medida de campo.
+
+### Regerar não apaga trabalho
+
+`POST` recalcula as linhas derivadas do estado atual do levantamento, mas
+preserva preço, observações e quantidade informada de cada elemento que
+continua no quantitativo. Linhas manuais (instalação, frete) ficam intactas.
+
 ## Testes
 
 A suíte bate num **MongoDB de verdade** e confere o **arquivo no disco** — é
@@ -521,6 +561,7 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_takeoff.py` | 12 | Só conferido entra; estimativa contamina a linha; preço nunca inventado e total parcial; regerar preserva os preços |
 | `tests/test_presentations.py` | 11 | Só versão aprovada vira slide; troca de aprovação marca o slide como desatualizado; PDF do mock é arquivo válido; link interno exige login |
 | `tests/test_versions.py` | 10 | Limite de 3 aguenta cliques simultâneos; uma aprovada por foto; descartar devolve a vaga; aprovada não pode ser descartada |
 | `tests/test_proposals.py` | 9 | Geração só altera pixel sob intervenção (provado com provedor desobediente); prompt não inventa medida; falha do provedor vira registro e 502 |

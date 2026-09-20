@@ -4,6 +4,7 @@ import { Button, ErrorNotice, Loading } from '../components/ui'
 import { useResource } from '../hooks/useResource'
 import PresentationPanel from '../components/PresentationPanel'
 import SurveyPanel from './SurveyPanel'
+import TakeoffPanel from '../components/TakeoffPanel'
 
 const dateTimeFormat = new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short',
@@ -76,9 +77,7 @@ export default function ProjectDetailPage({
 
           <PresentationPanel projectId={resource.data.id} />
 
-          <p className="mt-8 max-w-prose text-sm text-neutral-500">
-            Quantitativo e orçamento entram na próxima fase deste projeto.
-          </p>
+          <TakeoffPanel projectId={resource.data.id} />
         </>
       )}
     </section>

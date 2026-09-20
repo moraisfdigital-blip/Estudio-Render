@@ -23,6 +23,7 @@ from app.api.routers.photos import router as photos_router
 from app.api.routers.presentations import router as presentations_router
 from app.api.routers.projects import router as projects_router
 from app.api.routers.proposals import router as proposals_router
+from app.api.routers.takeoff import router as takeoff_router
 from app.api.routers.tenants import router as tenants_router
 from app.api.routers.versions import router as versions_router
 from app.core.config import get_settings
@@ -63,6 +64,7 @@ app.include_router(masks_router, prefix="/api", tags=["masks"])
 app.include_router(proposals_router, prefix="/api", tags=["proposals"])
 app.include_router(versions_router, prefix="/api", tags=["versions"])
 app.include_router(presentations_router, prefix="/api", tags=["presentations"])
+app.include_router(takeoff_router, prefix="/api", tags=["takeoff"])
 
 
 def _json_safe_float(value: float) -> float | str:
