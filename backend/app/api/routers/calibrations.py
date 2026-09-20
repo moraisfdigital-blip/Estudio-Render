@@ -66,7 +66,7 @@ def _to_out(doc: dict[str, Any]) -> CalibrationOut:
 
 
 def _reject(detail: str) -> None:
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 @router.get("/photos/{photo_id}/calibration", response_model=CalibrationOut)

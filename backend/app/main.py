@@ -14,6 +14,7 @@ from app.api.health import router as health_router
 from app.api.routers.areas import router as areas_router
 from app.api.routers.auth import router as auth_router
 from app.api.routers.calibrations import router as calibrations_router
+from app.api.routers.catalog import router as catalog_router
 from app.api.routers.clients import router as clients_router
 from app.api.routers.elements import router as elements_router
 from app.api.routers.locations import router as locations_router
@@ -53,6 +54,7 @@ app.include_router(areas_router, prefix="/api", tags=["areas"])
 app.include_router(photos_router, prefix="/api", tags=["photos"])
 app.include_router(calibrations_router, prefix="/api", tags=["calibrations"])
 app.include_router(elements_router, prefix="/api", tags=["elements"])
+app.include_router(catalog_router, prefix="/api", tags=["catalog"])
 
 
 def _json_safe_float(value: float) -> float | str:
@@ -71,7 +73,7 @@ async def validation_error(request: Request, exc: RequestValidationError) -> JSO
     como o erro de validação que de fato é.
     """
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"detail": jsonable_encoder(exc.errors(), custom_encoder={float: _json_safe_float})},
     )
 

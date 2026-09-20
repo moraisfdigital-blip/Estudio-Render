@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import hash_password
 from app.models import calibration as calibration_model
+from app.models import catalog as catalog_model
 from app.models import client as client_model
 from app.models import area as area_model
 from app.models import element as element_model
@@ -74,6 +75,21 @@ async def ensure_indexes() -> None:
     # para essa leitura não virar varredura de coleção.
     await db[element_model.COLLECTION].create_index(
         [("tenant_id", 1), ("project_id", 1), ("deleted_at", 1)], name="tenant_project_element"
+    )
+    # Fase 7: catálogo do tenant. Nome único por tenant no material e na marca
+    # — dois cadastros iguais no mesmo select é erro de digitação, não escolha.
+    await db[catalog_model.MATERIALS].create_index(
+        [("tenant_id", 1), ("name_key", 1)], unique=True, name="uniq_tenant_material_name"
+    )
+    await db[catalog_model.BRANDS].create_index(
+        [("tenant_id", 1), ("name_key", 1)], unique=True, name="uniq_tenant_brand_name"
+    )
+    # Acabamento é único dentro do material, não do tenant: "Branco fosco" pode
+    # existir em ACM e em vinil ao mesmo tempo.
+    await db[catalog_model.FINISHES].create_index(
+        [("tenant_id", 1), ("material_id", 1), ("name_key", 1)],
+        unique=True,
+        name="uniq_material_finish_name",
     )
 
 

@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # .../backend/app/core/config.py -> raiz do repositório
@@ -21,9 +22,26 @@ class Settings(BaseSettings):
     mongo_url: str = "mongodb://localhost:27017"
     mongo_db: str = "estudio_render"
 
-    jwt_secret: str = "dev-only-nao-usar-em-producao"
+    # Sem default de propósito: um fallback aqui seria um segredo conhecido,
+    # publicado no repositório, assinando token de owner. Faltando a env, o app
+    # não sobe — é o único jeito de um deploy distraído falhar alto em vez de
+    # ficar aberto em silêncio.
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 12
+
+    # 32 bytes é o mínimo da RFC 7518 §3.2 para HS256; abaixo disso o próprio
+    # PyJWT avisa. Validar aqui transforma o aviso em recusa de subir.
+    @field_validator("jwt_secret")
+    @classmethod
+    def _secret_is_strong(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 32:
+            raise ValueError(
+                "JWT_SECRET precisa de pelo menos 32 caracteres. "
+                "Gere um: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+            )
+        return value
 
     image_gen_provider: str = "mock"
     pdf_provider: str = "mock"

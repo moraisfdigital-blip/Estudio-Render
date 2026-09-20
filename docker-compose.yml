@@ -6,7 +6,7 @@ services:
     environment:
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB: ${MONGO_DB:-estudio_render}
-      JWT_SECRET: ${JWT_SECRET:-dev-only-nao-usar-em-producao}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env — 32+ caracteres, um por ambiente}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-720}
       IMAGE_GEN_PROVIDER: ${IMAGE_GEN_PROVIDER:-mock}

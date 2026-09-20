@@ -27,6 +27,7 @@ um número que ninguém olhou.
 from typing import Any
 
 from app.core.clock import utcnow
+from app.models import catalog
 
 COLLECTION = "elements"
 
@@ -125,6 +126,9 @@ def new_element_doc(
         # marcado na foto antes de alguém ter ido medir.
         "measurements": empty_measurements(),
         "conference": new_conference(),
+        # Fase 7: material/acabamento/marca entram pelo PATCH de spec. Decidir
+        # o que a peça vai ser é passo separado de marcá-la na foto.
+        "spec": catalog.empty_spec(),
         "created_by": created_by,
         "created_at": now,
         "updated_at": now,

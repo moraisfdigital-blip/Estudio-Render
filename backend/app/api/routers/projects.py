@@ -82,11 +82,11 @@ async def _serialize(scope: TenantScope, docs: list[dict[str, Any]]) -> list[Pro
 async def _ensure_links(scope: TenantScope, *, client_id: str | None, location_id: str | None):
     if client_id is not None and await get_client_doc(scope, client_id) is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=CLIENT_NOT_FOUND
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=CLIENT_NOT_FOUND
         )
     if location_id is not None and await get_location_doc(scope, location_id) is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=LOCATION_NOT_FOUND
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=LOCATION_NOT_FOUND
         )
 
 
@@ -134,7 +134,7 @@ async def update_project(
     for field, label in (("name", "Nome"), ("client_id", "Cliente"), ("location_id", "Local")):
         if field in changes and changes[field] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"{label} do projeto é obrigatório e não pode ser removido.",
             )
     if "status" in changes and changes["status"] is None:

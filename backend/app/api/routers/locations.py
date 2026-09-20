@@ -46,7 +46,7 @@ async def ensure_client_in_tenant(scope: TenantScope, client_id: str | None) -> 
         return
     if await get_client_doc(scope, client_id) is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=CLIENT_NOT_FOUND
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=CLIENT_NOT_FOUND
         )
 
 
@@ -89,7 +89,7 @@ async def update_location(
     if "name" in changes:
         if changes["name"] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Nome do local não pode ficar vazio.",
             )
         changes["name"] = " ".join(changes["name"].split())

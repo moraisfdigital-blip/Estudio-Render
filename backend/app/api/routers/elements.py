@@ -22,17 +22,27 @@ imagem. Nenhum byte do original é reescrito.
 
 from typing import Any
 
+from bson import ObjectId
 from fastapi import APIRouter, HTTPException, status
 from pymongo import ReturnDocument
 
 from app.api.deps import CurrentScope, CurrentUser
+from app.api.routers.catalog import get_brand_doc, get_finish_doc, get_material_doc
 from app.api.routers.photos import get_photo_doc, original_dimensions
 from app.core.clock import as_utc, utcnow
 from app.core.db import get_db
 from app.core.ids import parse_object_id
 from app.core.tenancy import TenantScope
 from app.models import calibration as calibration_model
+from app.models import catalog as catalog_model
 from app.models import element as element_model
+from app.schemas.catalog import (
+    SpecBrandOut,
+    SpecFinishOut,
+    SpecIn,
+    SpecMaterialOut,
+    SpecOut,
+)
 from app.schemas.element import (
     Box,
     ConferenceIn,
@@ -56,7 +66,7 @@ NOTHING_TO_CONFIRM = (
 
 
 def _reject(detail: str) -> None:
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 def _check_box(box: Box, width: int, height: int) -> None:
@@ -104,7 +114,84 @@ def _scale_estimate(
     return ScaleEstimateOut(**estimate)
 
 
-def _to_out(doc: dict[str, Any], calibration: dict[str, Any] | None) -> ElementOut:
+async def _catalog_index(scope: TenantScope, docs: list[dict[str, Any]]) -> dict[str, dict]:
+    """Catálogo citado por estes elementos, em três queries — não uma por elemento.
+
+    A spec guarda só ids; nome e cor vivem no catálogo e são lidos aqui na hora
+    de responder. É o que faz renomear um material aparecer em todo elemento na
+    resposta seguinte, em vez de deixar cópias velhas espalhadas.
+    """
+    wanted: dict[str, set[str]] = {"material_id": set(), "finish_id": set(), "brand_id": set()}
+    for doc in docs:
+        spec = doc.get("spec") or {}
+        for field, ids in wanted.items():
+            if value := spec.get(field):
+                ids.add(value)
+
+    index: dict[str, dict] = {}
+    for field, collection in (
+        ("material_id", catalog_model.MATERIALS),
+        ("finish_id", catalog_model.FINISHES),
+        ("brand_id", catalog_model.BRANDS),
+    ):
+        ids = wanted[field]
+        if not ids:
+            index[field] = {}
+            continue
+        # Id gravado fora do formato (import, correção manual no banco) é
+        # ignorado em vez de estourar: `_spec_out` já trata item ausente como
+        # "sem spec", e um elemento sem material na tela é melhor do que a
+        # lista inteira em 500.
+        oids = [ObjectId(value) for value in ids if ObjectId.is_valid(value)]
+        if not oids:
+            index[field] = {}
+            continue
+        cursor = get_db()[collection].find(scope.filter(_id={"$in": oids}))
+        index[field] = {str(entry["_id"]): entry async for entry in cursor}
+    return index
+
+
+def _spec_out(doc: dict[str, Any], index: dict[str, dict]) -> SpecOut:
+    """Spec resolvida. Item apagado do catálogo simplesmente some da resposta."""
+    spec = doc.get("spec") or catalog_model.empty_spec()
+    material = index.get("material_id", {}).get(spec.get("material_id"))
+    finish = index.get("finish_id", {}).get(spec.get("finish_id"))
+    brand = index.get("brand_id", {}).get(spec.get("brand_id"))
+
+    return SpecOut(
+        material=(
+            SpecMaterialOut(id=str(material["_id"]), name=material["name"]) if material else None
+        ),
+        finish=(
+            SpecFinishOut(
+                id=str(finish["_id"]),
+                name=finish["name"],
+                # Cor sai daqui pronta: a tela não tem paleta própria.
+                color_name=finish["color_name"],
+                color_hex=finish["color_hex"],
+            )
+            if finish
+            else None
+        ),
+        brand=(
+            SpecBrandOut(
+                id=str(brand["_id"]),
+                name=brand["name"],
+                logo_url=f"/api/brands/{brand['_id']}/logo" if brand.get("logo") else None,
+            )
+            if brand
+            else None
+        ),
+        applied_at=as_utc(spec["applied_at"]) if spec.get("applied_at") else None,
+        is_empty=not any((material, finish, brand)),
+    )
+
+
+def _to_out(
+    doc: dict[str, Any],
+    calibration: dict[str, Any] | None,
+    catalog_index: dict[str, dict] | None = None,
+) -> ElementOut:
     measurements = doc.get("measurements") or element_model.empty_measurements()
     measured_at = measurements.get("measured_at")
     return ElementOut(
@@ -130,6 +217,7 @@ def _to_out(doc: dict[str, Any], calibration: dict[str, Any] | None) -> ElementO
             status=doc["conference"]["status"],
             at=as_utc(doc["conference"]["at"]) if doc["conference"].get("at") else None,
         ),
+        spec=_spec_out(doc, catalog_index or {}),
         scale_estimate=_scale_estimate(doc["box"], calibration),
         created_at=as_utc(doc["created_at"]),
         updated_at=as_utc(doc["updated_at"]),
@@ -146,8 +234,12 @@ async def get_element_doc(scope: TenantScope, element_id: str) -> dict[str, Any]
 
 
 async def _out_for(scope: TenantScope, doc: dict[str, Any]) -> ElementOut:
-    """Resposta de um elemento só, buscando a calibração da foto dele."""
-    return _to_out(doc, await _calibration(scope, doc["photo_id"]))
+    """Resposta de um elemento só: calibração da foto + catálogo da spec dele."""
+    return _to_out(
+        doc,
+        await _calibration(scope, doc["photo_id"]),
+        await _catalog_index(scope, [doc]),
+    )
 
 
 @router.get("/photos/{photo_id}/elements", response_model=list[ElementOut])
@@ -160,10 +252,12 @@ async def list_elements(photo_id: str, scope: CurrentScope) -> list[ElementOut]:
         .find(scope.filter(photo_id=photo_id, deleted_at=None))
         .sort("created_at", 1)
     )
+    docs = [doc async for doc in cursor]
     # Uma consulta de calibração para a lista inteira: todos os elementos desta
     # rota são da mesma foto, então a escala é a mesma.
     calibration = await _calibration(scope, photo_id)
-    return [_to_out(doc, calibration) async for doc in cursor]
+    catalog_index = await _catalog_index(scope, docs)
+    return [_to_out(doc, calibration, catalog_index) for doc in docs]
 
 
 @router.post(
@@ -284,6 +378,74 @@ async def save_measurements(
             "$set": {
                 "measurements": measurements,
                 "conference": element_model.new_conference(),
+                "updated_at": utcnow(),
+            }
+        },
+        return_document=ReturnDocument.AFTER,
+    )
+    if doc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    return await _out_for(scope, doc)
+
+
+@router.patch("/elements/{element_id}/spec", response_model=ElementOut)
+async def apply_spec(
+    element_id: str,
+    payload: SpecIn,
+    scope: CurrentScope,
+    user: CurrentUser,
+) -> ElementOut:
+    """Aplica material, acabamento e marca do catálogo no elemento.
+
+    PATCH parcial pelo campo *enviado*, não pelo valor: mandar `finish_id:
+    null` limpa o acabamento, e omitir o campo deixa como estava. Por isso a
+    leitura é de `model_fields_set`.
+
+    Só ids são gravados. Nome e cor continuam morando no catálogo e são
+    resolvidos na resposta — assim o elemento nunca guarda uma cor que o
+    cadastro já corrigiu.
+
+    Aplicar spec é trabalho de levantamento, então o editor pode. Quem não pode
+    é criar item de catálogo: isso é do owner, no router de catálogo.
+    """
+    element = await get_element_doc(scope, element_id)
+    current = element.get("spec") or catalog_model.empty_spec()
+    sent = payload.model_fields_set
+
+    material_id = payload.material_id if "material_id" in sent else current.get("material_id")
+    finish_id = payload.finish_id if "finish_id" in sent else current.get("finish_id")
+    brand_id = payload.brand_id if "brand_id" in sent else current.get("brand_id")
+
+    # Cada id precisa existir neste tenant: 404 do próprio catálogo se não existir.
+    material = await get_material_doc(scope, material_id) if material_id else None
+    finish = await get_finish_doc(scope, finish_id) if finish_id else None
+    if brand_id:
+        await get_brand_doc(scope, brand_id)
+
+    if finish is not None:
+        # Acabamento é variante de um material: sem material escolhido não há o
+        # que variar, e de outro material seria uma combinação que não existe.
+        if material is None:
+            _reject(
+                f"O acabamento {finish['name']!r} é variante de um material, e nenhum material "
+                "ficou escolhido. Escolha o material ou limpe o acabamento junto."
+            )
+        if finish["material_id"] != str(material["_id"]):
+            _reject(
+                f"O acabamento {finish['name']!r} não é do material {material['name']!r}. "
+                "Escolha um acabamento desse material."
+            )
+
+    doc = await get_db()[element_model.COLLECTION].find_one_and_update(
+        scope.filter(_id=element["_id"], deleted_at=None),
+        {
+            "$set": {
+                "spec": catalog_model.spec_fields(
+                    material_id=material_id,
+                    finish_id=finish_id,
+                    brand_id=brand_id,
+                    applied_by=str(user["_id"]),
+                ),
                 "updated_at": utcnow(),
             }
         },

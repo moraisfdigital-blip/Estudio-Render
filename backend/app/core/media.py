@@ -83,6 +83,17 @@ def build_original_key(*, tenant_id: str, photo_uid: str, extension: str) -> str
     return f"{tenant_id}/photos/{photo_uid}/original.{extension}"
 
 
+def build_brand_logo_key(*, tenant_id: str, logo_uid: str, extension: str) -> str:
+    """Caminho do logo de uma marca (Fase 7).
+
+    Cada upload recebe um uid novo, então trocar o logo escreve um arquivo novo
+    e a marca passa a apontar para ele. O arquivo anterior fica onde está: a
+    escrita única deste módulo vale para toda mídia, não só para foto de
+    levantamento.
+    """
+    return f"{tenant_id}/brands/{logo_uid}/logo.{extension}"
+
+
 def resolve(key: str) -> Path:
     """Converte a chave do banco em caminho absoluto, preso ao MEDIA_ROOT.
 
@@ -107,22 +118,35 @@ def _freeze(path: Path) -> None:
         pass
 
 
-async def write_original(
-    *,
-    tenant_id: str,
-    photo_uid: str,
-    extension: str,
-    chunks,
-    max_bytes: int,
-) -> StoredFile:
-    """Grava o original a partir de um iterável assíncrono de chunks.
+# Chunk de leitura do upload. Grande o bastante para não picotar o I/O,
+# pequeno o bastante para o limite de tamanho cortar cedo.
+CHUNK_SIZE = 1024 * 256
+
+
+async def restream(reader, first: bytes):
+    """Re-emite o cabeçalho já lido para o sniff e segue com o resto do stream.
+
+    O sniff precisa dos primeiros bytes antes de decidir se aceita o arquivo,
+    mas esses bytes fazem parte do conteúdo — então voltam para o começo do
+    stream em vez de sumirem.
+    """
+    yield first
+    while chunk := await reader.read(CHUNK_SIZE):
+        yield chunk
+
+
+async def write_once(*, key: str, chunks, max_bytes: int) -> StoredFile:
+    """Grava um arquivo novo a partir de um iterável assíncrono de chunks.
 
     Escreve em streaming: um upload grande nunca é carregado inteiro em memória,
     e o limite de tamanho corta no meio do caminho em vez de depois de gastar o
     disco. Se estourar, o arquivo parcial é removido — ele nunca chegou a ser
-    um original válido, então apagá-lo não viola a regra de imutabilidade.
+    um arquivo válido, então apagá-lo não viola a regra de imutabilidade.
+
+    Serve para qualquer mídia (original de foto, logo de marca): a chave já vem
+    montada pelo chamador, e a garantia de não sobrescrever é do `O_EXCL`
+    abaixo, não de quem chamou.
     """
-    key = build_original_key(tenant_id=tenant_id, photo_uid=photo_uid, extension=extension)
     path = resolve(key)
     path.parent.mkdir(parents=True, exist_ok=True)
 
