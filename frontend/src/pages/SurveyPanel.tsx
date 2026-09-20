@@ -14,6 +14,7 @@ import {
 } from '../api/client'
 import CalibrationDialog from '../components/CalibrationDialog'
 import ElementsDialog from '../components/ElementsDialog'
+import MasksDialog from '../components/MasksDialog'
 import PhotoThumb from '../components/PhotoThumb'
 import { Button, EmptyState, ErrorNotice, Field, Loading, inputClass } from '../components/ui'
 import { useResource } from '../hooks/useResource'
@@ -138,6 +139,7 @@ function AreaPhotos({
   // Fase 6: os elementos da foto abrem no mesmo lugar da calibração — marcar a
   // peça e medir fazem parte do levantamento, não de outra tela.
   const [listingElements, setListingElements] = useState<Photo | null>(null)
+  const [masking, setMasking] = useState<Photo | null>(null)
 
   const maxBytes = limits.max_upload_mb * 1024 * 1024
   const accepted = limits.accepted_labels.join(', ')
@@ -361,6 +363,19 @@ function AreaPhotos({
                       ? '1 elemento'
                       : `${photo.element_count} elementos`}
                 </button>
+                {/* Fase 8: sem recorte de intervenção a geração não tem onde
+                    escrever, e o grid precisa mostrar isso de relance. */}
+                <button
+                  type="button"
+                  onClick={() => setMasking(photo)}
+                  className="w-fit text-xs text-neutral-400 underline-offset-2 transition hover:text-neutral-100 hover:underline"
+                >
+                  {photo.intervention_count === 0
+                    ? 'Marcar máscaras'
+                    : photo.intervention_count === 1
+                      ? '1 área de intervenção'
+                      : `${photo.intervention_count} áreas de intervenção`}
+                </button>
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <button
                     type="button"
@@ -393,6 +408,22 @@ function AreaPhotos({
             patch((current) =>
               current.map((item) =>
                 item.id === calibration.photo_id ? { ...item, calibrated: true } : item,
+              ),
+            )
+          }
+        />
+      )}
+
+      {masking && (
+        <MasksDialog
+          photo={masking}
+          onClose={() => setMasking(null)}
+          onSaved={(estado) =>
+            patch((current) =>
+              current.map((item) =>
+                item.id === estado.photo_id
+                  ? { ...item, intervention_count: estado.intervention_count }
+                  : item,
               ),
             )
           }

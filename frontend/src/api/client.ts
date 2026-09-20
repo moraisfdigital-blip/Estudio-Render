@@ -123,6 +123,8 @@ export type Project = {
   description: string | null
   client: Related | null
   location: Related | null
+  /** Fase 8: Architecture Lock do projeto. Nasce ligado. */
+  architecture_lock: boolean
   created_at: string
   updated_at: string
 }
@@ -233,6 +235,8 @@ export type Photo = {
   calibrated: boolean
   /** Fase 6: quantos elementos já foram marcados nesta foto. */
   element_count: number
+  /** Fase 8: quantos recortes de intervenção — é o que diz se dá para gerar. */
+  intervention_count: number
 }
 
 /** Limites de upload publicados pelo servidor — nada de tamanho/tipo chumbado aqui. */
@@ -638,5 +642,79 @@ export async function applySpec(elementId: string, input: SpecInput): Promise<Su
 /** Mesma razão do original da foto: a rota exige token, e `<img src>` não manda header. */
 export async function fetchBrandLogoBlob(brandId: string): Promise<Blob> {
   const { data } = await api.get<Blob>(`/brands/${brandId}/logo`, { responseType: 'blob' })
+  return data
+}
+
+// ---- Fase 8: máscaras e Architecture Lock ----------------------------
+// A máscara diz onde a geração PODE mexer (`intervention`) e onde ela NUNCA
+// pode (`protect`). Nada é gerado aqui — a Fase 8 só estabelece o contrato que
+// a Fase 9 vai obedecer.
+//
+// O veredito da geração (`generation_ready` + `blocked_reason`) vem pronto do
+// SERVIDOR, com o mesmo texto que a API usará ao recusar. A tela não escreve
+// motivo por conta própria: se a regra mudar, ela acompanha sozinha.
+
+export type MaskKind = 'intervention' | 'protect'
+
+/** Vértice em pixel da foto original (origem no canto superior esquerdo). */
+export type MaskPoint = { x: number; y: number }
+
+export type MaskLayer = {
+  id: string
+  kind: MaskKind
+  /** Rótulo do tipo, pronto do servidor ("Intervenção" / "Proteção"). */
+  kind_label: string
+  label: string
+  points: MaskPoint[]
+  /** Área do polígono em px², calculada no servidor. */
+  area_px: number
+}
+
+export type MasksState = {
+  photo_id: string
+  tenant_id: string
+  /** `false` é o estado inicial normal da foto — "sem máscara", não erro. */
+  masked: boolean
+  layers: MaskLayer[]
+  intervention_count: number
+  protect_count: number
+  image_width: number | null
+  image_height: number | null
+  architecture_lock: boolean
+  generation_ready: boolean
+  /** Por que a geração está bloqueada. Texto do servidor, exibido como veio. */
+  blocked_reason: string | null
+  updated_at: string | null
+}
+
+/** O que o cliente envia: só tipo, nome e vértices. Id e área são do servidor. */
+export type MaskLayerInput = {
+  kind: MaskKind
+  label?: string
+  points: MaskPoint[]
+}
+
+export async function getMasks(photoId: string): Promise<MasksState> {
+  const { data } = await api.get<MasksState>(`/photos/${photoId}/masks`)
+  return data
+}
+
+/** PUT substitui o conjunto inteiro: o que está na tela é o que fica no banco. */
+export async function saveMasks(
+  photoId: string,
+  layers: MaskLayerInput[],
+): Promise<MasksState> {
+  const { data } = await api.put<MasksState>(`/photos/${photoId}/masks`, { layers })
+  return data
+}
+
+/** Ligar/desligar o lock é do owner; a API recusa o editor com 403. */
+export async function setArchitectureLock(
+  projectId: string,
+  enabled: boolean,
+): Promise<Project> {
+  const { data } = await api.patch<Project>(`/projects/${projectId}/architecture-lock`, {
+    enabled,
+  })
   return data
 }

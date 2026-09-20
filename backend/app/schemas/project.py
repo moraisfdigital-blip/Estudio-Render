@@ -57,5 +57,8 @@ class ProjectOut(BaseModel):
     # o dashboard trata esse caso em vez de quebrar a listagem.
     client: RelatedOut | None = None
     location: RelatedOut | None = None
+    # Fase 8: o lock é do projeto inteiro. Vem no ProjectOut para a tela do
+    # levantamento mostrar o estado sem uma segunda chamada.
+    architecture_lock: bool = True
     created_at: datetime
     updated_at: datetime

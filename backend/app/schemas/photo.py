@@ -27,6 +27,10 @@ class PhotoOut(BaseModel):
     # `calibrated` — o grid mostra o andamento do levantamento sem abrir foto
     # por foto.
     element_count: int = 0
+    # Fase 8: quantos recortes de intervenção esta foto já tem. Mesmo motivo do
+    # `calibrated` — o grid mostra o andamento sem abrir foto por foto, e é o
+    # número que diz se a Fase 9 terá onde escrever.
+    intervention_count: int = 0
 
 
 class MediaLimitsOut(BaseModel):
