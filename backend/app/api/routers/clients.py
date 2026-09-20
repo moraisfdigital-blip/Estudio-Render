@@ -74,7 +74,7 @@ async def update_client(client_id: str, payload: ClientUpdate, scope: CurrentSco
     if "name" in changes:
         if changes["name"] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Nome do cliente não pode ficar vazio.",
             )
         changes["name"] = " ".join(changes["name"].split())

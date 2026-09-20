@@ -66,7 +66,7 @@ NOTHING_TO_CONFIRM = (
 
 
 def _reject(detail: str) -> None:
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 def _check_box(box: Box, width: int, height: int) -> None:
@@ -138,7 +138,15 @@ async def _catalog_index(scope: TenantScope, docs: list[dict[str, Any]]) -> dict
         if not ids:
             index[field] = {}
             continue
-        cursor = get_db()[collection].find(scope.filter(_id={"$in": [ObjectId(i) for i in ids]}))
+        # Id gravado fora do formato (import, correção manual no banco) é
+        # ignorado em vez de estourar: `_spec_out` já trata item ausente como
+        # "sem spec", e um elemento sem material na tela é melhor do que a
+        # lista inteira em 500.
+        oids = [ObjectId(value) for value in ids if ObjectId.is_valid(value)]
+        if not oids:
+            index[field] = {}
+            continue
+        cursor = get_db()[collection].find(scope.filter(_id={"$in": oids}))
         index[field] = {str(entry["_id"]): entry async for entry in cursor}
     return index
 

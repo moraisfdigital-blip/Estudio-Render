@@ -102,7 +102,7 @@ def original_dimensions(photo: dict[str, Any]) -> tuple[int, int]:
         return imagesize.read_dimensions(path)
     except imagesize.UnreadableImage:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=UNREADABLE
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=UNREADABLE
         ) from None
 
 

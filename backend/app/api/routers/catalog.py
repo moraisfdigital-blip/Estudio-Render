@@ -71,7 +71,7 @@ def _renamed(changes: dict[str, Any], detail: str) -> dict[str, Any]:
     """Normaliza `name` num PATCH e recalcula a chave de unicidade."""
     if "name" in changes:
         if changes["name"] is None:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
         changes["name"] = catalog_model.clean_name(changes["name"])
         changes["name_key"] = catalog_model.name_key(changes["name"])
     return changes
@@ -251,7 +251,7 @@ async def update_finish(
     ):
         if field in changes and changes[field] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=message
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=message
             )
     if "color_name" in changes:
         changes["color_name"] = catalog_model.clean_name(changes["color_name"])

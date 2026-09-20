@@ -73,7 +73,7 @@ async def validation_error(request: Request, exc: RequestValidationError) -> JSO
     como o erro de validação que de fato é.
     """
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"detail": jsonable_encoder(exc.errors(), custom_encoder={float: _json_safe_float})},
     )
 
