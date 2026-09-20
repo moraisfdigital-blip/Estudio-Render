@@ -209,6 +209,29 @@ async def write_once(*, key: str, chunks, max_bytes: int) -> StoredFile:
     return StoredFile(key=key, size_bytes=size, checksum_sha256=digest.hexdigest())
 
 
+def discard_unreferenced(key: str) -> None:
+    """Remove um arquivo recém-gravado que **não chegou a virar registro**.
+
+    Isto não contradiz a regra do original imutável — é a mesma limpeza que o
+    `write_once` já faz quando a gravação falha no meio. A fronteira é precisa:
+    só pode ser chamado antes de existir documento apontando para a chave, ou
+    seja, para um upload que a validação recusou. Depois que uma foto existe no
+    banco, nada neste módulo apaga ou reescreve o binário dela.
+    """
+    caminho = resolve(key)
+    # O arquivo nasce somente-leitura; devolver a escrita é necessário para
+    # removê-lo no Windows.
+    try:
+        os.chmod(caminho, stat.S_IWUSR | stat.S_IRUSR)
+    except OSError:
+        pass
+    caminho.unlink(missing_ok=True)
+    try:
+        caminho.parent.rmdir()
+    except OSError:
+        pass
+
+
 def checksum_on_disk(key: str) -> str | None:
     """SHA-256 do arquivo como ele está agora. Usado para provar que o original
     não mudou depois de qualquer operação (inclusive o DELETE do registro)."""

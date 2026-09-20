@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, Response
 
+from app.api.pagination import PageDep
 from app.api.deps import CurrentScope, CurrentUser
 from app.api.routers.areas import get_area_doc
 from app.core import imagesize, media
@@ -34,6 +35,11 @@ router = APIRouter()
 NOT_FOUND = "Foto não encontrada neste workspace."
 FILE_GONE = "O arquivo original desta foto não está acessível no storage."
 UNREADABLE = "Não foi possível ler as dimensões da foto original."
+TOO_MANY_PIXELS = (
+    "Imagem com resolução acima do limite ({largura}x{altura} = {mpx:.0f} Mpx; "
+    "o máximo é {teto} Mpx). Um arquivo pequeno pode declarar uma resolução "
+    "enorme, e decodificá-la consumiria a memória do servidor."
+)
 
 
 def _to_out(
@@ -212,9 +218,33 @@ async def upload_photo(
         )
     except media.MediaTooLarge:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"Arquivo maior que o limite de {settings.max_upload_mb} MB por foto.",
         ) from None
+
+    # Resolução conferida ANTES de a foto existir: um arquivo minúsculo pode
+    # declarar 9000x8000, e cada decodificação futura (a geração faz duas)
+    # alocaria centenas de MB. O arquivo recusado é descartado — ele nunca
+    # chegou a ser uma foto.
+    try:
+        largura, altura = imagesize.read_dimensions(media.resolve(stored.key))
+    except imagesize.UnreadableImage:
+        media.discard_unreferenced(stored.key)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=UNREADABLE
+        ) from None
+
+    if largura * altura > settings.max_image_pixels:
+        media.discard_unreferenced(stored.key)
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=TOO_MANY_PIXELS.format(
+                largura=largura,
+                altura=altura,
+                mpx=largura * altura / 1_000_000,
+                teto=settings.max_image_megapixels,
+            ),
+        )
 
     doc = scope.stamp(
         photo_model.new_photo_doc(
@@ -233,13 +263,17 @@ async def upload_photo(
 
 
 @router.get("/areas/{area_id}/photos", response_model=list[PhotoOut])
-async def list_area_photos(area_id: str, scope: CurrentScope) -> list[PhotoOut]:
+async def list_area_photos(
+    area_id: str, scope: CurrentScope, page: PageDep
+) -> list[PhotoOut]:
     """Grid da área: só as fotos ativas, mais recentes primeiro."""
     await get_area_doc(scope, area_id)
 
     cursor = (
         get_db()[photo_model.COLLECTION]
         .find(scope.filter(area_id=area_id, deleted_at=None))
+        .skip(page.offset)
+        .limit(page.limit)
         .sort("created_at", -1)
     )
     docs = [doc async for doc in cursor]

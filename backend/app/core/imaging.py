@@ -33,7 +33,14 @@ from typing import Any
 
 from PIL import Image, ImageChops, ImageDraw
 
+from app.core.config import get_settings
 from app.models import mask as mask_model
+
+# Teto explícito, em vez do default da biblioteca. O default do Pillow (~89 Mpx,
+# com folga até o dobro) deixa passar uma imagem de 72 Mpx que aloca ~200 MB por
+# decodificação — e a geração decodifica duas (original e candidata). Amarrar
+# isto ao mesmo limite do upload garante que os dois lados concordem.
+Image.MAX_IMAGE_PIXELS = get_settings().max_image_pixels
 
 # Tudo é convertido para RGB antes de compor. Sem isso, um provedor que devolve
 # RGBA ou escala de cinza produziria um `paste` com canais incompatíveis.

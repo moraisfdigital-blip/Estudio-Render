@@ -527,6 +527,90 @@ número digitado não vira medida de campo.
 preserva preço, observações e quantidade informada de cada elemento que
 continua no quantitativo. Linhas manuais (instalação, frete) ficam intactas.
 
+## Endurecimento para deploy
+
+Correções de prioridade 1 da auditoria de segurança.
+
+### Teto de resolução, além do teto de tamanho
+
+`MAX_IMAGE_MEGAPIXELS=50`. São coisas diferentes: um PNG de **132 bytes** pode
+declarar 9000×8000 pixels. O arquivo passa em qualquer limite de MB, mas
+decodificá-lo aloca ~200 MB — e a geração decodifica duas imagens por proposta.
+O upload recusa com 413 e descarta o arquivo, que nunca chegou a ser uma foto.
+O `Image.MAX_IMAGE_PIXELS` do Pillow é amarrado ao mesmo número, para os dois
+lados nunca discordarem.
+
+### `/docs` fechado em produção
+
+`ENVIRONMENT=production` (o padrão do código) remove `/docs`, `/redoc` e
+`/openapi.json`. Eles entregavam o mapa completo das 47 rotas para quem ainda
+não fez login. Em produção essas URLs passam a cair no fallback do SPA.
+
+### Cabeçalhos de segurança
+
+`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` e
+uma CSP em todas as respostas; HSTS só em produção (em desenvolvimento ele
+ficaria cacheado no navegador exigindo https de `localhost`).
+
+A CSP tem duas concessões deliberadas: `blob:` em `img-src`, porque as imagens
+autenticadas chegam por fetch e viram object URL, e `'unsafe-inline'` em
+`style-src`, que o Tailwind compilado precisa. Em `script-src` **não** há
+concessão — que é onde importa. O build não tem nenhum script inline.
+
+### Paginação
+
+`limit` (padrão 100, teto 500) e `offset` nas listagens. Opcionais: quem não
+passa nada continua recebendo uma lista, agora com teto. O teto não é
+negociável pelo cliente — `?limit=999999` é 422, senão a paginação seria
+decorativa.
+
+### Log de evento de segurança
+
+Login com sucesso, login falho, bloqueio por limite, registro recusado e papel
+negado viram uma linha com formato fixo (`SEGURANCA evento=... ip=... `), para
+dar `grep`. Senha, token e cabeçalho `Authorization` **nunca** entram — há
+teste afirmando isso.
+
+## Autenticação: o que está endurecido
+
+### Registro fechado por padrão
+
+`ALLOW_SELF_REGISTER=false` é o padrão do código. Aberto, qualquer um que
+alcance a URL vira `editor` e enxerga os levantamentos e os clientes do
+workspace. Ligue só enquanto cadastra a equipe, e desligue depois.
+
+### Limite de tentativas
+
+`POST /auth/login` e `POST /auth/register` contam tentativas **por IP** numa
+janela (padrão: 10 em 15 minutos). Estourou, a rota responde **429 antes de
+conferir a senha** — o atacante não gasta bcrypt do servidor nem recebe
+qualquer sinal sobre a credencial tentada. Acertar a senha limpa o histórico
+daquele IP.
+
+As tentativas ficam no Mongo, não em memória: um contador em memória valeria
+por processo (dois workers dobrariam o limite real) e sumiria no restart. Um
+índice TTL apaga os registros velhos sem rotina de limpeza.
+
+**Por IP e não por e-mail, de propósito.** Contar por e-mail parece mais
+preciso, mas cria negação de serviço: qualquer um erra a senha de alguém da
+ARTELUX de propósito até a conta travar. Ataque distribuído de muitos IPs é
+trabalho de borda (proxy, WAF) — o que esta camada resolve é o caso comum.
+
+### `X-Forwarded-For` só com proxy declarado
+
+`TRUST_PROXY_HEADERS=false` por padrão. O cabeçalho é escolhido pelo cliente:
+confiar nele sem um proxy confiável na frente daria ao atacante um limite novo
+a cada requisição. Ligue **apenas** quando existir de fato um proxy
+reescrevendo esse valor.
+
+### Algoritmo do JWT restrito
+
+Só `HS256`, `HS384` e `HS512`. Qualquer outro valor faz o app **recusar subir**:
+
+- `none` desliga a verificação de assinatura — qualquer token forjado passaria;
+- `RS256`/`ES256` usariam o segredo simétrico como se fosse chave pública, que
+  é exatamente a confusão do CVE-2026-48526 do PyJWT.
+
 ## Testes
 
 A suíte bate num **MongoDB de verdade** e confere o **arquivo no disco** — é
@@ -561,6 +645,8 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_hardening_deploy.py` | — | Bomba de descompressão recusada; docs fechado; CSP e headers; teto de paginação; log sem senha nem token |
+| `tests/test_auth_hardening.py` | — | Registro fechado por padrão; limite de tentativas por IP; `alg: none` recusado de ponta a ponta |
 | `tests/test_takeoff.py` | 12 | Só conferido entra; estimativa contamina a linha; preço nunca inventado e total parcial; regerar preserva os preços |
 | `tests/test_presentations.py` | 11 | Só versão aprovada vira slide; troca de aprovação marca o slide como desatualizado; PDF do mock é arquivo válido; link interno exige login |
 | `tests/test_versions.py` | 10 | Limite de 3 aguenta cliques simultâneos; uma aprovada por foto; descartar devolve a vaga; aprovada não pode ser descartada |

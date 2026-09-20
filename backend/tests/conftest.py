@@ -54,7 +54,13 @@ os.environ["JWT_SECRET"] = "segredo-so-de-teste-sem-valor-em-producao"
 os.environ["SEED_OWNER_EMAIL"] = EMAIL_OWNER
 os.environ["SEED_OWNER_PASSWORD"] = SENHA
 os.environ["SEED_OWNER_NAME"] = "Owner de teste"
+# Registro aberto só no ambiente de teste: a suíte cria o editor pela API.
+# Em produção o padrão é fechado.
 os.environ["ALLOW_SELF_REGISTER"] = "true"
+# Limite alto o bastante para a suíte inteira não esbarrar nele; o teste do
+# limite usa seu próprio IP para não interferir nos outros.
+os.environ["AUTH_RATE_LIMIT_ATTEMPTS"] = "10"
+os.environ["AUTH_RATE_LIMIT_WINDOW_MINUTES"] = "15"
 os.environ["MAX_UPLOAD_MB"] = "25"
 
 import pytest  # noqa: E402

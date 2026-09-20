@@ -13,6 +13,7 @@ from bson.errors import InvalidId
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.core import audit
 from app.core.db import get_db
 from app.core.security import decode_access_token
 from app.core.tenancy import TenantScope
@@ -71,6 +72,7 @@ def require_role(*roles: str):
 
     async def dependency(user: CurrentUser) -> dict[str, Any]:
         if user.get("role") not in roles:
+            audit.falha_de_autorizacao(user=user, papeis=roles)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Seu papel não permite esta ação.",

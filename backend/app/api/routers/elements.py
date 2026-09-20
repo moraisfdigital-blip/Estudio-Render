@@ -26,6 +26,7 @@ from bson import ObjectId
 from fastapi import APIRouter, HTTPException, status
 from pymongo import ReturnDocument
 
+from app.api.pagination import PageDep
 from app.api.deps import CurrentScope, CurrentUser
 from app.api.routers.catalog import get_brand_doc, get_finish_doc, get_material_doc
 from app.api.routers.photos import get_photo_doc, original_dimensions
@@ -243,7 +244,9 @@ async def _out_for(scope: TenantScope, doc: dict[str, Any]) -> ElementOut:
 
 
 @router.get("/photos/{photo_id}/elements", response_model=list[ElementOut])
-async def list_elements(photo_id: str, scope: CurrentScope) -> list[ElementOut]:
+async def list_elements(
+    photo_id: str, scope: CurrentScope, page: PageDep
+) -> list[ElementOut]:
     """Elementos marcados nesta foto, na ordem em que foram marcados."""
     await get_photo_doc(scope, photo_id)
 
@@ -251,6 +254,8 @@ async def list_elements(photo_id: str, scope: CurrentScope) -> list[ElementOut]:
         get_db()[element_model.COLLECTION]
         .find(scope.filter(photo_id=photo_id, deleted_at=None))
         .sort("created_at", 1)
+        .skip(page.offset)
+        .limit(page.limit)
     )
     docs = [doc async for doc in cursor]
     # Uma consulta de calibração para a lista inteira: todos os elementos desta

@@ -40,6 +40,7 @@ from app.adapters.image_gen import (
     ImageGenError,
     get_image_gen_adapter,
 )
+from app.api.pagination import PageDep
 from app.api.deps import CurrentScope, CurrentUser
 from app.api.routers.elements import catalog_index_for
 from app.api.routers.masks import get_mask_doc
@@ -296,13 +297,17 @@ async def get_proposal(proposal_id: str, scope: CurrentScope) -> ProposalOut:
 
 
 @router.get("/photos/{photo_id}/proposals", response_model=list[ProposalOut])
-async def list_proposals(photo_id: str, scope: CurrentScope) -> list[ProposalOut]:
+async def list_proposals(
+    photo_id: str, scope: CurrentScope, page: PageDep
+) -> list[ProposalOut]:
     """Histórico da foto, mais recente primeiro — tentativas falhas inclusive."""
     await get_photo_doc(scope, photo_id)
     cursor = (
         get_db()[proposal_model.PROPOSALS]
         .find(scope.filter(photo_id=photo_id))
         .sort("created_at", -1)
+        .skip(page.offset)
+        .limit(page.limit)
     )
     return [await _with_image(scope, doc) async for doc in cursor]
 

@@ -50,6 +50,7 @@ from app.models import presentation as presentation_model
 from app.models import proposal as proposal_model
 from app.models import version as version_model
 from app.schemas.presentation import (
+    MAX_SLIDES,
     PdfOut,
     PresentationIn,
     PresentationOut,
@@ -74,6 +75,10 @@ async def _photos_of(scope: TenantScope, project_id: str) -> list[dict[str, Any]
         get_db()[photo_model.COLLECTION]
         .find(scope.filter(project_id=project_id, deleted_at=None))
         .sort("created_at", 1)
+        # Teto do rascunho: o schema já limita a apresentação a MAX_SLIDES, e
+        # carregar mais fotos do que isso só para descartá-las seria trabalho
+        # jogado fora.
+        .limit(MAX_SLIDES)
     )
     return [doc async for doc in cursor]
 

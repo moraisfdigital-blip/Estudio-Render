@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
+from app.api.pagination import PageDep
 from app.api.deps import CurrentScope
 from app.core.clock import as_utc
 from app.core.db import get_db
@@ -71,13 +72,13 @@ def _to_out(doc: dict[str, Any], photo_count: int) -> AreaOut:
 
 
 @router.get("/projects/{project_id}/areas", response_model=list[AreaOut])
-async def list_areas(project_id: str, scope: CurrentScope) -> list[AreaOut]:
+async def list_areas(project_id: str, scope: CurrentScope, page: PageDep) -> list[AreaOut]:
     """Áreas do projeto, mais antigas primeiro — a ordem em que o levantamento andou."""
     await ensure_project(scope, project_id)
 
     cursor = (
         get_db()[area_model.COLLECTION]
-        .find(scope.filter(project_id=project_id))
+        .find(scope.filter(project_id=project_id)).skip(page.offset).limit(page.limit)
         .sort("created_at", 1)
     )
     docs = [doc async for doc in cursor]

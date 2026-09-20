@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, Response
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
+from app.api.pagination import PageDep
 from app.api.deps import CurrentScope, require_role
 from app.core import media
 from app.core.clock import as_utc, utcnow
@@ -113,8 +114,14 @@ async def _finish_counts(scope: TenantScope, material_ids: list[str]) -> dict[st
 
 
 @router.get("/materials", response_model=list[MaterialOut])
-async def list_materials(scope: CurrentScope) -> list[MaterialOut]:
-    cursor = get_db()[catalog_model.MATERIALS].find(scope.filter()).sort("name", 1)
+async def list_materials(scope: CurrentScope, page: PageDep) -> list[MaterialOut]:
+    cursor = (
+        get_db()[catalog_model.MATERIALS]
+        .find(scope.filter())
+        .sort("name", 1)
+        .skip(page.offset)
+        .limit(page.limit)
+    )
     docs = [doc async for doc in cursor]
     counts = await _finish_counts(scope, [str(doc["_id"]) for doc in docs])
     return [material_out(doc, counts.get(str(doc["_id"]), 0)) for doc in docs]
@@ -200,6 +207,7 @@ async def _material_names(scope: TenantScope, material_ids: list[str]) -> dict[s
 @router.get("/finishes", response_model=list[FinishOut])
 async def list_finishes(
     scope: CurrentScope,
+    page: PageDep,
     material_id: Annotated[
         str | None, Query(description="Filtra os acabamentos de um material.")
     ] = None,
@@ -209,7 +217,13 @@ async def list_finishes(
     if material_id is not None:
         # Material inexistente devolve lista vazia, não erro: o filtro é da tela.
         criteria["material_id"] = material_id
-    cursor = get_db()[catalog_model.FINISHES].find(scope.filter(**criteria)).sort("name", 1)
+    cursor = (
+        get_db()[catalog_model.FINISHES]
+        .find(scope.filter(**criteria))
+        .sort("name", 1)
+        .skip(page.offset)
+        .limit(page.limit)
+    )
     docs = [doc async for doc in cursor]
     names = await _material_names(scope, [doc["material_id"] for doc in docs])
     return [finish_out(doc, names.get(doc["material_id"], "Material removido")) for doc in docs]
@@ -313,8 +327,14 @@ async def get_brand_doc(scope: TenantScope, brand_id: str) -> dict[str, Any]:
 
 
 @router.get("/brands", response_model=list[BrandOut])
-async def list_brands(scope: CurrentScope) -> list[BrandOut]:
-    cursor = get_db()[catalog_model.BRANDS].find(scope.filter()).sort("name", 1)
+async def list_brands(scope: CurrentScope, page: PageDep) -> list[BrandOut]:
+    cursor = (
+        get_db()[catalog_model.BRANDS]
+        .find(scope.filter())
+        .sort("name", 1)
+        .skip(page.offset)
+        .limit(page.limit)
+    )
     return [brand_out(doc) async for doc in cursor]
 
 
@@ -397,7 +417,7 @@ async def upload_brand_logo(
         )
     except media.MediaTooLarge:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"Logo maior que o limite de {settings.max_upload_mb} MB.",
         ) from None
 
