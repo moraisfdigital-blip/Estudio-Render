@@ -237,6 +237,8 @@ export type Photo = {
   element_count: number
   /** Fase 8: quantos recortes de intervenção — é o que diz se dá para gerar. */
   intervention_count: number
+  /** Fase 10: versão aprovada desta foto, ou nulo enquanto ninguém escolheu. */
+  approved_version_id: string | null
 }
 
 /** Limites de upload publicados pelo servidor — nada de tamanho/tipo chumbado aqui. */
@@ -809,4 +811,79 @@ export async function fetchGeneratedImageBlob(imageId: string): Promise<Blob> {
     responseType: 'blob',
   })
   return data
+}
+
+// ---- Fase 10: versões, comparação e aprovação -------------------------
+// No máximo três versões por foto. O limite é do SERVIDOR (índice único
+// parcial), então a tela mostra `limit_reached` em vez de recontar sozinha —
+// e a quarta promoção é recusada mesmo em dois cliques simultâneos.
+//
+// Uma aprovada por foto: a escolha mora em `photos.approved_version_id`, e
+// `approved` em cada versão é derivado dela.
+
+export type Version = {
+  id: string
+  tenant_id: string
+  photo_id: string
+  project_id: string
+  proposal_id: string
+  /** 1 a 3 — a vaga que a versão ocupa. */
+  position: number
+  label: string
+  notes: string | null
+  generated_image: GeneratedImage | null
+  approved: boolean
+  created_at: string
+}
+
+export type VersionList = {
+  photo_id: string
+  versions: Version[]
+  max_versions: number
+  slots_left: number
+  limit_reached: boolean
+  approved_version_id: string | null
+}
+
+export type VersionComparison = {
+  photo_id: string
+  original_url: string
+  versions: Version[]
+}
+
+export type VersionInput = {
+  proposal_id: string
+  label?: string
+  notes?: string
+}
+
+export async function listVersions(photoId: string): Promise<VersionList> {
+  const { data } = await api.get<VersionList>(`/photos/${photoId}/versions`)
+  return data
+}
+
+export async function createVersion(photoId: string, input: VersionInput): Promise<Version> {
+  const { data } = await api.post<Version>(`/photos/${photoId}/versions`, input)
+  return data
+}
+
+export async function compareVersions(
+  photoId: string,
+  ids: string[],
+): Promise<VersionComparison> {
+  const { data } = await api.get<VersionComparison>(`/photos/${photoId}/versions/compare`, {
+    params: { ids: ids.join(',') },
+  })
+  return data
+}
+
+/** Aprovar é do owner; a API recusa o editor com 403. */
+export async function approveVersion(versionId: string): Promise<VersionList> {
+  const { data } = await api.post<VersionList>(`/versions/${versionId}/approve`)
+  return data
+}
+
+/** Descarta e devolve a vaga. A versão aprovada não pode ser descartada (422). */
+export async function discardVersion(versionId: string): Promise<void> {
+  await api.delete(`/versions/${versionId}`)
 }

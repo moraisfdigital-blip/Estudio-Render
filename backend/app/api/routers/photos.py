@@ -57,6 +57,7 @@ def _to_out(
         calibrated=calibrated,
         element_count=element_count,
         intervention_count=intervention_count,
+        approved_version_id=doc.get("approved_version_id"),
     )
 
 
