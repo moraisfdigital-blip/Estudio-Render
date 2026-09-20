@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { getProject } from '../api/client'
 import { Button, ErrorNotice, Loading } from '../components/ui'
 import { useResource } from '../hooks/useResource'
+import PresentationPanel from '../components/PresentationPanel'
 import SurveyPanel from './SurveyPanel'
 
 const dateTimeFormat = new Intl.DateTimeFormat('pt-BR', {
@@ -73,8 +74,10 @@ export default function ProjectDetailPage({
 
           <SurveyPanel projectId={resource.data.id} />
 
+          <PresentationPanel projectId={resource.data.id} />
+
           <p className="mt-8 max-w-prose text-sm text-neutral-500">
-            Calibração de escala, elementos e geração entram nas próximas fases deste projeto.
+            Quantitativo e orçamento entram na próxima fase deste projeto.
           </p>
         </>
       )}
