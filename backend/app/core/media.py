@@ -94,6 +94,16 @@ def build_brand_logo_key(*, tenant_id: str, logo_uid: str, extension: str) -> st
     return f"{tenant_id}/brands/{logo_uid}/logo.{extension}"
 
 
+def build_derived_key(*, original_key: str, derived_uid: str, extension: str) -> str:
+    """Caminho de um derivado, dentro de `derived/` na pasta da própria foto.
+
+    O original fica na raiz da pasta e o derivado num subdiretório: a separação
+    é visível no disco, e nenhum caminho de derivado pode colidir com o nome do
+    original por acidente. A Fase 9 grava aqui a imagem gerada.
+    """
+    return f"{original_key.rsplit('/', 1)[0]}/derived/{derived_uid}.{extension}"
+
+
 def resolve(key: str) -> Path:
     """Converte a chave do banco em caminho absoluto, preso ao MEDIA_ROOT.
 
@@ -121,6 +131,16 @@ def _freeze(path: Path) -> None:
 # Chunk de leitura do upload. Grande o bastante para não picotar o I/O,
 # pequeno o bastante para o limite de tamanho cortar cedo.
 CHUNK_SIZE = 1024 * 256
+
+
+async def single_chunk(content: bytes):
+    """Adapta bytes já em memória ao `write_once`, que consome chunks.
+
+    A imagem gerada nasce em memória (veio do adapter), então não há stream
+    para repassar — mas a gravação continua sendo a mesma, com `O_EXCL` e
+    somente-leitura no fim.
+    """
+    yield content
 
 
 async def restream(reader, first: bytes):

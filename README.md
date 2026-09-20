@@ -340,6 +340,61 @@ A máscara é documento novo no Mongo (`masks`, uma por foto, `PUT` que substitu
 o conjunto de camadas). O arquivo da foto é aberto só para leitura, e só para
 saber largura e altura — o que permite recusar vértice fora da imagem.
 
+## Geração da proposta (Fase 9)
+
+`POST /api/photos/{id}/proposals` monta o pedido, chama o provedor e grava o
+resultado. **A rota não tem corpo**: não existe campo para mandar prompt,
+escolher área ou pedir "ignore a máscara" — tudo vem do que está persistido. É
+o que impede contornar o Architecture Lock por parâmetro.
+
+O caminho completo:
+
+1. carrega foto, projeto, máscaras, calibração e elementos;
+2. `mask_model.generation_block()` decide — sem intervenção ou com o lock
+   desligado, **422** e para aqui, antes de custar chamada de provedor;
+3. `prompt_engine.build()` monta o pedido a partir desses dados;
+4. o adapter gera (em `mock`, sem tocar a rede);
+5. **`imaging.compose_locked()` aplica o retorno só sob a máscara**;
+6. o resultado vira arquivo novo em `derived/`, ao lado do original.
+
+### O passo 5 é o Architecture Lock
+
+Um provedor de IA devolve uma imagem inteira, e nada impede que ele mexa fora
+da máscara — por bug, por atualização de modelo, ou porque o prompt vazou. Se o
+retorno fosse salvo direto, o lock seria uma promessa escrita neste arquivo.
+
+Compondo, ele vira estrutura: o provedor pode devolver o que quiser, porque só
+os pixels sob a máscara de intervenção sobrevivem. O teste
+`test_provedor_desobediente_nao_altera_a_arquitetura` prova isso trocando o
+adapter por um que devolve a imagem **inteiramente vermelha** e conferindo,
+pixel a pixel, que só a área permitida mudou.
+
+Cada imagem gerada grava `changed_pixels` — o alcance real da geração naquela
+foto, que nunca pode ser maior que a área da máscara.
+
+### O prompt fica salvo
+
+O texto exato enviado ao provedor é gravado na proposta. Se daqui a seis meses
+alguém perguntar "por que a proposta ficou assim?", a resposta é o pedido real,
+não uma reconstrução.
+
+Duas regras vivem no Prompt Engine: **medida nunca é inventada** (estimativa
+entra escrita como estimativa, e elemento sem medida vira "medida não
+informada") e **cor e material saem do catálogo** da Fase 7.
+
+### Trocar o mock pelo provedor real
+
+`IMAGE_GEN_PROVIDER=mock` não abre conexão nenhuma. Para produção, a variável
+passa a nomear o provedor e as credenciais dele entram **só por env** — a rota,
+o Prompt Engine e a composição não mudam. O adapter recebe a máscara já
+rasterizada em PNG, que é o formato que serviços de inpainting esperam.
+
+### A foto original continua intocada
+
+A imagem gerada é arquivo novo em `derived/`, dentro da pasta da própria foto.
+Gerar duas vezes cria dois arquivos; nenhum sobrescreve nada. O documento da
+foto não é alterado — a proposta aponta para a foto, nunca o contrário.
+
 ## Testes
 
 A suíte bate num **MongoDB de verdade** e confere o **arquivo no disco** — é
@@ -374,6 +429,7 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_proposals.py` | 9 | Geração só altera pixel sob intervenção (provado com provedor desobediente); prompt não inventa medida; falha do provedor vira registro e 502 |
 | `tests/test_masks.py` | 8 | Geração só libera com recorte de intervenção **e** lock ligado; `PUT` substitui em vez de acumular; vértice fora da foto é recusado; o lock é do owner |
 
 ## Verificar que subiu

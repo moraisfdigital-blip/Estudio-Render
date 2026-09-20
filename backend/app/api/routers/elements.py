@@ -114,7 +114,7 @@ def _scale_estimate(
     return ScaleEstimateOut(**estimate)
 
 
-async def _catalog_index(scope: TenantScope, docs: list[dict[str, Any]]) -> dict[str, dict]:
+async def catalog_index_for(scope: TenantScope, docs: list[dict[str, Any]]) -> dict[str, dict]:
     """Catálogo citado por estes elementos, em três queries — não uma por elemento.
 
     A spec guarda só ids; nome e cor vivem no catálogo e são lidos aqui na hora
@@ -238,7 +238,7 @@ async def _out_for(scope: TenantScope, doc: dict[str, Any]) -> ElementOut:
     return _to_out(
         doc,
         await _calibration(scope, doc["photo_id"]),
-        await _catalog_index(scope, [doc]),
+        await catalog_index_for(scope, [doc]),
     )
 
 
@@ -256,7 +256,7 @@ async def list_elements(photo_id: str, scope: CurrentScope) -> list[ElementOut]:
     # Uma consulta de calibração para a lista inteira: todos os elementos desta
     # rota são da mesma foto, então a escala é a mesma.
     calibration = await _calibration(scope, photo_id)
-    catalog_index = await _catalog_index(scope, docs)
+    catalog_index = await catalog_index_for(scope, docs)
     return [_to_out(doc, calibration, catalog_index) for doc in docs]
 
 
