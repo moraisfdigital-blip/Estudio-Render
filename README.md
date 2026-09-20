@@ -395,6 +395,51 @@ A imagem gerada é arquivo novo em `derived/`, dentro da pasta da própria foto.
 Gerar duas vezes cria dois arquivos; nenhum sobrescreve nada. O documento da
 foto não é alterado — a proposta aponta para a foto, nunca o contrário.
 
+## Versões e aprovação (Fase 10)
+
+A Fase 9 gera quantas propostas alguém quiser — cada clique é uma tentativa
+registrada. A Fase 10 é o passo de **decisão**: promover uma geração a versão
+significa "esta é candidata a ir para o cliente", e aprovar é escolher a que vai.
+
+| Método | Rota | O quê |
+| --- | --- | --- |
+| GET | `/api/photos/{id}/versions` | Lista + estado do limite |
+| POST | `/api/photos/{id}/versions` | Promove uma proposta a versão |
+| GET | `/api/photos/{id}/versions/compare?ids=a,b` | Compara |
+| POST | `/api/versions/{id}/approve` | Aprova (owner) |
+| DELETE | `/api/versions/{id}` | Descarta e devolve a vaga |
+
+### O limite de três é estrutural
+
+Três opções é o que um cliente compara sem travar na escolha; a quarta
+transforma escolha em indecisão. O limite **não** é um `count` antes do insert —
+isso perderia a corrida entre dois cliques simultâneos e gravaria uma quarta.
+
+Cada versão ocupa uma `position` de 1 a 3, e existe índice único **parcial**
+(só entre as versões ativas) em `tenant_id + photo_id + position`. Duas
+promoções concorrentes disputam a mesma vaga e o Mongo recusa a segunda.
+
+O índice ser parcial é o que faz o descarte devolver a vaga: versão descartada
+mantém a posição no documento, mas sai do índice.
+
+> `test_limite_aguenta_cliques_simultaneos` dispara quatro promoções ao mesmo
+> tempo. Sem o `unique=True` no índice, ele cria quatro versões e o teste falha.
+
+### Uma aprovada por foto
+
+A escolha mora em `photos.approved_version_id` — fonte única. Aprovar outra
+versão é um `$set` só, e `approved` em cada versão é **derivado** disso. Não
+existe o estado impossível de duas versões marcadas como aprovadas.
+
+A versão aprovada não pode ser descartada: a apresentação da Fase 11 depende de
+haver uma escolha registrada.
+
+### A versão não copia a imagem
+
+Ela aponta para a geração que já existe. Promover não cria um segundo arquivo
+no disco, e descartar não apaga imagem nenhuma — o descarte é soft-delete, e
+fica registrado que aquela opção existiu e foi considerada.
+
 ## Testes
 
 A suíte bate num **MongoDB de verdade** e confere o **arquivo no disco** — é
@@ -429,6 +474,7 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_versions.py` | 10 | Limite de 3 aguenta cliques simultâneos; uma aprovada por foto; descartar devolve a vaga; aprovada não pode ser descartada |
 | `tests/test_proposals.py` | 9 | Geração só altera pixel sob intervenção (provado com provedor desobediente); prompt não inventa medida; falha do provedor vira registro e 502 |
 | `tests/test_masks.py` | 8 | Geração só libera com recorte de intervenção **e** lock ligado; `PUT` substitui em vez de acumular; vértice fora da foto é recusado; o lock é do owner |
 

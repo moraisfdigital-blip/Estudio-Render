@@ -16,6 +16,7 @@ import CalibrationDialog from '../components/CalibrationDialog'
 import ElementsDialog from '../components/ElementsDialog'
 import MasksDialog from '../components/MasksDialog'
 import ProposalDialog from '../components/ProposalDialog'
+import VersionsDialog from '../components/VersionsDialog'
 import PhotoThumb from '../components/PhotoThumb'
 import { Button, EmptyState, ErrorNotice, Field, Loading, inputClass } from '../components/ui'
 import { useResource } from '../hooks/useResource'
@@ -142,6 +143,7 @@ function AreaPhotos({
   const [listingElements, setListingElements] = useState<Photo | null>(null)
   const [masking, setMasking] = useState<Photo | null>(null)
   const [proposing, setProposing] = useState<Photo | null>(null)
+  const [versioning, setVersioning] = useState<Photo | null>(null)
 
   const maxBytes = limits.max_upload_mb * 1024 * 1024
   const accepted = limits.accepted_labels.join(', ')
@@ -388,6 +390,15 @@ function AreaPhotos({
                 >
                   Proposta visual
                 </button>
+                {/* Fase 10: até 3 candidatas, uma aprovada. O estado da escolha
+                    aparece aqui para não precisar abrir foto por foto. */}
+                <button
+                  type="button"
+                  onClick={() => setVersioning(photo)}
+                  className="w-fit text-xs text-neutral-400 underline-offset-2 transition hover:text-neutral-100 hover:underline"
+                >
+                  {photo.approved_version_id ? 'Versão aprovada' : 'Versões'}
+                </button>
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <button
                     type="button"
@@ -420,6 +431,22 @@ function AreaPhotos({
             patch((current) =>
               current.map((item) =>
                 item.id === calibration.photo_id ? { ...item, calibrated: true } : item,
+              ),
+            )
+          }
+        />
+      )}
+
+      {versioning && (
+        <VersionsDialog
+          photo={versioning}
+          onClose={() => setVersioning(null)}
+          onChanged={(lista) =>
+            patch((current) =>
+              current.map((item) =>
+                item.id === lista.photo_id
+                  ? { ...item, approved_version_id: lista.approved_version_id }
+                  : item,
               ),
             )
           }

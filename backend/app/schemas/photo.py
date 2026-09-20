@@ -31,6 +31,9 @@ class PhotoOut(BaseModel):
     # `calibrated` — o grid mostra o andamento sem abrir foto por foto, e é o
     # número que diz se a Fase 9 terá onde escrever.
     intervention_count: int = 0
+    # Fase 10: qual versão foi aprovada nesta foto, ou nulo enquanto ninguém
+    # escolheu. Vem do próprio documento da foto — é lá que a escolha mora.
+    approved_version_id: str | None = None
 
 
 class MediaLimitsOut(BaseModel):
