@@ -18,6 +18,7 @@ from app.models import client as client_model
 from app.models import area as area_model
 from app.models import element as element_model
 from app.models import location as location_model
+from app.models import mask as mask_model
 from app.models import photo as photo_model
 from app.models import project as project_model
 from app.models import tenant as tenant_model
@@ -90,6 +91,16 @@ async def ensure_indexes() -> None:
         [("tenant_id", 1), ("material_id", 1), ("name_key", 1)],
         unique=True,
         name="uniq_material_finish_name",
+    )
+    # Fase 8: uma máscara por foto. O índice único é o que torna o PUT um
+    # upsert seguro — redesenhar corrige o mesmo documento em vez de empilhar
+    # conjuntos de camadas concorrentes para a mesma foto.
+    await db[mask_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("photo_id", 1)], unique=True, name="uniq_tenant_photo_mask"
+    )
+    # A Fase 9 varre máscara por projeto ao montar a geração.
+    await db[mask_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("project_id", 1)], name="tenant_project_mask"
     )
 
 

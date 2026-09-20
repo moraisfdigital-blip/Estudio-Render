@@ -25,6 +25,7 @@ from app.core.ids import parse_object_id
 from app.core.tenancy import TenantScope
 from app.models import calibration as calibration_model
 from app.models import element as element_model
+from app.models import mask as mask_model
 from app.models import photo as photo_model
 from app.schemas.photo import MediaLimitsOut, PhotoOut
 
@@ -35,7 +36,12 @@ FILE_GONE = "O arquivo original desta foto não está acessível no storage."
 UNREADABLE = "Não foi possível ler as dimensões da foto original."
 
 
-def _to_out(doc: dict[str, Any], calibrated: bool = False, element_count: int = 0) -> PhotoOut:
+def _to_out(
+    doc: dict[str, Any],
+    calibrated: bool = False,
+    element_count: int = 0,
+    intervention_count: int = 0,
+) -> PhotoOut:
     photo_id = str(doc["_id"])
     return PhotoOut(
         id=photo_id,
@@ -50,6 +56,7 @@ def _to_out(doc: dict[str, Any], calibrated: bool = False, element_count: int = 
         original_url=f"/api/photos/{photo_id}/original",
         calibrated=calibrated,
         element_count=element_count,
+        intervention_count=intervention_count,
     )
 
 
@@ -61,6 +68,33 @@ async def _calibrated_ids(scope: TenantScope, photo_ids: list[str]) -> set[str]:
         scope.filter(photo_id={"$in": photo_ids}), {"photo_id": 1}
     )
     return {doc["photo_id"] async for doc in cursor}
+
+
+async def _intervention_counts(scope: TenantScope, photo_ids: list[str]) -> dict[str, int]:
+    """Recortes de intervenção por foto, numa agregação só.
+
+    Conta só a camada `intervention`: é ela que diz se a Fase 9 tem onde
+    escrever. Camada de proteção não libera geração nenhuma — sozinha, ela só
+    diz onde *não* mexer.
+    """
+    if not photo_ids:
+        return {}
+    pipeline = [
+        {"$match": scope.filter(photo_id={"$in": photo_ids})},
+        {"$project": {
+            "photo_id": 1,
+            "total": {
+                "$size": {
+                    "$filter": {
+                        "input": {"$ifNull": ["$layers", []]},
+                        "cond": {"$eq": ["$$this.kind", mask_model.INTERVENTION]},
+                    }
+                }
+            },
+        }},
+    ]
+    cursor = get_db()[mask_model.COLLECTION].aggregate(pipeline)
+    return {doc["photo_id"]: doc["total"] async for doc in cursor}
 
 
 async def _element_counts(scope: TenantScope, photo_ids: list[str]) -> dict[str, int]:
@@ -211,8 +245,14 @@ async def list_area_photos(area_id: str, scope: CurrentScope) -> list[PhotoOut]:
     photo_ids = [str(doc["_id"]) for doc in docs]
     calibrated = await _calibrated_ids(scope, photo_ids)
     counts = await _element_counts(scope, photo_ids)
+    mascaras = await _intervention_counts(scope, photo_ids)
     return [
-        _to_out(doc, str(doc["_id"]) in calibrated, counts.get(str(doc["_id"]), 0))
+        _to_out(
+            doc,
+            str(doc["_id"]) in calibrated,
+            counts.get(str(doc["_id"]), 0),
+            mascaras.get(str(doc["_id"]), 0),
+        )
         for doc in docs
     ]
 
@@ -222,7 +262,10 @@ async def get_photo(photo_id: str, scope: CurrentScope) -> PhotoOut:
     doc = await get_photo_doc(scope, photo_id)
     calibrated = await _calibrated_ids(scope, [photo_id])
     counts = await _element_counts(scope, [photo_id])
-    return _to_out(doc, photo_id in calibrated, counts.get(photo_id, 0))
+    mascaras = await _intervention_counts(scope, [photo_id])
+    return _to_out(
+        doc, photo_id in calibrated, counts.get(photo_id, 0), mascaras.get(photo_id, 0)
+    )
 
 
 @router.get("/photos/{photo_id}/original")

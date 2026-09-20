@@ -300,6 +300,46 @@ A calibração é um documento novo no Mongo (`calibrations`). O arquivo da foto
 aberto apenas para leitura, e só para descobrir largura e altura. Nenhum byte do
 original é reescrito — conferido com SHA-256 antes e depois.
 
+## Máscaras e Architecture Lock
+
+A máscara diz **onde a geração pode mexer** e **onde ela não pode nunca**. São
+duas camadas com significados opostos, desenhadas como polígonos sobre a foto
+original:
+
+| Camada | Significado |
+| --- | --- |
+| `intervention` | Aqui pode. O recorte da peça que muda na proposta |
+| `protect` | Aqui não. Janela, telhado, poste, o prédio do vizinho |
+
+Na Fase 9 o adapter de geração só terá permissão de escrever pixel que esteja
+dentro de `intervention` e fora de `protect`. A proteção vence o empate: se um
+polígono de proteção cruza um de intervenção, a interseção é proteção — a regra
+é conservadora de propósito.
+
+### O Architecture Lock
+
+Vive no **projeto** (`projects.architecture_lock`), não na foto: é decisão do
+trabalho inteiro. Nasce **ligado**, e desligar é do owner — com o lock off a
+geração recusa, então não é preferência de tela, é abrir mão da garantia de
+preservar a arquitetura original.
+
+### O veredito sai do servidor
+
+`GET /api/photos/{id}/masks` já devolve `generation_ready` e, quando bloqueado,
+o `blocked_reason` com o **mesmo texto** que a Fase 9 usará no 422. A tela
+exibe o que recebeu; não existe regra de bloqueio duplicada no frontend.
+
+Os dois bloqueios:
+
+- foto sem camada de intervenção → não há onde gerar;
+- Architecture Lock desligado → gerar contrariaria a promessa do produto.
+
+### O original continua intocado
+
+A máscara é documento novo no Mongo (`masks`, uma por foto, `PUT` que substitui
+o conjunto de camadas). O arquivo da foto é aberto só para leitura, e só para
+saber largura e altura — o que permite recusar vértice fora da imagem.
+
 ## Testes
 
 A suíte bate num **MongoDB de verdade** e confere o **arquivo no disco** — é
@@ -334,6 +374,7 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_masks.py` | 8 | Geração só libera com recorte de intervenção **e** lock ligado; `PUT` substitui em vez de acumular; vértice fora da foto é recusado; o lock é do owner |
 
 ## Verificar que subiu
 

@@ -19,6 +19,18 @@ STATUS_LABELS = {
 }
 
 
+# Fase 8 — Architecture Lock. Nasce LIGADO: preservar a arquitetura do cliente
+# é o comportamento padrão do produto, e desligar é uma decisão explícita do
+# owner. Projeto criado antes desta fase não tem o campo, e `architecture_lock_of`
+# trata essa ausência como ligado — migração para trás sem script.
+ARCHITECTURE_LOCK_DEFAULT = True
+
+
+def architecture_lock_of(doc: dict[str, Any]) -> bool:
+    """Estado do lock, com o default seguro para documento antigo."""
+    return bool(doc.get("architecture_lock", ARCHITECTURE_LOCK_DEFAULT))
+
+
 def new_project_doc(
     *,
     name: str,
@@ -34,6 +46,7 @@ def new_project_doc(
         "location_id": location_id,
         "status": status,
         "description": description,
+        "architecture_lock": ARCHITECTURE_LOCK_DEFAULT,
         "created_at": now,
         "updated_at": now,
     }

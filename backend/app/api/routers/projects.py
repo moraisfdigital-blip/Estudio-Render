@@ -12,7 +12,11 @@ from bson.errors import InvalidId
 from fastapi import APIRouter, HTTPException, status
 from pymongo import ReturnDocument
 
-from app.api.deps import CurrentScope
+from typing import Annotated
+
+from fastapi import Depends
+
+from app.api.deps import CurrentScope, require_role
 from app.api.routers.clients import get_client_doc
 from app.api.routers.locations import get_location_doc
 from app.core.clock import as_utc, utcnow
@@ -22,6 +26,7 @@ from app.core.tenancy import TenantScope
 from app.models import client as client_model
 from app.models import location as location_model
 from app.models import project as project_model
+from app.schemas.mask import ArchitectureLockIn
 from app.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate, RelatedOut
 
 router = APIRouter()
@@ -62,6 +67,7 @@ def _to_out(
         status=status_value,
         status_label=project_model.STATUS_LABELS.get(status_value, status_value),
         description=doc.get("description"),
+        architecture_lock=project_model.architecture_lock_of(doc),
         client=clients.get(doc.get("client_id") or ""),
         location=locations.get(doc.get("location_id") or ""),
         created_at=as_utc(doc["created_at"]),
@@ -115,12 +121,18 @@ async def create_project(payload: ProjectCreate, scope: CurrentScope) -> Project
     return (await _serialize(scope, [created]))[0]
 
 
-@router.get("/projects/{project_id}", response_model=ProjectOut)
-async def get_project(project_id: str, scope: CurrentScope) -> ProjectOut:
+async def get_project_doc(scope: TenantScope, project_id: str) -> dict[str, Any]:
+    """Documento do projeto, escopado por tenant. Reusado pelas máscaras (Fase 8)."""
     oid = parse_object_id(project_id, detail=NOT_FOUND)
     doc = await get_db()[project_model.COLLECTION].find_one(scope.filter(_id=oid))
     if doc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    return doc
+
+
+@router.get("/projects/{project_id}", response_model=ProjectOut)
+async def get_project(project_id: str, scope: CurrentScope) -> ProjectOut:
+    doc = await get_project_doc(scope, project_id)
     return (await _serialize(scope, [doc]))[0]
 
 
@@ -154,6 +166,32 @@ async def update_project(
     doc = await get_db()[project_model.COLLECTION].find_one_and_update(
         scope.filter(_id=oid),
         {"$set": changes},
+        return_document=ReturnDocument.AFTER,
+    )
+    if doc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=NOT_FOUND)
+    return (await _serialize(scope, [doc]))[0]
+
+
+# Só o owner administra o lock; ler o estado continua aberto ao tenant inteiro.
+OwnerUser = Annotated[dict[str, Any], Depends(require_role("owner"))]
+
+
+@router.patch("/projects/{project_id}/architecture-lock", response_model=ProjectOut)
+async def set_architecture_lock(
+    project_id: str, payload: ArchitectureLockIn, scope: CurrentScope, user: OwnerUser
+) -> ProjectOut:
+    """Liga ou desliga o Architecture Lock do projeto.
+
+    Nasce ligado, e **desligar é decisão de owner**: com o lock off a geração
+    recusa (Fase 9), então isto não é preferência de tela — é abrir mão da
+    garantia de que a proposta preserva a arquitetura original.
+    """
+    projeto = await get_project_doc(scope, project_id)
+
+    doc = await get_db()[project_model.COLLECTION].find_one_and_update(
+        scope.filter(_id=projeto["_id"]),
+        {"$set": {"architecture_lock": payload.enabled, "updated_at": utcnow()}},
         return_document=ReturnDocument.AFTER,
     )
     if doc is None:
