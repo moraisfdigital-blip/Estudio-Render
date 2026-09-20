@@ -4,6 +4,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB: ${MONGO_DB:-estudio_render}
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env — 32+ caracteres, um por ambiente}
@@ -23,6 +24,7 @@ services:
       FRONTEND_DIST: /app/frontend/dist
       MEDIA_ROOT: ${MEDIA_ROOT:-/app/var/media}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+      MAX_IMAGE_MEGAPIXELS: ${MAX_IMAGE_MEGAPIXELS:-50}
     volumes:
       # Original preservado: os arquivos sobrevivem a rebuild do container.
       - media_data:/app/var/media

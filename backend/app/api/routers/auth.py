@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pymongo.errors import DuplicateKeyError
 
 from app.api.deps import CurrentUser
-from app.core import ratelimit
+from app.core import audit, ratelimit
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.seed import ensure_default_tenant
@@ -50,11 +50,20 @@ async def register(payload: RegisterRequest, request: Request) -> TokenResponse:
     Fechado por padrão (`ALLOW_SELF_REGISTER=false`): aberto, qualquer um que
     alcance a URL vira editor e enxerga os levantamentos do workspace.
     """
-    await ratelimit.enforce(request, scope="register")
+    try:
+        await ratelimit.enforce(request, scope="register")
+    except HTTPException:
+        audit.log(audit.REGISTRO_BLOQUEADO, ip=ratelimit.client_ip(request))
+        raise
     settings = get_settings()
     if not settings.allow_self_register:
         # Conta como tentativa: varrer a rota fechada também é reconhecimento.
         await ratelimit.record_failure(request, scope="register")
+        audit.log(
+            audit.REGISTRO_FECHADO,
+            ip=ratelimit.client_ip(request),
+            email=payload.email,
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Registro fechado nesta instalação.",
@@ -77,7 +86,15 @@ async def register(payload: RegisterRequest, request: Request) -> TokenResponse:
             detail="Já existe um usuário com este e-mail.",
         ) from None
 
-    return token_response({**doc, "_id": result.inserted_id})
+    criado = {**doc, "_id": result.inserted_id}
+    audit.log(
+        audit.REGISTRO_OK,
+        ip=ratelimit.client_ip(request),
+        email=doc["email"],
+        tenant_id=tenant_id,
+        user_id=str(result.inserted_id),
+    )
+    return token_response(criado)
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -87,7 +104,13 @@ async def login(payload: LoginRequest, request: Request) -> TokenResponse:
     O limite por IP é conferido **antes** da senha: quem já estourou não gasta
     bcrypt do servidor nem recebe qualquer sinal sobre a credencial tentada.
     """
-    await ratelimit.enforce(request, scope="login")
+    try:
+        await ratelimit.enforce(request, scope="login")
+    except HTTPException:
+        audit.log(
+            audit.LOGIN_BLOQUEADO, ip=ratelimit.client_ip(request), email=payload.email
+        )
+        raise
 
     tenant_id = await ensure_default_tenant()
     doc = await get_db()[user_model.COLLECTION].find_one(
@@ -96,11 +119,23 @@ async def login(payload: LoginRequest, request: Request) -> TokenResponse:
     # Mesma resposta para usuário inexistente e senha errada: não revela quem existe.
     if doc is None or not verify_password(payload.password, doc["password_hash"]):
         await ratelimit.record_failure(request, scope="login")
+        # Só o e-mail tentado. A senha chutada não entra no log: não ajuda em
+        # nada e transformaria o arquivo de log num alvo.
+        audit.log(
+            audit.LOGIN_FALHOU, ip=ratelimit.client_ip(request), email=payload.email
+        )
         raise INVALID_CREDENTIALS
 
     # Acertou: o histórico de erros de digitação deste IP não precisa mais
     # pesar contra ele.
     await ratelimit.clear(request, scope="login")
+    audit.log(
+        audit.LOGIN_OK,
+        ip=ratelimit.client_ip(request),
+        email=doc["email"],
+        tenant_id=doc["tenant_id"],
+        user_id=str(doc["_id"]),
+    )
     return token_response(doc)
 
 

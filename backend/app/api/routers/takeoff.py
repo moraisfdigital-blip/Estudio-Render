@@ -53,6 +53,9 @@ router = APIRouter()
 NOT_FOUND = "Quantitativo não encontrado neste workspace."
 ITEM_NOT_FOUND = "Linha de orçamento não encontrada neste quantitativo."
 
+# Teto de linhas derivadas por quantitativo.
+MAX_TAKEOFF_ITEMS = 500
+
 
 def _item_out(item: dict[str, Any]) -> TakeoffItemOut:
     origem = item.get("quantity_source")
@@ -134,6 +137,9 @@ async def _conferred_elements(
             )
         )
         .sort("created_at", 1)
+        # Teto do quantitativo. Um projeto real tem dezenas de elementos
+        # conferidos; o limite existe para o documento não crescer sem fim.
+        .limit(MAX_TAKEOFF_ITEMS)
     )
     return [doc async for doc in cursor]
 

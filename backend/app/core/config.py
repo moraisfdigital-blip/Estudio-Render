@@ -20,6 +20,11 @@ class Settings(BaseSettings):
 
     app_name: str = "Render Artelux"
 
+    # Ambiente. O padrão é `production` de propósito: uma instalação que
+    # esqueceu de declarar o ambiente deve nascer fechada, não aberta. É o que
+    # decide se `/docs` existe e se o HSTS é enviado.
+    environment: str = "production"
+
     mongo_url: str = "mongodb://localhost:27017"
     mongo_db: str = "estudio_render"
 
@@ -103,6 +108,21 @@ class Settings(BaseSettings):
     # Limite de tamanho por foto. Fotos de levantamento feitas com celular ficam
     # bem abaixo disso; o teto existe para não encher o volume por acidente.
     max_upload_mb: int = 25
+
+    # Teto de RESOLUÇÃO, que é diferente do teto de tamanho. Um PNG de 132 bytes
+    # pode declarar 9000x8000 pixels: o arquivo passa no limite de MB e,
+    # na hora de gerar, a decodificação aloca ~200 MB por imagem. Sem este teto,
+    # derrubar o serviço custa um arquivo minúsculo.
+    # 50 Mpx é folgado para foto de celular (um iPhone faz 12 Mpx).
+    max_image_megapixels: int = 50
+
+    @property
+    def max_image_pixels(self) -> int:
+        return self.max_image_megapixels * 1_000_000
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() == "production"
 
     @property
     def frontend_dist_path(self) -> Path:

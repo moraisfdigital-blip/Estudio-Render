@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
+from app.api.pagination import PageDep
 from app.api.deps import CurrentScope
 from app.core.clock import utcnow
 from app.core.db import get_db
@@ -40,8 +41,8 @@ async def get_client_doc(scope: TenantScope, client_id: str) -> dict[str, Any] |
 
 
 @router.get("/clients", response_model=list[ClientOut])
-async def list_clients(scope: CurrentScope) -> list[ClientOut]:
-    cursor = get_db()[client_model.COLLECTION].find(scope.filter()).sort("name", 1)
+async def list_clients(scope: CurrentScope, page: PageDep) -> list[ClientOut]:
+    cursor = get_db()[client_model.COLLECTION].find(scope.filter()).sort("name", 1).skip(page.offset).limit(page.limit)
     return [to_out(doc) async for doc in cursor]
 
 

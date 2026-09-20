@@ -16,6 +16,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from app.api.pagination import PageDep
 from app.api.deps import CurrentScope, require_role
 from app.api.routers.clients import get_client_doc
 from app.api.routers.locations import get_location_doc
@@ -97,9 +98,9 @@ async def _ensure_links(scope: TenantScope, *, client_id: str | None, location_i
 
 
 @router.get("/projects", response_model=list[ProjectOut])
-async def list_projects(scope: CurrentScope) -> list[ProjectOut]:
+async def list_projects(scope: CurrentScope, page: PageDep) -> list[ProjectOut]:
     """Dashboard: projetos do tenant autenticado, mais recentes primeiro."""
-    cursor = get_db()[project_model.COLLECTION].find(scope.filter()).sort("created_at", -1)
+    cursor = get_db()[project_model.COLLECTION].find(scope.filter()).sort("created_at", -1).skip(page.offset).limit(page.limit)
     return await _serialize(scope, [doc async for doc in cursor])
 
 

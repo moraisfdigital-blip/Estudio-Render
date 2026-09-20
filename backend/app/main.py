@@ -46,7 +46,63 @@ async def lifespan(app: FastAPI):
 
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+# `/docs`, `/redoc` e `/openapi.json` entregam o mapa completo da API — todas as
+# rotas, todos os schemas — para quem ainda não fez login. Em desenvolvimento
+# isso é ferramenta; em produção é reconhecimento gratuito para um atacante.
+_docs = None if settings.is_production else "/docs"
+_redoc = None if settings.is_production else "/redoc"
+_openapi = None if settings.is_production else "/openapi.json"
+
+app = FastAPI(
+    title=settings.app_name,
+    lifespan=lifespan,
+    docs_url=_docs,
+    redoc_url=_redoc,
+    openapi_url=_openapi,
+)
+
+# Cabeçalhos de segurança. O app serve, na MESMA origem, o SPA e as imagens
+# enviadas pelos usuários — é a combinação que torna `nosniff` e CSP
+# necessários, e não opcionais.
+_SECURITY_HEADERS = {
+    # Sem isto, o navegador pode "adivinhar" que um upload é HTML e executá-lo.
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    # `blob:` em img-src é obrigatório: as imagens autenticadas chegam por
+    # fetch e viram object URL, porque `<img src>` não manda cabeçalho.
+    # `unsafe-inline` em style-src é o que o Tailwind compilado precisa; em
+    # script-src ele NÃO aparece, que é onde importa.
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "img-src 'self' data: blob:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
+        "connect-src 'self'; "
+        "font-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'"
+    ),
+}
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    resposta = await call_next(request)
+    for chave, valor in _SECURITY_HEADERS.items():
+        resposta.headers.setdefault(chave, valor)
+    # HSTS só em produção: em desenvolvimento o app roda em http, e mandar o
+    # navegador exigir https para localhost quebra a máquina de quem desenvolve
+    # por meses (o cabeçalho fica cacheado).
+    if settings.is_production:
+        resposta.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+    return resposta
 
 # Toda a API vive sob /api — o resto do path é do frontend.
 app.include_router(health_router, prefix="/api", tags=["health"])
