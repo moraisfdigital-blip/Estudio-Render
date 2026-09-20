@@ -73,7 +73,7 @@ docker compose up --build
 | --- | --- |
 | `MONGO_URL` | Conexão do MongoDB |
 | `MONGO_DB` | Nome do banco |
-| `JWT_SECRET` | Assinatura do token |
+| `JWT_SECRET` | Assinatura do token. **Obrigatória**, mínimo 32 caracteres — sem ela o app não sobe |
 | `JWT_ALGORITHM` | Algoritmo do JWT (`HS256`) |
 | `JWT_EXPIRE_MINUTES` | Validade do token em minutos |
 | `IMAGE_GEN_PROVIDER` | Adaptador de geração de imagem (`mock`) |
@@ -299,6 +299,41 @@ blueprint e é decisão do Owner — não se resolve dentro deste endpoint.
 A calibração é um documento novo no Mongo (`calibrations`). O arquivo da foto é
 aberto apenas para leitura, e só para descobrir largura e altura. Nenhum byte do
 original é reescrito — conferido com SHA-256 antes e depois.
+
+## Testes
+
+A suíte bate num **MongoDB de verdade** e confere o **arquivo no disco** — é
+onde moram as regras do projeto (original imutável, medida com procedência,
+cor vinda do catálogo). Não sobe servidor: fala com a app em memória.
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest
+```
+
+Precisa de um Mongo acessível. Por padrão a suíte procura em
+`mongodb://localhost:27017`; para apontar para outro, use `TEST_MONGO_URL`.
+Sem Mongo, os testes **pulam** com a mensagem dizendo o que falta — não falham
+em silêncio nem passam por engano.
+
+O que a suíte isola sozinha:
+
+| Recurso | Como |
+| --- | --- |
+| Banco | Usa `estudio_render_testes` e o apaga no começo e no fim. Um `assert` recusa rodar se o nome do banco não parecer de teste |
+| Mídia | `MEDIA_ROOT` vai para uma pasta temporária por execução; nada encosta no `var/media` |
+| Segredo | `JWT_SECRET` fixo, só de teste |
+
+Nenhuma variável do seu `.env` é usada: a suíte define o ambiente dela antes
+de carregar a app.
+
+### O que está coberto
+
+| Arquivo | Fase | O que protege |
+| --- | --- | --- |
+| `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
+| `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
 
 ## Verificar que subiu
 
