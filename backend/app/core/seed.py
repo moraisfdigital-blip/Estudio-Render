@@ -24,6 +24,7 @@ from app.models import presentation as presentation_model
 from app.models import project as project_model
 from app.models import proposal as proposal_model
 from app.models import version as version_model
+from app.models import takeoff as takeoff_model
 from app.models import tenant as tenant_model
 from app.models import user as user_model
 
@@ -130,6 +131,15 @@ async def ensure_indexes() -> None:
     # O link interno é resolvido por token; sem índice isso varreria a coleção.
     await db[presentation_model.COLLECTION].create_index(
         [("tenant_id", 1), ("share_token", 1)], name="tenant_share_token"
+    )
+    # Fase 12: um quantitativo por projeto — o índice único é o que torna o
+    # POST de geração um upsert seguro em vez de empilhar quantitativos.
+    await db[takeoff_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("project_id", 1)], unique=True, name="uniq_tenant_project_takeoff"
+    )
+    # O PATCH de linha acha o documento pelo id do item.
+    await db[takeoff_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("items.id", 1)], name="tenant_takeoff_item"
     )
 
 

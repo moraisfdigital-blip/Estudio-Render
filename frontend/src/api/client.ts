@@ -985,3 +985,93 @@ export async function fetchPresentationPdfBlob(projectId: string): Promise<Blob>
   })
   return data
 }
+
+// ---- Fase 12: quantitativo e orçamento --------------------------------
+// As linhas saem dos elementos CONFERIDOS, com a área derivada das medidas.
+// Três regras que o servidor guarda e a tela só exibe:
+//
+// 1. estimativa continua estimativa — `quantity_source_label` vem pronto;
+// 2. sem medida suficiente não há quantidade, e `quantity_note` diz por quê;
+// 3. preço nunca é inventado: linha sem preço fica sem preço, e o total é
+//    declarado parcial em vez de somar a linha como se fosse de graça.
+
+export type QuantitySource = 'user_measured' | 'estimated' | 'user_informed'
+
+export type TakeoffItem = {
+  id: string
+  origin: 'element' | 'manual'
+  element_id: string | null
+  photo_id: string | null
+  description: string
+  kind_label: string | null
+  material_name: string | null
+  finish_name: string | null
+  color_name: string | null
+  color_hex: string | null
+  quantity: number | null
+  unit: string
+  quantity_source: QuantitySource | null
+  /** Rótulo pronto do servidor. A tela é obrigada a mostrar estimativa como tal. */
+  quantity_source_label: string | null
+  quantity_note: string | null
+  unit_price: number | null
+  /** `null` enquanto faltar quantidade ou preço — nunca zero. */
+  line_total: number | null
+  notes: string | null
+}
+
+export type Takeoff = {
+  project_id: string
+  tenant_id: string
+  items: TakeoffItem[]
+  generated: boolean
+  total: number | null
+  items_without_price: number
+  items_with_estimate: number
+  skipped_without_measurement: number
+  generated_at: string | null
+  updated_at: string | null
+}
+
+export type ManualItemInput = {
+  description: string
+  quantity: number
+  unit?: string
+  unit_price?: number
+  notes?: string
+}
+
+export type BudgetItemPatch = {
+  quantity?: number
+  unit?: string
+  unit_price?: number
+  notes?: string
+}
+
+export async function getTakeoff(projectId: string): Promise<Takeoff> {
+  const { data } = await api.get<Takeoff>(`/projects/${projectId}/quantity-takeoff`)
+  return data
+}
+
+/** Recalcula as linhas derivadas. Preço e observações são preservados. */
+export async function generateTakeoff(projectId: string): Promise<Takeoff> {
+  const { data } = await api.post<Takeoff>(`/projects/${projectId}/quantity-takeoff`)
+  return data
+}
+
+export async function addManualItem(
+  projectId: string,
+  input: ManualItemInput,
+): Promise<Takeoff> {
+  const { data } = await api.post<Takeoff>(`/quantity-takeoff/${projectId}/items`, input)
+  return data
+}
+
+/** Informar quantidade aqui marca a procedência como `user_informed`. */
+export async function updateBudgetItem(
+  itemId: string,
+  patch: BudgetItemPatch,
+): Promise<Takeoff> {
+  const { data } = await api.patch<Takeoff>(`/budget-items/${itemId}`, patch)
+  return data
+}
