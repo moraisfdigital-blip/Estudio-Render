@@ -440,6 +440,53 @@ Ela aponta para a geração que já existe. Promover não cria um segundo arquiv
 no disco, e descartar não apaga imagem nenhuma — o descarte é soft-delete, e
 fica registrado que aquela opção existiu e foi considerada.
 
+## Apresentação e PDF (Fase 11)
+
+Uma apresentação por projeto. Ela reúne as **versões aprovadas** das fotos e é
+o que vai para o cliente.
+
+| Método | Rota | O quê |
+| --- | --- | --- |
+| GET | `/api/projects/{id}/presentation` | Preview (rascunho, se nada salvo) |
+| PUT | `/api/projects/{id}/presentation` | Salva título, ordem e legendas |
+| POST | `/api/projects/{id}/presentation/export` | Exporta o PDF |
+| GET | `/api/presentations/{id}/pdf` | Baixa |
+| POST | `/api/projects/{id}/presentation/share-link` | Cria/renova o link interno |
+| GET | `/api/p/{token}` | Abre pelo link |
+
+### Só versão aprovada entra
+
+Salvar um slide apontando para outra versão é 422. Sem isso, a apresentação
+poderia levar ao cliente uma proposta que ninguém escolheu — e o trabalho de
+aprovar (Fase 10) perderia o sentido.
+
+Como a aprovação mora na foto, trocar a versão aprovada **depois** de montar a
+apresentação desatualiza o slide. A leitura devolve esse slide com
+`outdated: true`, e a tela avisa, em vez de exibir em silêncio uma imagem que
+não é mais a escolha registrada.
+
+### Começa montada
+
+Sem nada salvo, o GET devolve um rascunho: as versões aprovadas na ordem em que
+as fotos foram enviadas. Quem só quer exportar não precisa montar nada.
+
+### O PDF do mock é um PDF de verdade
+
+`PDF_PROVIDER=mock` monta o arquivo localmente, sem rede e sem credencial: capa
+com projeto/cliente/local e uma página por slide, com a imagem real da versão
+aprovada. Abre, lê e imprime. O que ele **não** faz é diagramação de marca —
+tipografia, grid e cores da ARTELUX são trabalho do provedor real, que entra
+pela mesma fábrica trocando a variável de ambiente.
+
+Reexportar grava um arquivo novo; o anterior continua no disco, somente-leitura.
+
+### O link é interno, não portal de cliente
+
+`POST /presentation/share-link` cria um token e `GET /api/p/{token}` abre —
+**exigindo login do tenant**. O token deixa a URL curta e estável; ele não
+autentica. Um link vazado não serve para ninguém de fora da ARTELUX, e renovar
+o link invalida o anterior (é assim que se revoga um que circulou demais).
+
 ## Testes
 
 A suíte bate num **MongoDB de verdade** e confere o **arquivo no disco** — é
@@ -474,6 +521,7 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_presentations.py` | 11 | Só versão aprovada vira slide; troca de aprovação marca o slide como desatualizado; PDF do mock é arquivo válido; link interno exige login |
 | `tests/test_versions.py` | 10 | Limite de 3 aguenta cliques simultâneos; uma aprovada por foto; descartar devolve a vaga; aprovada não pode ser descartada |
 | `tests/test_proposals.py` | 9 | Geração só altera pixel sob intervenção (provado com provedor desobediente); prompt não inventa medida; falha do provedor vira registro e 502 |
 | `tests/test_masks.py` | 8 | Geração só libera com recorte de intervenção **e** lock ligado; `PUT` substitui em vez de acumular; vértice fora da foto é recusado; o lock é do owner |

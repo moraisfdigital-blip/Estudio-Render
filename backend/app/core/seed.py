@@ -20,6 +20,7 @@ from app.models import element as element_model
 from app.models import location as location_model
 from app.models import mask as mask_model
 from app.models import photo as photo_model
+from app.models import presentation as presentation_model
 from app.models import project as project_model
 from app.models import proposal as proposal_model
 from app.models import version as version_model
@@ -120,6 +121,15 @@ async def ensure_indexes() -> None:
         unique=True,
         partialFilterExpression={"deleted_at": None},
         name="uniq_photo_version_position",
+    )
+    # Fase 11: uma apresentação por projeto — o índice único é o que torna o
+    # PUT um upsert seguro em vez de empilhar montagens concorrentes.
+    await db[presentation_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("project_id", 1)], unique=True, name="uniq_tenant_project_presentation"
+    )
+    # O link interno é resolvido por token; sem índice isso varreria a coleção.
+    await db[presentation_model.COLLECTION].create_index(
+        [("tenant_id", 1), ("share_token", 1)], name="tenant_share_token"
     )
 
 

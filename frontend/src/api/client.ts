@@ -887,3 +887,101 @@ export async function approveVersion(versionId: string): Promise<VersionList> {
 export async function discardVersion(versionId: string): Promise<void> {
   await api.delete(`/versions/${versionId}`)
 }
+
+// ---- Fase 11: apresentação, PDF e link interno ------------------------
+// A apresentação reúne as VERSÕES APROVADAS do projeto. Salvar um slide com
+// outra versão é recusado pelo servidor (422) — a tela não precisa (nem deve)
+// reimplementar essa regra.
+//
+// O link interno exige login do tenant: o token encurta a URL, não autentica.
+
+export type Slide = {
+  position: number
+  photo_id: string
+  version_id: string
+  label: string
+  caption: string | null
+  original_filename: string
+  original_url: string
+  image_url: string | null
+  area_id: string
+  /** A foto passou a ter outra versão aprovada depois deste slide ser salvo. */
+  outdated: boolean
+}
+
+export type PresentationPdf = {
+  url: string
+  size_bytes: number
+  checksum_sha256: string
+  provider: string
+  page_count: number
+  generated_at: string
+}
+
+export type ShareLink = {
+  url: string
+  token: string
+  created_at: string
+}
+
+export type Presentation = {
+  project_id: string
+  tenant_id: string
+  title: string
+  notes: string | null
+  slides: Slide[]
+  /** `false` enquanto ninguém salvou: o que veio é rascunho das aprovadas. */
+  saved: boolean
+  approved_count: number
+  can_export: boolean
+  /** Motivo pronto do servidor quando não dá para exportar. */
+  blocked_reason: string | null
+  pdf: PresentationPdf | null
+  share: ShareLink | null
+  updated_at: string | null
+}
+
+export type SlideInput = {
+  photo_id: string
+  version_id: string
+  caption?: string
+}
+
+export type PresentationInput = {
+  title?: string
+  notes?: string
+  slides: SlideInput[]
+}
+
+export async function getPresentation(projectId: string): Promise<Presentation> {
+  const { data } = await api.get<Presentation>(`/projects/${projectId}/presentation`)
+  return data
+}
+
+export async function savePresentation(
+  projectId: string,
+  input: PresentationInput,
+): Promise<Presentation> {
+  const { data } = await api.put<Presentation>(`/projects/${projectId}/presentation`, input)
+  return data
+}
+
+export async function exportPresentation(projectId: string): Promise<Presentation> {
+  const { data } = await api.post<Presentation>(`/projects/${projectId}/presentation/export`)
+  return data
+}
+
+export async function createShareLink(projectId: string): Promise<Presentation> {
+  const { data } = await api.post<Presentation>(
+    `/projects/${projectId}/presentation/share-link`,
+  )
+  return data
+}
+
+/** O PDF exige token, como todo arquivo do projeto. */
+export async function fetchPresentationPdfBlob(projectId: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/presentations/${projectId}/pdf`, {
+    responseType: 'blob',
+  })
+  return data
+}

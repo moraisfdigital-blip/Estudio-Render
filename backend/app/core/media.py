@@ -104,6 +104,17 @@ def build_derived_key(*, original_key: str, derived_uid: str, extension: str) ->
     return f"{original_key.rsplit('/', 1)[0]}/derived/{derived_uid}.{extension}"
 
 
+def build_presentation_pdf_key(*, tenant_id: str, project_id: str, pdf_uid: str) -> str:
+    """Caminho do PDF exportado (Fase 11).
+
+    Fora da pasta das fotos de propósito: o PDF é do projeto, não de uma foto.
+    Cada exportação recebe um uid novo, então reexportar grava arquivo novo e a
+    apresentação passa a apontar para ele — a escrita única deste módulo vale
+    para toda mídia, não só para imagem.
+    """
+    return f"{tenant_id}/projects/{project_id}/presentations/{pdf_uid}.pdf"
+
+
 def resolve(key: str) -> Path:
     """Converte a chave do banco em caminho absoluto, preso ao MEDIA_ROOT.
 
