@@ -718,3 +718,95 @@ export async function setArchitectureLock(
   })
   return data
 }
+
+// ---- Fase 9: geração da proposta (mock) -------------------------------
+// O POST não tem corpo: o pedido é montado no SERVIDOR a partir do que está
+// persistido (elementos, specs do catálogo, máscaras). Não existe campo para
+// mandar prompt — é o que impede contornar o Architecture Lock por parâmetro.
+//
+// E o que volta do provedor passa por composição antes de virar arquivo: só os
+// pixels sob a máscara de intervenção sobrevivem.
+
+export type ProposalStatus = 'pendente' | 'concluida' | 'falhou'
+
+export type PromptPiece = {
+  name: string
+  kind: string | null
+  /** Vem com a procedência colada ("medido em campo" / "estimativa"). */
+  dimensions: string
+  spec: string
+}
+
+export type Prompt = {
+  text: string
+  instrucao: string
+  projeto: string
+  intervencao: string[]
+  protecao: string[]
+  pecas: PromptPiece[]
+  escala: string | null
+}
+
+export type GeneratedImage = {
+  id: string
+  photo_id: string
+  proposal_id: string
+  url: string
+  content_type: string
+  size_bytes: number
+  checksum_sha256: string
+  width: number
+  height: number
+  /** Alcance real da geração — nunca maior que a área da máscara. */
+  changed_pixels: number
+  provider: string
+  created_at: string
+}
+
+export type Proposal = {
+  id: string
+  tenant_id: string
+  photo_id: string
+  project_id: string
+  status: ProposalStatus
+  status_label: string
+  provider: string
+  prompt: Prompt
+  generated_image: GeneratedImage | null
+  error: string | null
+  created_at: string
+  completed_at: string | null
+}
+
+export type Comparison = {
+  photo_id: string
+  original_url: string
+  original_filename: string
+  /** Nulo enquanto a foto não tem proposta concluída — estado normal. */
+  generated: GeneratedImage | null
+  proposal: Proposal | null
+  proposal_count: number
+}
+
+export async function generateProposal(photoId: string): Promise<Proposal> {
+  const { data } = await api.post<Proposal>(`/photos/${photoId}/proposals`)
+  return data
+}
+
+export async function listProposals(photoId: string): Promise<Proposal[]> {
+  const { data } = await api.get<Proposal[]>(`/photos/${photoId}/proposals`)
+  return data
+}
+
+export async function getComparison(photoId: string): Promise<Comparison> {
+  const { data } = await api.get<Comparison>(`/photos/${photoId}/compare`)
+  return data
+}
+
+/** Mesma razão do original: a rota exige token, e `<img src>` não manda header. */
+export async function fetchGeneratedImageBlob(imageId: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/generated-images/${imageId}`, {
+    responseType: 'blob',
+  })
+  return data
+}

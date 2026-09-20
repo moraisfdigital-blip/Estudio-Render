@@ -15,6 +15,7 @@ import {
 import CalibrationDialog from '../components/CalibrationDialog'
 import ElementsDialog from '../components/ElementsDialog'
 import MasksDialog from '../components/MasksDialog'
+import ProposalDialog from '../components/ProposalDialog'
 import PhotoThumb from '../components/PhotoThumb'
 import { Button, EmptyState, ErrorNotice, Field, Loading, inputClass } from '../components/ui'
 import { useResource } from '../hooks/useResource'
@@ -140,6 +141,7 @@ function AreaPhotos({
   // peça e medir fazem parte do levantamento, não de outra tela.
   const [listingElements, setListingElements] = useState<Photo | null>(null)
   const [masking, setMasking] = useState<Photo | null>(null)
+  const [proposing, setProposing] = useState<Photo | null>(null)
 
   const maxBytes = limits.max_upload_mb * 1024 * 1024
   const accepted = limits.accepted_labels.join(', ')
@@ -376,6 +378,16 @@ function AreaPhotos({
                       ? '1 área de intervenção'
                       : `${photo.intervention_count} áreas de intervenção`}
                 </button>
+                {/* Fase 9: gerar a proposta. O botão fica visível sempre — se a
+                    foto não estiver pronta, a própria API explica o porquê (422)
+                    em vez de a tela esconder a ação sem dizer nada. */}
+                <button
+                  type="button"
+                  onClick={() => setProposing(photo)}
+                  className="w-fit text-xs text-neutral-400 underline-offset-2 transition hover:text-neutral-100 hover:underline"
+                >
+                  Proposta visual
+                </button>
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <button
                     type="button"
@@ -411,6 +423,14 @@ function AreaPhotos({
               ),
             )
           }
+        />
+      )}
+
+      {proposing && (
+        <ProposalDialog
+          photo={proposing}
+          onClose={() => setProposing(null)}
+          onGenerated={reload}
         />
       )}
 

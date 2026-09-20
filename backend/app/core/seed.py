@@ -21,6 +21,7 @@ from app.models import location as location_model
 from app.models import mask as mask_model
 from app.models import photo as photo_model
 from app.models import project as project_model
+from app.models import proposal as proposal_model
 from app.models import tenant as tenant_model
 from app.models import user as user_model
 
@@ -101,6 +102,14 @@ async def ensure_indexes() -> None:
     # A Fase 9 varre máscara por projeto ao montar a geração.
     await db[mask_model.COLLECTION].create_index(
         [("tenant_id", 1), ("project_id", 1)], name="tenant_project_mask"
+    )
+    # Fase 9: histórico de geração por foto, mais recente primeiro — é como a
+    # comparação acha a última proposta concluída sem varrer a coleção.
+    await db[proposal_model.PROPOSALS].create_index(
+        [("tenant_id", 1), ("photo_id", 1), ("created_at", -1)], name="tenant_photo_proposal"
+    )
+    await db[proposal_model.GENERATED_IMAGES].create_index(
+        [("tenant_id", 1), ("photo_id", 1), ("created_at", -1)], name="tenant_photo_generated"
     )
 
 
