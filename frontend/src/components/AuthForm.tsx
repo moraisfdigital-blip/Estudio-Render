@@ -20,7 +20,7 @@ export function AuthCard({
     <main className="min-h-dvh bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
         <header className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Render Artelux</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">ENBY PRO</p>
           <h1 className="text-2xl font-semibold">{title}</h1>
           <p className="text-sm text-neutral-400">{subtitle}</p>
         </header>

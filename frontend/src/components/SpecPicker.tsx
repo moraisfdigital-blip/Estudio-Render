@@ -148,7 +148,7 @@ export default function SpecPicker({
     return (
       <div className="rounded-md border border-dashed border-neutral-800 px-4 py-6 text-center">
         <p className="text-xs text-neutral-400">
-          Nenhum material cadastrado ainda. O que a peça é feita sai do catálogo da ARTELUX, não
+          Nenhum material cadastrado ainda. O que a peça é feita sai do catálogo da sua empresa, não
           de texto livre.
         </p>
         <p className="mt-3 text-[11px] text-neutral-600">

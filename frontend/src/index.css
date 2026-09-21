@@ -1,1 +1,65 @@
 @import "tailwindcss";
+
+/**
+ * Tokens da interface.
+ *
+ * Os valores vêm do protótipo aprovado: fundo azul-marinho quase preto, painéis
+ * um degrau acima dele, e UM azul vivo reservado para a ação principal. A cor
+ * de destaque é escassa de propósito — se tudo é azul, nada é.
+ *
+ * Nenhum componente escreve cor literal: tudo passa por estes tokens, para
+ * trocar a paleta ser uma edição num lugar só.
+ */
+@theme {
+  /* Fundo da aplicação e superfícies empilhadas sobre ele. */
+  --color-app: #0b0f14;
+  --color-surface: #111720;
+  --color-raised: #161d27;
+  --color-line: #1f2935;
+  --color-line-soft: #18212b;
+
+  /* Texto. */
+  --color-ink: #e7ecf3;
+  --color-ink-soft: #aab6c5;
+  --color-ink-dim: #7c8a9b;
+
+  /* Azul da ação principal. */
+  --color-brand: #2f6fed;
+  --color-brand-hover: #3f7df5;
+  --color-brand-soft: #16233c;
+
+  /* Semânticas — separadas do azul de marca de propósito. */
+  --color-good: #3fb984;
+  --color-good-soft: #10281f;
+  --color-warn: #e0a552;
+  --color-warn-soft: #2a2011;
+  --color-bad: #ef6b63;
+  --color-bad-soft: #2d1817;
+}
+
+/* O app ocupa a janela inteira: a área de trabalho rola por dentro, não a página. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-app);
+  color: var(--color-ink);
+}
+
+/* Foco visível em tudo que recebe teclado — o padrão do navegador some no escuro. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

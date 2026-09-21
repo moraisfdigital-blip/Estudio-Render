@@ -29,7 +29,7 @@ export default function AppShell() {
             onClick={() => setView({ kind: 'dashboard' })}
             className="flex items-center gap-3 text-left"
           >
-            <span className="text-sm font-semibold">Render Artelux</span>
+            <span className="text-sm font-semibold">ENBY PRO</span>
             <span className="rounded-full border border-neutral-700 px-2.5 py-0.5 text-xs text-neutral-300">
               {tenant.name}
             </span>

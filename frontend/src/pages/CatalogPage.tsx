@@ -78,7 +78,7 @@ function MaterialsSection({
   return (
     <Section
       title="Materiais"
-      description="O que a ARTELUX usa para fabricar: ACM, vinil, acrílico, chapa."
+      description="O que a sua empresa usa para fabricar: ACM, vinil, acrílico, chapa."
     >
       {error && <ErrorNotice message={error} />}
 

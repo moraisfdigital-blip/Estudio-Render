@@ -1,36 +1,142 @@
 import { useState } from 'react'
-import AppShell from './components/AppShell'
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
+import AppLayout from './components/layout/AppLayout'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/context'
+import CatalogPage from './pages/CatalogPage'
+import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
+import ProjectFormPage from './pages/ProjectFormPage'
 import RegisterPage from './pages/RegisterPage'
+import {
+  ProjectIndexRedirect,
+  ProjectWorkspace,
+  StepEntrega,
+  StepEspecificacao,
+  StepLevantamento,
+  StepProposta,
+} from './pages/ProjectWorkspace'
 
-function Routes() {
+/**
+ * Rotas da aplicação.
+ *
+ * Antes a navegação era uma variável de estado: não havia URL, então não dava
+ * para mandar "abre esse projeto" para ninguém nem usar o botão voltar do
+ * navegador. Agora cada tela tem endereço.
+ *
+ * As páginas existentes recebem os mesmos `props` de antes — os invólucros
+ * abaixo traduzem parâmetro de rota em callback, para nenhuma delas precisar
+ * conhecer o roteador.
+ */
+
+function DashboardRoute() {
+  const navigate = useNavigate()
+  return (
+    <div className="px-5 py-6">
+      <DashboardPage
+        onNewProject={() => navigate('/projeto/novo')}
+        onOpenProject={(id) => navigate(`/projeto/${id}`)}
+      />
+    </div>
+  )
+}
+
+function NovoProjetoRoute() {
+  const navigate = useNavigate()
+  return (
+    <div className="px-5 py-6">
+      <ProjectFormPage
+        onDone={(project) => navigate(`/projeto/${project.id}`)}
+        onCancel={() => navigate('/projetos')}
+      />
+    </div>
+  )
+}
+
+function EditarProjetoRoute() {
+  const { projectId = '' } = useParams()
+  const navigate = useNavigate()
+  return (
+    <div className="px-5 py-6">
+      <ProjectFormPage
+        projectId={projectId}
+        onDone={(project) => navigate(`/projeto/${project.id}`)}
+        onCancel={() => navigate(`/projeto/${projectId}`)}
+      />
+    </div>
+  )
+}
+
+function MateriaisRoute() {
   const { state } = useAuth()
-  const [screen, setScreen] = useState<'login' | 'register'>('login')
+  const navigate = useNavigate()
+  const podeGerenciar = state.kind === 'authenticated' && state.session.user.role === 'owner'
+  return (
+    <div className="px-5 py-6">
+      <CatalogPage onBack={() => navigate('/projetos')} canManage={podeGerenciar} />
+    </div>
+  )
+}
 
-  // Sessão sendo conferida a partir do token guardado.
+function Autenticado() {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route path="/projetos" element={<DashboardRoute />} />
+        <Route path="/projeto/novo" element={<NovoProjetoRoute />} />
+        <Route path="/projeto/:projectId/editar" element={<EditarProjetoRoute />} />
+        <Route path="/materiais" element={<MateriaisRoute />} />
+
+        <Route path="/projeto/:projectId" element={<ProjectWorkspace />}>
+          <Route index element={<ProjectIndexRedirect />} />
+          <Route path="levantamento" element={<StepLevantamento />} />
+          <Route path="especificacao" element={<StepEspecificacao />} />
+          <Route path="proposta" element={<StepProposta />} />
+          <Route path="entrega" element={<StepEntrega />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/projetos" replace />} />
+      </Route>
+    </Routes>
+  )
+}
+
+function Anonimo() {
+  const [tela, setTela] = useState<'login' | 'registro'>('login')
+  return tela === 'login' ? (
+    <LoginPage onGoToRegister={() => setTela('registro')} />
+  ) : (
+    <RegisterPage onGoToLogin={() => setTela('login')} />
+  )
+}
+
+function Raiz() {
+  const { state } = useAuth()
+
   if (state.kind === 'hydrating') {
     return (
-      <main className="min-h-dvh bg-neutral-950 text-neutral-100 flex items-center justify-center">
-        <p className="text-sm text-neutral-400">Carregando sessão…</p>
+      <main className="grid h-full place-items-center bg-app text-ink">
+        <p className="text-sm text-ink-dim">Carregando sessão…</p>
       </main>
     )
   }
 
-  if (state.kind === 'authenticated') return <AppShell />
-
-  return screen === 'login' ? (
-    <LoginPage onGoToRegister={() => setScreen('register')} />
-  ) : (
-    <RegisterPage onGoToLogin={() => setScreen('login')} />
-  )
+  return state.kind === 'authenticated' ? <Autenticado /> : <Anonimo />
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <Raiz />
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
