@@ -634,9 +634,11 @@ async def test_foto_original_continua_intacta_depois_de_tudo(
 
     doc = await banco["photos"].find_one({"_id": ObjectId(levantamento.foto_id)})
     pasta = (midia / doc["storage_key"]).parent
-    assert sorted(p.name for p in pasta.iterdir()) == ["original.jpg"], (
-        "nenhum derivado pode ter sido escrito na pasta da foto"
-    )
+    # Derivados existem e vivem em `derived/` — a cópia sem EXIF é um deles. A
+    # regra proíbe o original ser tocado ou substituído, não que derivados
+    # existam; por isso o assert olha só os arquivos da raiz da pasta.
+    raiz = sorted(p.name for p in pasta.iterdir() if p.is_file())
+    assert raiz == ["original.jpg"], raiz
 
 
 @pytest.mark.parametrize(

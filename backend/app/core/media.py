@@ -104,6 +104,16 @@ def build_derived_key(*, original_key: str, derived_uid: str, extension: str) ->
     return f"{original_key.rsplit('/', 1)[0]}/derived/{derived_uid}.{extension}"
 
 
+def build_display_key(*, original_key: str) -> str:
+    """Caminho da cópia de exibição, sem EXIF (Fase de endurecimento).
+
+    Nome fixo, e não um uid: existe **uma** cópia por foto, derivada de um
+    arquivo que nunca muda. O nome determinístico é o que deixa dois pedidos
+    simultâneos convergirem para o mesmo arquivo em vez de criarem dois.
+    """
+    return f"{original_key.rsplit('/', 1)[0]}/derived/display.jpg"
+
+
 def build_presentation_pdf_key(*, tenant_id: str, project_id: str, pdf_uid: str) -> str:
     """Caminho do PDF exportado (Fase 11).
 

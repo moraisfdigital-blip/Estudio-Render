@@ -3,7 +3,7 @@ import {
   createArea,
   deletePhoto,
   errorMessage,
-  fetchPhotoBlob,
+  fetchPhotoOriginalBlob,
   getMediaLimits,
   listAreaPhotos,
   listAreas,
@@ -205,7 +205,9 @@ function AreaPhotos({
     setOpening(photo.id)
     setUploadErrors([])
     try {
-      const blob = await fetchPhotoBlob(photo.id)
+      // Aqui é o arquivo como veio da câmera, EXIF incluído: é o que
+      // "Ver original" promete.
+      const blob = await fetchPhotoOriginalBlob(photo.id)
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank', 'noopener')
       // A aba já leu o blob; soltamos a referência depois de um instante.

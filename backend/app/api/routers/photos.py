@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse, Response
 from app.api.pagination import PageDep
 from app.api.deps import CurrentScope, CurrentUser
 from app.api.routers.areas import get_area_doc
-from app.core import imagesize, media
+from app.core import imagesize, imaging, media
 from app.core.clock import as_utc, utcnow
 from app.core.config import get_settings
 from app.core.db import get_db
@@ -60,6 +60,7 @@ def _to_out(
         checksum_sha256=doc["checksum_sha256"],
         created_at=as_utc(doc["created_at"]),
         original_url=f"/api/photos/{photo_id}/original",
+        display_url=f"/api/photos/{photo_id}/display",
         calibrated=calibrated,
         element_count=element_count,
         intervention_count=intervention_count,
@@ -145,6 +146,41 @@ def original_dimensions(photo: dict[str, Any]) -> tuple[int, int]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=UNREADABLE
         ) from None
+
+
+async def _ensure_display_copy(storage_key: str) -> str | None:
+    """Garante a cópia sem EXIF da foto e devolve a chave dela.
+
+    Idempotente de propósito: a chave é determinística e a gravação usa
+    `O_EXCL`, então dois pedidos simultâneos convergem para o mesmo arquivo —
+    o segundo encontra o do primeiro em vez de criar um concorrente.
+
+    Devolve `None` se a cópia não puder ser feita. A rota cai de volta no
+    original nesse caso: é melhor mostrar a foto com metadado do que não
+    mostrar a foto.
+    """
+    display_key = media.build_display_key(original_key=storage_key)
+    caminho = media.resolve(display_key)
+    if caminho.is_file():
+        return display_key
+
+    origem = media.resolve(storage_key)
+    if not origem.is_file():
+        return None
+
+    try:
+        limpa = imaging.strip_metadata(origem.read_bytes())
+        await media.write_once(
+            key=display_key,
+            chunks=media.single_chunk(limpa),
+            max_bytes=get_settings().max_upload_mb * 1024 * 1024,
+        )
+    except FileExistsError:
+        # Outro pedido criou a cópia no meio do caminho. O arquivo dele serve.
+        pass
+    except (OSError, ValueError):
+        return None
+    return display_key
 
 
 def _safe_filename(raw: str | None) -> str:
@@ -246,6 +282,10 @@ async def upload_photo(
             ),
         )
 
+    # Cópia de exibição, sem EXIF. O original fica intacto — a limpeza produz
+    # um arquivo novo, que é o que a tela e o PDF passam a usar.
+    await _ensure_display_copy(stored.key)
+
     doc = scope.stamp(
         photo_model.new_photo_doc(
             area_id=area_id,
@@ -330,6 +370,48 @@ async def get_photo_original(photo_id: str, scope: CurrentScope, request: Reques
         filename=doc["original_filename"],
         # inline: o grid e o visualizador abrem a foto; o usuário ainda pode
         # salvar pelo navegador.
+        content_disposition_type="inline",
+        headers={"ETag": etag, "Cache-Control": "private, max-age=3600"},
+    )
+
+
+@router.get("/photos/{photo_id}/display")
+async def get_photo_display(photo_id: str, scope: CurrentScope, request: Request) -> Response:
+    """Cópia da foto **sem EXIF** — é esta que a tela e o PDF usam.
+
+    O original guarda GPS e modelo do aparelho, e não pode ser alterado: é a
+    regra do blueprint. Então o que circula na interface é esta cópia, gerada
+    no upload a partir dele.
+
+    Foto enviada antes desta mudança não tem cópia ainda; ela é criada aqui, no
+    primeiro acesso. Se por algum motivo não der para criar, a rota serve o
+    original — mostrar a foto com metadado é melhor do que não mostrar a foto,
+    e o acesso continua exigindo token do mesmo tenant.
+    """
+    doc = await get_photo_doc(scope, photo_id)
+
+    display_key = await _ensure_display_copy(doc["storage_key"])
+    chave = display_key or doc["storage_key"]
+    tipo = "image/jpeg" if display_key else doc["content_type"]
+
+    try:
+        path = media.resolve(chave)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE) from None
+    if not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE)
+
+    # ETag derivado do hash do original + a marca da cópia: muda se a origem
+    # mudar (não muda, por contrato) e distingue este recurso do `/original`,
+    # que tem o mesmo hash de base.
+    etag = '"' + doc["checksum_sha256"] + ("-display" if display_key else "") + '"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={"ETag": etag})
+
+    return FileResponse(
+        path,
+        media_type=tipo,
+        filename=doc["original_filename"],
         content_disposition_type="inline",
         headers={"ETag": etag, "Cache-Control": "private, max-age=3600"},
     )

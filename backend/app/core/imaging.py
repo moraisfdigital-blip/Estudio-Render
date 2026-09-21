@@ -136,5 +136,30 @@ def changed_pixels(antes: Image.Image, depois: Image.Image) -> int:
     return marcados.histogram()[255]
 
 
+# Qualidade da cópia de exibição. Alta o bastante para ninguém notar a
+# diferença olhando a fachada, baixa o bastante para não dobrar o disco.
+_DISPLAY_QUALITY = 90
+
+
+def strip_metadata(image_bytes: bytes) -> bytes:
+    """Devolve a mesma imagem, sem metadado nenhum.
+
+    EXIF carrega GPS e modelo do aparelho. O original **não** pode ser tocado —
+    é a regra do blueprint — então a limpeza produz um arquivo **novo**, que é
+    o que a tela e o PDF passam a usar. O original continua no disco, intacto,
+    para quem precisar dele de propósito.
+
+    A limpeza é a própria reencodificação: abrir e salvar sem passar `exif` nem
+    `icc_profile` não leva metadado junto. Não é uma remoção campo a campo, que
+    deixaria passar o que ninguém lembrou de listar.
+    """
+    original = Image.open(io.BytesIO(image_bytes))
+    limpa = original.convert(_MODE)
+
+    buffer = io.BytesIO()
+    limpa.save(buffer, format="JPEG", quality=_DISPLAY_QUALITY, optimize=True)
+    return buffer.getvalue()
+
+
 def size_of(image_bytes: bytes) -> tuple[int, int]:
     return Image.open(io.BytesIO(image_bytes)).size

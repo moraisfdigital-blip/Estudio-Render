@@ -527,6 +527,32 @@ número digitado não vira medida de campo.
 preserva preço, observações e quantidade informada de cada elemento que
 continua no quantitativo. Linhas manuais (instalação, frete) ficam intactas.
 
+## EXIF: cópia limpa, original intocado
+
+As fotos saem do celular com EXIF, e EXIF carrega **GPS e modelo do aparelho**.
+O blueprint proíbe alterar a foto original, então a limpeza não acontece nela.
+
+No upload, uma **cópia sem metadado** é gravada em `derived/display.jpg`. É ela
+que a interface usa — grid, calibração, elementos, máscaras e comparação — e é
+ela que alimenta o PDF. O original continua no disco, byte a byte, somente
+leitura.
+
+| Rota | O que entrega |
+| --- | --- |
+| `GET /api/photos/{id}/display` | A cópia sem EXIF. É o que a tela mostra |
+| `GET /api/photos/{id}/original` | O arquivo como veio da câmera, EXIF incluído |
+
+O botão **"Ver original"** continua apontando para o original — é a porta
+explícita para quem quer o arquivo como enviado.
+
+A limpeza é a própria reencodificação: abrir e salvar sem passar `exif` nem
+`icc_profile` não leva metadado junto. Não é remoção campo a campo, que
+deixaria passar o que ninguém lembrou de listar.
+
+Foto enviada antes desta mudança não tem cópia; ela é criada no primeiro
+acesso. A chave é determinística (`display.jpg`, não um uid), então dois
+pedidos simultâneos convergem para o mesmo arquivo em vez de criarem dois.
+
 ## Achados de média severidade
 
 Fechados depois da auditoria, exceto o EXIF (SEC-09), que é decisão de produto.
@@ -686,6 +712,7 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_exif.py` | — | Original mantém o EXIF byte a byte; a cópia não tem nenhum; foto antiga ganha cópia no primeiro acesso |
 | `tests/test_medios.py` | — | Sem enumeração nem diferença de tempo; logout revoga só o token da sessão; prompt delimitado; senha previsível recusada |
 | `tests/test_hardening_deploy.py` | — | Bomba de descompressão recusada; docs fechado; CSP e headers; teto de paginação; log sem senha nem token |
 | `tests/test_auth_hardening.py` | — | Registro fechado por padrão; limite de tentativas por IP; `alg: none` recusado de ponta a ponta |

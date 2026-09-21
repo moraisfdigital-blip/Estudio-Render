@@ -436,8 +436,11 @@ async def test_foto_original_intacta_depois_de_desenhar(
 
     doc = await banco["photos"].find_one({"_id": ObjectId(levantamento.foto_id)})
     pasta = (midia / doc["storage_key"]).parent
-    arquivos = sorted(p.name for p in pasta.rglob("*"))
-    assert arquivos == ["original.jpg"], f"nenhum derivado devia existir: {arquivos}"
+    # Derivado (cópia sem EXIF, imagem gerada) vive em `derived/`. A regra é
+    # que o original não seja tocado nem substituído — não que derivados não
+    # existam.
+    raiz = sorted(p.name for p in pasta.iterdir() if p.is_file())
+    assert raiz == ["original.jpg"], raiz
 
 
 @pytest.mark.parametrize("indice", ["uniq_tenant_photo_mask", "tenant_project_mask"])
