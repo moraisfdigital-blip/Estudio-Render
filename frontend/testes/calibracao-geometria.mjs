@@ -61,20 +61,24 @@ for (const janela of JANELAS) {
   await pagina.goto(`${APP}/projeto/${PROJETO}/levantamento`, { waitUntil: 'networkidle' })
   await pagina.waitForTimeout(1200)
 
-  // As fotos ficam dentro da área; abrir a área é parte do caminho real.
-  const abrirArea = pagina.getByRole('button', { name: 'Abrir' })
-  if (await abrirArea.count()) {
-    await abrirArea.first().click()
-    await pagina.waitForTimeout(1200)
-  }
-
-  if (!(await pagina.getByRole('button', { name: /Calibrar escala|Conferir escala/ }).count())) {
-    erros.push(`${janela.height}px: o projeto indicado não tem foto com botão de escala`)
+  // Caminho real da tela: escolher a foto na biblioteca abre o bloco de
+  // trabalho dela, e é de lá que sai a calibração.
+  const cartaoFoto = pagina.locator('button[aria-pressed]').first()
+  if (!(await cartaoFoto.count())) {
+    erros.push(`${janela.height}px: o projeto indicado não tem foto na biblioteca`)
     await contexto.close()
     continue
   }
+  await cartaoFoto.click()
+  await pagina.waitForTimeout(1800)
 
-  await pagina.getByRole('button', { name: /Calibrar escala|Conferir escala/ }).first().click()
+  const botaoEscala = pagina.getByRole('button', { name: /Calibrar fotografia|Conferir escala/ }).first()
+  if (!(await botaoEscala.count())) {
+    erros.push(`${janela.height}px: a foto aberta não ofereceu a calibração`)
+    await contexto.close()
+    continue
+  }
+  await botaoEscala.click()
   const foto = pagina.locator('img[alt="Foto original do levantamento"]')
   await foto.waitFor({ timeout: 15000 })
   await pagina.waitForTimeout(800)

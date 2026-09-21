@@ -9,7 +9,7 @@ import TrilhaEtapas from '../components/layout/TrilhaEtapas'
 import { ErrorNotice, Loading } from '../components/ui'
 import { useProjetoAtual } from '../contexts/ProjetoAtual'
 import { useResource } from '../hooks/useResource'
-import SurveyPanel from './SurveyPanel'
+import Levantamento from './Levantamento'
 
 /**
  * A tela de um projeto: cabeçalho, trilha de passos e o trabalho do passo atual.
@@ -67,9 +67,7 @@ export function ProjectIndexRedirect() {
 export function StepLevantamento() {
   const { projectId = '' } = useParams()
   return (
-    <Moldura>
-      <SurveyPanel projectId={projectId} />
-    </Moldura>
+    <Levantamento projectId={projectId} />
   )
 }
 
