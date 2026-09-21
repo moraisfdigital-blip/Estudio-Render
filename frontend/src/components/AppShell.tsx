@@ -21,8 +21,8 @@ export default function AppShell() {
   const { user, tenant } = state.session
 
   return (
-    <div className="min-h-dvh bg-neutral-950 text-neutral-100">
-      <header className="border-b border-neutral-800">
+    <div className="min-h-dvh bg-app text-ink">
+      <header className="border-b border-line">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
           <button
             type="button"
@@ -30,7 +30,7 @@ export default function AppShell() {
             className="flex items-center gap-3 text-left"
           >
             <span className="text-sm font-semibold">ENBY PRO</span>
-            <span className="rounded-full border border-neutral-700 px-2.5 py-0.5 text-xs text-neutral-300">
+            <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-ink-soft">
               {tenant.name}
             </span>
           </button>
@@ -42,21 +42,21 @@ export default function AppShell() {
               <button
                 type="button"
                 onClick={() => setView({ kind: 'catalog' })}
-                className="rounded-md px-3 py-1.5 text-sm text-neutral-400 transition hover:text-neutral-100"
+                className="rounded-md px-3 py-1.5 text-sm text-ink-soft transition hover:text-ink"
               >
                 Catálogo
               </button>
             )}
             <div className="text-right">
               <p className="text-sm leading-tight">{user.name}</p>
-              <p className="text-xs leading-tight text-neutral-500">
+              <p className="text-xs leading-tight text-ink-dim">
                 {user.email} · {user.role}
               </p>
             </div>
             <button
               type="button"
               onClick={() => void signOut()}
-              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 transition hover:border-neutral-500 hover:text-neutral-100"
+              className="rounded-md border border-line px-3 py-1.5 text-sm text-ink-soft transition hover:border-ink-dim hover:text-ink"
             >
               Sair
             </button>

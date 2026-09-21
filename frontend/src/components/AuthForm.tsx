@@ -1,4 +1,5 @@
 import type { FormEvent, ReactNode } from 'react'
+import Marca from './layout/Marca'
 
 /** Casca das telas de auth: título, erro e ação secundária. */
 export function AuthCard({
@@ -17,25 +18,25 @@ export function AuthCard({
   footer: ReactNode
 }) {
   return (
-    <main className="min-h-dvh bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
+    <main className="min-h-dvh bg-app text-ink flex items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
         <header className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">ENBY PRO</p>
+          <Marca className="text-xl" />
           <h1 className="text-2xl font-semibold">{title}</h1>
-          <p className="text-sm text-neutral-400">{subtitle}</p>
+          <p className="text-sm text-ink-soft">{subtitle}</p>
         </header>
 
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           {children}
 
           {error && (
-            <p role="alert" className="text-sm text-red-400 border border-red-900/60 bg-red-950/40 rounded-md px-3 py-2">
+            <p role="alert" className="text-sm text-bad border border-bad bg-bad-soft rounded-md px-3 py-2">
               {error}
             </p>
           )}
         </form>
 
-        <p className="text-sm text-neutral-400">{footer}</p>
+        <p className="text-sm text-ink-soft">{footer}</p>
       </div>
     </main>
   )
@@ -60,7 +61,7 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-sm text-neutral-300">{label}</span>
+      <span className="text-sm text-ink-soft">{label}</span>
       <input
         type={type}
         value={value}
@@ -69,7 +70,7 @@ export function Field({
         disabled={disabled}
         minLength={minLength}
         required
-        className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-neutral-100 outline-none focus:border-neutral-500 disabled:opacity-60"
+        className="w-full rounded-md border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-ink-dim disabled:opacity-60"
       />
     </label>
   )
@@ -80,7 +81,7 @@ export function SubmitButton({ pending, children }: { pending: boolean; children
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-neutral-100 px-3 py-2 font-medium text-neutral-950 transition hover:bg-white disabled:opacity-60 disabled:cursor-not-allowed"
+      className="w-full rounded-md bg-brand px-3 py-2 font-medium text-brand-ink transition hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed"
     >
       {pending ? 'Enviando…' : children}
     </button>
@@ -89,7 +90,7 @@ export function SubmitButton({ pending, children }: { pending: boolean; children
 
 export function LinkButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="text-neutral-100 underline underline-offset-4">
+    <button type="button" onClick={onClick} className="text-ink underline underline-offset-4">
       {children}
     </button>
   )

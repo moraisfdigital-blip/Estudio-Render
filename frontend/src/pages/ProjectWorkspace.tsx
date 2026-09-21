@@ -123,7 +123,7 @@ function EmMigracao({ titulo, descricao }: { titulo: string; descricao: string }
         <button
           type="button"
           onClick={() => navigate(`/projeto/${projectId}/levantamento`)}
-          className="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-hover"
+          className="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-ink transition hover:bg-brand-hover"
         >
           Ir para as fotos
         </button>

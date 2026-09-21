@@ -57,7 +57,7 @@ function VersionThumb({ imageId, alt }: { imageId: string; alt: string }) {
   }, [imageId])
 
   if (!url) {
-    return <div className="aspect-4/3 w-full animate-pulse rounded bg-neutral-900" />
+    return <div className="aspect-4/3 w-full animate-pulse rounded bg-surface" />
   }
   return <img src={url} alt={alt} className="aspect-4/3 w-full rounded object-cover" />
 }
@@ -83,10 +83,10 @@ function CardVersao({
     <li
       className={`flex flex-col gap-2 rounded-lg border p-3 ${
         versao.approved
-          ? 'border-emerald-800 bg-emerald-950/20'
+          ? 'border-good bg-good-soft'
           : selecionada
-            ? 'border-neutral-600'
-            : 'border-neutral-800'
+            ? 'border-ink-dim'
+            : 'border-line'
       }`}
     >
       {versao.generated_image && (
@@ -95,23 +95,23 @@ function CardVersao({
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm text-neutral-100" title={versao.label}>
+          <p className="truncate text-sm text-ink" title={versao.label}>
             {versao.label}
           </p>
-          <p className="text-[10px] text-neutral-600">
+          <p className="text-[10px] text-ink-dim">
             Vaga {versao.position} · {dateTimeFormat.format(new Date(versao.created_at))}
           </p>
         </div>
         {versao.approved && (
-          <span className="shrink-0 rounded-full border border-emerald-800 px-2 py-0.5 text-[10px] text-emerald-300">
+          <span className="shrink-0 rounded-full border border-good px-2 py-0.5 text-[10px] text-good">
             Aprovada
           </span>
         )}
       </div>
 
-      {versao.notes && <p className="text-xs text-neutral-400">{versao.notes}</p>}
+      {versao.notes && <p className="text-xs text-ink-soft">{versao.notes}</p>}
 
-      <label className="flex items-center gap-2 text-xs text-neutral-400">
+      <label className="flex items-center gap-2 text-xs text-ink-soft">
         <input
           type="checkbox"
           checked={selecionada}
@@ -125,7 +125,7 @@ function CardVersao({
         {versao.approved ? (
           // A aprovada não pode ser descartada: a apresentação depende de haver
           // uma escolha registrada. Dizer isso é melhor do que um botão que dá erro.
-          <span className="text-[10px] text-neutral-600">
+          <span className="text-[10px] text-ink-dim">
             Aprove outra versão antes de descartar esta.
           </span>
         ) : (
@@ -134,7 +134,7 @@ function CardVersao({
               type="button"
               onClick={onAprovar}
               disabled={!podeAprovar || ocupada}
-              className="text-xs text-neutral-400 underline-offset-2 transition hover:text-neutral-100 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+              className="text-xs text-ink-soft underline-offset-2 transition hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-40"
               title={podeAprovar ? undefined : 'Só o owner do workspace aprova uma versão.'}
             >
               Aprovar
@@ -143,7 +143,7 @@ function CardVersao({
               type="button"
               onClick={onDescartar}
               disabled={ocupada}
-              className="text-xs text-neutral-500 transition hover:text-red-300 disabled:opacity-40"
+              className="text-xs text-ink-dim transition hover:text-bad disabled:opacity-40"
             >
               Descartar
             </button>
@@ -244,16 +244,16 @@ export default function VersionsDialog({
       role="dialog"
       aria-modal="true"
       aria-label={`Versões de ${photo.original_filename}`}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-4 sm:p-8"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-5xl rounded-xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl">
+      <div className="w-full max-w-5xl rounded-xl border border-line bg-app p-5 shadow-2xl">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-neutral-100">Versões</h2>
-            <p className="truncate text-sm text-neutral-500" title={photo.original_filename}>
+            <h2 className="text-lg font-semibold text-ink">Versões</h2>
+            <p className="truncate text-sm text-ink-dim" title={photo.original_filename}>
               {photo.original_filename}
             </p>
           </div>
@@ -271,7 +271,7 @@ export default function VersionsDialog({
 
         {resource.kind === 'ready' && lista && (
           <div className="mt-4 flex flex-col gap-4">
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-ink-dim">
               Até {lista.max_versions} versões por foto —{' '}
               {lista.limit_reached
                 ? 'limite atingido. Descarte uma para abrir espaço.'
@@ -283,9 +283,9 @@ export default function VersionsDialog({
 
             {/* Estado vazio da fatia. */}
             {lista.versions.length === 0 ? (
-              <div className="rounded-md border border-dashed border-neutral-800 p-4 text-center">
-                <p className="text-sm text-neutral-300">Nenhuma versão ainda</p>
-                <p className="mt-1 text-xs text-neutral-500">
+              <div className="rounded-md border border-dashed border-line p-4 text-center">
+                <p className="text-sm text-ink-soft">Nenhuma versão ainda</p>
+                <p className="mt-1 text-xs text-ink-dim">
                   Gere propostas na tela de proposta visual e promova aqui as que merecem ir para
                   o cliente.
                 </p>
@@ -320,7 +320,7 @@ export default function VersionsDialog({
             {/* Comparação lado a lado das selecionadas. */}
             {emComparacao.length >= 2 && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs tracking-wide text-neutral-500 uppercase">
+                <p className="text-xs tracking-wide text-ink-dim uppercase">
                   Comparando {emComparacao.length} versões
                 </p>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -329,7 +329,7 @@ export default function VersionsDialog({
                       {versao.generated_image && (
                         <VersionThumb imageId={versao.generated_image.id} alt={versao.label} />
                       )}
-                      <figcaption className="text-xs text-neutral-400">{versao.label}</figcaption>
+                      <figcaption className="text-xs text-ink-soft">{versao.label}</figcaption>
                     </figure>
                   ))}
                 </div>
@@ -337,17 +337,17 @@ export default function VersionsDialog({
             )}
 
             {/* Promover proposta a versão. */}
-            <div className="flex flex-col gap-2 border-t border-neutral-800 pt-4">
-              <p className="text-xs tracking-wide text-neutral-500 uppercase">
+            <div className="flex flex-col gap-2 border-t border-line pt-4">
+              <p className="text-xs tracking-wide text-ink-dim uppercase">
                 Promover uma proposta
               </p>
               {lista.limit_reached ? (
-                <p className="text-xs text-amber-500">
+                <p className="text-xs text-warn">
                   Limite de {lista.max_versions} versões atingido. Descarte uma versão para
                   promover outra proposta.
                 </p>
               ) : promovieis.length === 0 ? (
-                <p className="text-xs text-neutral-600">
+                <p className="text-xs text-ink-dim">
                   Nenhuma proposta disponível para promover. Gere uma na tela de proposta visual.
                 </p>
               ) : (
@@ -355,9 +355,9 @@ export default function VersionsDialog({
                   {promovieis.map((proposta) => (
                     <li
                       key={proposta.id}
-                      className="flex items-center justify-between gap-3 rounded-md border border-neutral-800 p-2"
+                      className="flex items-center justify-between gap-3 rounded-md border border-line p-2"
                     >
-                      <span className="truncate text-xs text-neutral-400">
+                      <span className="truncate text-xs text-ink-soft">
                         Proposta de{' '}
                         {dateTimeFormat.format(new Date(proposta.created_at))} ·{' '}
                         {proposta.provider}

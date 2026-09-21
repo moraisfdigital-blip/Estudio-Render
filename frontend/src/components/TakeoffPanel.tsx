@@ -53,8 +53,8 @@ function Procedencia({ item }: { item: TakeoffItem }) {
     <span
       className={`rounded-full border px-1.5 py-0.5 text-[10px] ${
         estimativa
-          ? 'border-amber-800 bg-amber-950/40 text-amber-300'
-          : 'border-neutral-700 text-neutral-400'
+          ? 'border-warn bg-warn-soft text-warn'
+          : 'border-line text-ink-soft'
       }`}
     >
       {item.quantity_source_label}
@@ -74,10 +74,10 @@ function Linha({
   onQuantidade: (valor: number) => void
 }) {
   return (
-    <tr className="border-t border-neutral-800 align-top">
+    <tr className="border-t border-line align-top">
       <td className="py-2 pr-3">
-        <p className="text-neutral-200">{item.description}</p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-600">
+        <p className="text-ink">{item.description}</p>
+        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-ink-dim">
           {item.kind_label && <span>{item.kind_label}</span>}
           {item.material_name && <span>· {item.material_name}</span>}
           {item.finish_name && (
@@ -85,7 +85,7 @@ function Linha({
               · {item.finish_name}
               {item.color_hex && (
                 <span
-                  className="inline-block size-2.5 rounded-sm border border-neutral-600"
+                  className="inline-block size-2.5 rounded-sm border border-ink-dim"
                   style={{ backgroundColor: item.color_hex }}
                   title={item.color_name ?? undefined}
                 />
@@ -96,7 +96,7 @@ function Linha({
         </p>
         {/* Por que não há quantidade. Melhor do que um campo vazio sem explicação. */}
         {item.quantity_note && (
-          <p className="mt-1 text-[11px] text-amber-500">{item.quantity_note}</p>
+          <p className="mt-1 text-[11px] text-warn">{item.quantity_note}</p>
         )}
       </td>
 
@@ -112,7 +112,7 @@ function Linha({
             }}
             className={`${inputClass} w-24 text-right text-xs`}
           />
-          <span className="text-[10px] text-neutral-500">
+          <span className="text-[10px] text-ink-dim">
             {UNIDADES.find((u) => u.value === item.unit)?.label ?? item.unit}
           </span>
         </div>
@@ -134,9 +134,9 @@ function Linha({
         />
       </td>
 
-      <td className="py-2 text-right whitespace-nowrap text-neutral-200">
+      <td className="py-2 text-right whitespace-nowrap text-ink">
         {item.line_total === null ? (
-          <span className="text-xs text-neutral-600">—</span>
+          <span className="text-xs text-ink-dim">—</span>
         ) : (
           money.format(item.line_total)
         )}
@@ -195,8 +195,8 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
 
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-semibold text-neutral-100">Quantitativo e orçamento</h2>
-      <p className="mt-1 text-sm text-neutral-500">
+      <h2 className="text-lg font-semibold text-ink">Quantitativo e orçamento</h2>
+      <p className="mt-1 text-sm text-ink-dim">
         Sai dos elementos conferidos. O preço é sempre informado por você — não existe tabela
         nem valor de referência neste sistema.
       </p>
@@ -226,7 +226,7 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
               {ocupado ? 'Processando…' : atual.generated ? 'Atualizar quantitativo' : 'Gerar quantitativo'}
             </Button>
             {atual.generated && (
-              <span className="text-xs text-neutral-600">
+              <span className="text-xs text-ink-dim">
                 Atualizar recalcula as medidas e mantém os preços digitados.
               </span>
             )}
@@ -234,9 +234,9 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
 
           {/* Estado vazio da fatia. */}
           {atual.items.length === 0 ? (
-            <div className="rounded-md border border-dashed border-neutral-800 p-4">
-              <p className="text-sm text-neutral-300">Nenhuma linha no quantitativo</p>
-              <p className="mt-1 text-xs text-neutral-500">
+            <div className="rounded-md border border-dashed border-line p-4">
+              <p className="text-sm text-ink-soft">Nenhuma linha no quantitativo</p>
+              <p className="mt-1 text-xs text-ink-dim">
                 Só entram elementos <strong>conferidos</strong>. Confira as medidas no
                 levantamento e gere o quantitativo.
               </p>
@@ -246,7 +246,7 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="text-[10px] tracking-wide text-neutral-500 uppercase">
+                    <tr className="text-[10px] tracking-wide text-ink-dim uppercase">
                       <th className="pb-2 pr-3 font-normal">Item</th>
                       <th className="pb-2 pr-3 font-normal">Quantidade</th>
                       <th className="pb-2 pr-3 font-normal">Preço unitário</th>
@@ -278,25 +278,25 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
               </div>
 
               {/* O total e as pendências que o tornam parcial. */}
-              <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
+              <div className="rounded-md border border-line bg-surface p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-xs tracking-wide text-neutral-500 uppercase">
+                  <span className="text-xs tracking-wide text-ink-dim uppercase">
                     {atual.items_without_price > 0 ? 'Total parcial' : 'Total'}
                   </span>
-                  <span className="text-lg text-neutral-100">
+                  <span className="text-lg text-ink">
                     {atual.total === null ? '—' : money.format(atual.total)}
                   </span>
                 </div>
-                <ul className="mt-2 flex flex-col gap-1 text-xs text-neutral-500">
+                <ul className="mt-2 flex flex-col gap-1 text-xs text-ink-dim">
                   {atual.items_without_price > 0 && (
-                    <li className="text-amber-500">
+                    <li className="text-warn">
                       {atual.items_without_price === 1
                         ? '1 linha ainda sem preço — ela não está somada.'
                         : `${atual.items_without_price} linhas ainda sem preço — elas não estão somadas.`}
                     </li>
                   )}
                   {atual.items_with_estimate > 0 && (
-                    <li className="text-amber-500">
+                    <li className="text-warn">
                       {atual.items_with_estimate === 1
                         ? '1 linha usa quantidade estimada, não medida em campo.'
                         : `${atual.items_with_estimate} linhas usam quantidade estimada, não medida em campo.`}
@@ -318,13 +318,13 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
           )}
 
           {/* Linha manual: instalação, frete, projeto. */}
-          <div className="flex flex-col gap-2 border-t border-neutral-800 pt-4">
-            <p className="text-xs tracking-wide text-neutral-500 uppercase">
+          <div className="flex flex-col gap-2 border-t border-line pt-4">
+            <p className="text-xs tracking-wide text-ink-dim uppercase">
               Adicionar linha manual
             </p>
             <div className="flex flex-wrap items-end gap-2">
               <label className="flex flex-1 flex-col gap-1">
-                <span className="text-[10px] text-neutral-600">Descrição</span>
+                <span className="text-[10px] text-ink-dim">Descrição</span>
                 <input
                   value={novaDescricao}
                   onChange={(event) => setNovaDescricao(event.target.value)}
@@ -333,7 +333,7 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
                 />
               </label>
               <label className="flex w-24 flex-col gap-1">
-                <span className="text-[10px] text-neutral-600">Quantidade</span>
+                <span className="text-[10px] text-ink-dim">Quantidade</span>
                 <input
                   value={novaQuantidade}
                   onChange={(event) => setNovaQuantidade(event.target.value)}
@@ -341,7 +341,7 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
                 />
               </label>
               <label className="flex w-20 flex-col gap-1">
-                <span className="text-[10px] text-neutral-600">Unidade</span>
+                <span className="text-[10px] text-ink-dim">Unidade</span>
                 <select
                   value={novaUnidade}
                   onChange={(event) => setNovaUnidade(event.target.value)}

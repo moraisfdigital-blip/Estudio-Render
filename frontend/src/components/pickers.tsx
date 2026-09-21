@@ -26,7 +26,7 @@ function InlinePanel({
         {open ? 'Cancelar' : openLabel}
       </Button>
       {open && (
-        <div className="flex flex-col gap-3 rounded-md border border-neutral-800 bg-neutral-900/60 p-4">
+        <div className="flex flex-col gap-3 rounded-md border border-line bg-surface p-4">
           {children}
         </div>
       )}
@@ -37,7 +37,7 @@ function InlinePanel({
 function PanelError({ message }: { message: string | null }) {
   if (!message) return null
   return (
-    <p role="alert" className="text-sm text-red-300">
+    <p role="alert" className="text-sm text-bad">
       {message}
     </p>
   )

@@ -126,7 +126,7 @@ function Form({
       <h1 className="mt-2 text-2xl font-semibold">
         {projectId ? 'Editar projeto' : 'Novo projeto'}
       </h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="mt-1 text-sm text-ink-dim">
         Um projeto é o container do fluxo: cliente, local e, nas próximas fases, fotos e proposta.
       </p>
 
@@ -198,7 +198,7 @@ function Form({
           </Button>
         </div>
         {!ready && (
-          <p className="text-xs text-neutral-600">
+          <p className="text-xs text-ink-dim">
             Nome, cliente e local são obrigatórios — o projeto não existe sem os três.
           </p>
         )}

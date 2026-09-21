@@ -31,7 +31,7 @@ type Catalog = { materials: Material[]; finishes: Finish[]; brands: Brand[] }
 function ColorDot({ hex, label }: { hex: string; label: string }) {
   return (
     <span
-      className="inline-block size-3 shrink-0 rounded-sm border border-neutral-600"
+      className="inline-block size-3 shrink-0 rounded-sm border border-ink-dim"
       style={{ backgroundColor: hex }}
       role="img"
       aria-label={`Cor ${label}`}
@@ -44,7 +44,7 @@ function ColorDot({ hex, label }: { hex: string; label: string }) {
 function AppliedSpec({ spec }: { spec: SurveyElement['spec'] }) {
   if (spec.is_empty) {
     return (
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-ink-dim">
         Sem especificação. O elemento está marcado e medido, mas ninguém decidiu do que ele é
         feito.
       </p>
@@ -55,24 +55,24 @@ function AppliedSpec({ spec }: { spec: SurveyElement['spec'] }) {
     <dl className="flex flex-col gap-1.5 text-xs">
       {spec.material && (
         <div className="flex gap-2">
-          <dt className="w-20 shrink-0 text-neutral-500">Material</dt>
-          <dd className="text-neutral-200">{spec.material.name}</dd>
+          <dt className="w-20 shrink-0 text-ink-dim">Material</dt>
+          <dd className="text-ink">{spec.material.name}</dd>
         </div>
       )}
       {spec.finish && (
         <div className="flex gap-2">
-          <dt className="w-20 shrink-0 text-neutral-500">Acabamento</dt>
-          <dd className="flex items-center gap-1.5 text-neutral-200">
+          <dt className="w-20 shrink-0 text-ink-dim">Acabamento</dt>
+          <dd className="flex items-center gap-1.5 text-ink">
             {spec.finish.name}
             <ColorDot hex={spec.finish.color_hex} label={spec.finish.color_name} />
-            <span className="text-neutral-400">{spec.finish.color_name}</span>
+            <span className="text-ink-soft">{spec.finish.color_name}</span>
           </dd>
         </div>
       )}
       {spec.brand && (
         <div className="flex gap-2">
-          <dt className="w-20 shrink-0 text-neutral-500">Marca</dt>
-          <dd className="flex items-center gap-2 text-neutral-200">
+          <dt className="w-20 shrink-0 text-ink-dim">Marca</dt>
+          <dd className="flex items-center gap-2 text-ink">
             {spec.brand.logo_url && (
               <BrandLogo
                 brandId={spec.brand.id}
@@ -146,12 +146,12 @@ export default function SpecPicker({
 
   if (materials.length === 0 && brands.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-neutral-800 px-4 py-6 text-center">
-        <p className="text-xs text-neutral-400">
+      <div className="rounded-md border border-dashed border-line px-4 py-6 text-center">
+        <p className="text-xs text-ink-soft">
           Nenhum material cadastrado ainda. O que a peça é feita sai do catálogo da sua empresa, não
           de texto livre.
         </p>
-        <p className="mt-3 text-[11px] text-neutral-600">
+        <p className="mt-3 text-[11px] text-ink-dim">
           {canManageCatalog
             ? 'Cadastre em Catálogo, no topo da página.'
             : 'Só o owner do workspace cadastra material, acabamento e marca.'}
@@ -168,7 +168,7 @@ export default function SpecPicker({
 
       <div className="flex flex-col gap-2">
         <div>
-          <label htmlFor="spec-material" className="text-xs text-neutral-500">
+          <label htmlFor="spec-material" className="text-xs text-ink-dim">
             Material
           </label>
           <select
@@ -188,7 +188,7 @@ export default function SpecPicker({
         </div>
 
         <div>
-          <label htmlFor="spec-finish" className="text-xs text-neutral-500">
+          <label htmlFor="spec-finish" className="text-xs text-ink-dim">
             Acabamento e cor
           </label>
           <select
@@ -206,12 +206,12 @@ export default function SpecPicker({
             ))}
           </select>
           {materialId === '' ? (
-            <p className="mt-1 text-[10px] text-neutral-600">
+            <p className="mt-1 text-[10px] text-ink-dim">
               Escolha o material primeiro: acabamento é variante de um material.
             </p>
           ) : (
             available.length === 0 && (
-              <p className="mt-1 text-[10px] text-neutral-600">
+              <p className="mt-1 text-[10px] text-ink-dim">
                 Este material ainda não tem acabamento cadastrado.
               </p>
             )
@@ -219,7 +219,7 @@ export default function SpecPicker({
         </div>
 
         <div>
-          <label htmlFor="spec-brand" className="text-xs text-neutral-500">
+          <label htmlFor="spec-brand" className="text-xs text-ink-dim">
             Marca
           </label>
           <select
@@ -239,7 +239,7 @@ export default function SpecPicker({
         </div>
       </div>
 
-      {saving && <p className="text-[10px] text-neutral-500">Salvando especificação…</p>}
+      {saving && <p className="text-[10px] text-ink-dim">Salvando especificação…</p>}
     </div>
   )
 }

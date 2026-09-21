@@ -88,29 +88,29 @@ function useBlobUrl(fonte: Fonte) {
 function PromptResumo({ proposal }: { proposal: Proposal }) {
   const { prompt } = proposal
   return (
-    <details className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
-      <summary className="cursor-pointer text-xs text-neutral-400">
+    <details className="rounded-md border border-line bg-surface p-3">
+      <summary className="cursor-pointer text-xs text-ink-soft">
         O que foi pedido ao provedor
       </summary>
-      <div className="mt-2 flex flex-col gap-2 text-xs text-neutral-400">
+      <div className="mt-2 flex flex-col gap-2 text-xs text-ink-soft">
         <p>
-          <span className="text-neutral-500">Intervenção: </span>
+          <span className="text-ink-dim">Intervenção: </span>
           {prompt.intervencao.join(', ') || 'nenhuma'}
         </p>
         {prompt.protecao.length > 0 && (
           <p>
-            <span className="text-neutral-500">Protegido: </span>
+            <span className="text-ink-dim">Protegido: </span>
             {prompt.protecao.join(', ')}
           </p>
         )}
         {prompt.pecas.map((peca) => (
           <p key={peca.name}>
-            <span className="text-neutral-200">{peca.name}</span> — {peca.dimensions}. {peca.spec}.
+            <span className="text-ink">{peca.name}</span> — {peca.dimensions}. {peca.spec}.
           </p>
         ))}
         {/* O texto exato que foi enviado. É a resposta para "por que a
             proposta ficou assim?" sem reconstrução. */}
-        <pre className="mt-1 max-h-40 overflow-auto rounded bg-neutral-950 p-2 text-[10px] whitespace-pre-wrap text-neutral-500">
+        <pre className="mt-1 max-h-40 overflow-auto rounded bg-app p-2 text-[10px] whitespace-pre-wrap text-ink-dim">
           {prompt.text}
         </pre>
       </div>
@@ -178,16 +178,16 @@ export default function ProposalDialog({
       role="dialog"
       aria-modal="true"
       aria-label={`Proposta visual de ${photo.original_filename}`}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-4 sm:p-8"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-6xl rounded-xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl">
+      <div className="w-full max-w-6xl rounded-xl border border-line bg-app p-5 shadow-2xl">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-neutral-100">Proposta visual</h2>
-            <p className="truncate text-sm text-neutral-500" title={photo.original_filename}>
+            <h2 className="text-lg font-semibold text-ink">Proposta visual</h2>
+            <p className="truncate text-sm text-ink-dim" title={photo.original_filename}>
               {photo.original_filename}
             </p>
           </div>
@@ -207,7 +207,7 @@ export default function ProposalDialog({
           <div className="mt-4 flex flex-col gap-4">
             <div className="grid gap-4 md:grid-cols-2">
               <figure className="flex flex-col gap-2">
-                <figcaption className="text-xs tracking-wide text-neutral-500 uppercase">
+                <figcaption className="text-xs tracking-wide text-ink-dim uppercase">
                   Original
                 </figcaption>
                 {original.erro && <ErrorNotice message={original.erro} />}
@@ -216,20 +216,20 @@ export default function ProposalDialog({
                   <img
                     src={original.url}
                     alt="Foto original do levantamento"
-                    className="w-full rounded-lg border border-neutral-800"
+                    className="w-full rounded-lg border border-line"
                   />
                 )}
               </figure>
 
               <figure className="flex flex-col gap-2">
-                <figcaption className="text-xs tracking-wide text-neutral-500 uppercase">
+                <figcaption className="text-xs tracking-wide text-ink-dim uppercase">
                   Proposta gerada
                 </figcaption>
                 {/* Estado vazio: foto sem proposta é normal, não erro. */}
                 {!comparacao.generated && (
-                  <div className="flex h-full min-h-40 flex-col items-center justify-center rounded-lg border border-dashed border-neutral-800 p-4 text-center">
-                    <p className="text-sm text-neutral-300">Ainda não gerada</p>
-                    <p className="mt-1 text-xs text-neutral-500">
+                  <div className="flex h-full min-h-40 flex-col items-center justify-center rounded-lg border border-dashed border-line p-4 text-center">
+                    <p className="text-sm text-ink-soft">Ainda não gerada</p>
+                    <p className="mt-1 text-xs text-ink-dim">
                       A geração altera apenas as áreas marcadas como intervenção. O resto da foto
                       continua exatamente como está.
                     </p>
@@ -243,7 +243,7 @@ export default function ProposalDialog({
                   <img
                     src={gerada.url}
                     alt="Proposta visual gerada"
-                    className="w-full rounded-lg border border-neutral-800"
+                    className="w-full rounded-lg border border-line"
                   />
                 )}
               </figure>
@@ -260,7 +260,7 @@ export default function ProposalDialog({
                     : 'Gerar proposta'}
               </Button>
               {comparacao.proposal_count > 0 && (
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-ink-dim">
                   {comparacao.proposal_count === 1
                     ? '1 proposta no histórico'
                     : `${comparacao.proposal_count} propostas no histórico`}
@@ -270,19 +270,19 @@ export default function ProposalDialog({
 
             {comparacao.generated && comparacao.proposal && (
               <div className="flex flex-col gap-3">
-                <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
-                  <p className="text-xs tracking-wide text-neutral-500 uppercase">
+                <div className="rounded-md border border-line bg-surface p-3">
+                  <p className="text-xs tracking-wide text-ink-dim uppercase">
                     Alcance da geração
                   </p>
-                  <p className="mt-1 text-sm text-neutral-100">
+                  <p className="mt-1 text-sm text-ink">
                     {numberFormat.format(comparacao.generated.changed_pixels)} pixels alterados
                   </p>
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-1 text-xs text-ink-dim">
                     Todos dentro das áreas de intervenção — o que está fora da máscara é o
                     original, pixel por pixel. Provedor: {comparacao.generated.provider}.
                   </p>
                   {comparacao.proposal.completed_at && (
-                    <p className="mt-1 text-xs text-neutral-600">
+                    <p className="mt-1 text-xs text-ink-dim">
                       Gerada em {dateTimeFormat.format(new Date(comparacao.proposal.completed_at))}
                     </p>
                   )}

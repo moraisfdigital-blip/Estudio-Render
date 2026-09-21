@@ -57,7 +57,7 @@ function SlideThumb({ imageId, alt }: { imageId: string; alt: string }) {
     }
   }, [imageId])
 
-  if (!url) return <div className="aspect-4/3 w-full animate-pulse rounded bg-neutral-900" />
+  if (!url) return <div className="aspect-4/3 w-full animate-pulse rounded bg-surface" />
   return <img src={url} alt={alt} className="aspect-4/3 w-full rounded object-cover" />
 }
 
@@ -73,30 +73,30 @@ function CardSlide({
   return (
     <li
       className={`flex flex-col gap-2 rounded-lg border p-3 ${
-        slide.outdated ? 'border-amber-900 bg-amber-950/20' : 'border-neutral-800'
+        slide.outdated ? 'border-warn bg-warn-soft' : 'border-line'
       }`}
     >
       {imageId ? (
         <SlideThumb imageId={imageId} alt={slide.label} />
       ) : (
-        <div className="flex aspect-4/3 w-full items-center justify-center rounded border border-dashed border-neutral-800 text-xs text-neutral-600">
+        <div className="flex aspect-4/3 w-full items-center justify-center rounded border border-dashed border-line text-xs text-ink-dim">
           Imagem indisponível
         </div>
       )}
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm text-neutral-100" title={slide.original_filename}>
+          <p className="truncate text-sm text-ink" title={slide.original_filename}>
             {slide.original_filename}
           </p>
-          <p className="text-[10px] text-neutral-600">
+          <p className="text-[10px] text-ink-dim">
             Slide {slide.position} · {slide.label}
           </p>
         </div>
       </div>
 
       {slide.outdated && (
-        <p className="text-[11px] text-amber-500">
+        <p className="text-[11px] text-warn">
           Esta foto tem outra versão aprovada agora. Salve a apresentação de novo para atualizar
           o slide.
         </p>
@@ -198,8 +198,8 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
 
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-semibold text-neutral-100">Apresentação</h2>
-      <p className="mt-1 text-sm text-neutral-500">
+      <h2 className="text-lg font-semibold text-ink">Apresentação</h2>
+      <p className="mt-1 text-sm text-ink-dim">
         Reúne as versões aprovadas do projeto. O que vai para o cliente é só o que foi aprovado.
       </p>
 
@@ -216,9 +216,9 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
 
           {/* Estado vazio da fatia: sem aprovação não há apresentação. */}
           {atual.slides.length === 0 ? (
-            <div className="rounded-md border border-dashed border-neutral-800 p-4">
-              <p className="text-sm text-neutral-300">Nenhuma versão aprovada ainda</p>
-              <p className="mt-1 text-xs text-neutral-500">
+            <div className="rounded-md border border-dashed border-line p-4">
+              <p className="text-sm text-ink-soft">Nenhuma versão aprovada ainda</p>
+              <p className="mt-1 text-xs text-ink-dim">
                 {atual.blocked_reason ??
                   'Aprove uma versão em alguma foto para montar a apresentação.'}
               </p>
@@ -227,7 +227,7 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
             <>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="flex flex-col gap-1">
-                  <span className="text-xs text-neutral-500">Título</span>
+                  <span className="text-xs text-ink-dim">Título</span>
                   <input
                     value={titulo}
                     onChange={(event) => setTitulo(event.target.value)}
@@ -235,7 +235,7 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
                   />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-xs text-neutral-500">Observações</span>
+                  <span className="text-xs text-ink-dim">Observações</span>
                   <input
                     value={notas}
                     onChange={(event) => setNotas(event.target.value)}
@@ -246,7 +246,7 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
               </div>
 
               {!atual.saved && (
-                <p className="text-xs text-neutral-600">
+                <p className="text-xs text-ink-dim">
                   Rascunho montado das versões aprovadas. Salve para fixar a ordem e as legendas.
                 </p>
               )}
@@ -298,19 +298,19 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
               </div>
 
               {atual.pdf && (
-                <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
-                  <p className="text-xs tracking-wide text-neutral-500 uppercase">PDF exportado</p>
-                  <p className="mt-1 text-sm text-neutral-100">
+                <div className="rounded-md border border-line bg-surface p-3">
+                  <p className="text-xs tracking-wide text-ink-dim uppercase">PDF exportado</p>
+                  <p className="mt-1 text-sm text-ink">
                     {atual.pdf.page_count} páginas · {formatSize(atual.pdf.size_bytes)}
                   </p>
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-1 text-xs text-ink-dim">
                     Gerado em {dateTimeFormat.format(new Date(atual.pdf.generated_at))} ·
                     provedor {atual.pdf.provider}
                   </p>
                   <button
                     type="button"
                     onClick={() => void baixarPdf()}
-                    className="mt-2 text-xs text-neutral-300 underline-offset-2 hover:underline"
+                    className="mt-2 text-xs text-ink-soft underline-offset-2 hover:underline"
                   >
                     Abrir PDF
                   </button>
@@ -318,22 +318,22 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
               )}
 
               {atual.share && (
-                <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
-                  <p className="text-xs tracking-wide text-neutral-500 uppercase">
+                <div className="rounded-md border border-line bg-surface p-3">
+                  <p className="text-xs tracking-wide text-ink-dim uppercase">
                     Link interno
                   </p>
-                  <p className="mt-1 font-mono text-[11px] break-all text-neutral-300">
+                  <p className="mt-1 font-mono text-[11px] break-all text-ink-soft">
                     {window.location.origin}
                     {atual.share.url}
                   </p>
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-1 text-xs text-ink-dim">
                     Exige login do workspace — não é portal de cliente. Renovar o link invalida o
                     anterior.
                   </p>
                   <button
                     type="button"
                     onClick={() => void copiarLink()}
-                    className="mt-2 text-xs text-neutral-300 underline-offset-2 hover:underline"
+                    className="mt-2 text-xs text-ink-soft underline-offset-2 hover:underline"
                   >
                     Copiar link
                   </button>

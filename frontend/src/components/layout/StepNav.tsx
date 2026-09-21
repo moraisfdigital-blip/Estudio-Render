@@ -57,7 +57,7 @@ function Marcador({ numero, ativo, pronto }: { numero: number; ativo: boolean; p
   return (
     <span
       className={`${base} ${
-        ativo ? 'bg-brand text-white' : 'border border-line bg-raised text-ink-dim'
+        ativo ? 'bg-brand text-brand-ink' : 'border border-line bg-raised text-ink-dim'
       }`}
       aria-hidden="true"
     >

@@ -148,7 +148,7 @@ function Overlay({
   const both = points.a !== null && points.b !== null
 
   return (
-    <div className="relative select-none overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+    <div className="relative select-none overflow-hidden rounded-lg border border-line bg-app">
       <img
         ref={imageRef}
         src={url}
@@ -361,16 +361,16 @@ export default function CalibrationDialog({
       role="dialog"
       aria-modal="true"
       aria-label={`Calibrar escala de ${photo.original_filename}`}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-4 sm:p-8"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-5xl rounded-xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl">
+      <div className="w-full max-w-5xl rounded-xl border border-line bg-app p-5 shadow-2xl">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-neutral-100">Calibrar escala</h2>
-            <p className="truncate text-sm text-neutral-500" title={photo.original_filename}>
+            <h2 className="text-lg font-semibold text-ink">Calibrar escala</h2>
+            <p className="truncate text-sm text-ink-dim" title={photo.original_filename}>
               {photo.original_filename}
             </p>
           </div>
@@ -400,7 +400,7 @@ export default function CalibrationDialog({
                   disabled={saving}
                 />
               )}
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-ink-dim">
                 A foto original não é alterada: os pontos são um overlay e ficam salvos como um
                 registro à parte.
               </p>
@@ -409,26 +409,26 @@ export default function CalibrationDialog({
             <form onSubmit={submit} className="flex flex-col gap-4">
               {/* Estado da foto: calibrada ou não. É o "vazio" desta fatia. */}
               {saved ? (
-                <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
-                  <p className="text-xs tracking-wide text-neutral-500 uppercase">Escala salva</p>
-                  <p className="mt-1 text-sm text-neutral-100">
+                <div className="rounded-md border border-line bg-surface p-3">
+                  <p className="text-xs tracking-wide text-ink-dim uppercase">Escala salva</p>
+                  <p className="mt-1 text-sm text-ink">
                     {numberFormat.format(saved.pixels_per_unit ?? 0)} px por {saved.unit}
                   </p>
-                  <p className="mt-1 text-xs text-neutral-500">
+                  <p className="mt-1 text-xs text-ink-dim">
                     {numberFormat.format(saved.pixel_distance ?? 0)} px ={' '}
                     {numberFormat.format(saved.real_length ?? 0)} {saved.unit} · medida informada
                     pelo usuário
                   </p>
                   {saved.updated_at && (
-                    <p className="mt-1 text-xs text-neutral-600">
+                    <p className="mt-1 text-xs text-ink-dim">
                       Atualizada em {dateTimeFormat.format(new Date(saved.updated_at))}
                     </p>
                   )}
                 </div>
               ) : (
-                <div className="rounded-md border border-dashed border-neutral-800 p-3">
-                  <p className="text-sm text-neutral-300">Foto não calibrada</p>
-                  <p className="mt-1 text-xs text-neutral-500">
+                <div className="rounded-md border border-dashed border-line p-3">
+                  <p className="text-sm text-ink-soft">Foto não calibrada</p>
+                  <p className="mt-1 text-xs text-ink-dim">
                     Sem escala, as medidas das próximas fases só podem sair como estimativa — e
                     aparecem rotuladas como tal.
                   </p>
@@ -438,35 +438,35 @@ export default function CalibrationDialog({
               {/* Passo a passo só enquanto não há escala salva: depois de calibrada
                   a lista inteira fica riscada e vira ruído na tela. */}
               {!saved && (
-                <ol className="space-y-1 text-xs text-neutral-500">
-                  <li className={points.a ? 'text-neutral-600 line-through' : 'text-neutral-300'}>
+                <ol className="space-y-1 text-xs text-ink-dim">
+                  <li className={points.a ? 'text-ink-dim line-through' : 'text-ink-soft'}>
                     1. Clique no primeiro ponto (A).
                   </li>
-                  <li className={points.b ? 'text-neutral-600 line-through' : 'text-neutral-300'}>
+                  <li className={points.b ? 'text-ink-dim line-through' : 'text-ink-soft'}>
                     2. Clique no segundo ponto (B).
                   </li>
-                  <li className={ready ? 'text-neutral-600 line-through' : 'text-neutral-300'}>
+                  <li className={ready ? 'text-ink-dim line-through' : 'text-ink-soft'}>
                     3. Informe quanto mede, no mundo real, a distância entre eles.
                   </li>
                 </ol>
               )}
 
-              <div className="rounded-md border border-neutral-800 px-3 py-2 text-xs text-neutral-400">
+              <div className="rounded-md border border-line px-3 py-2 text-xs text-ink-soft">
                 <div className="flex justify-between gap-3">
                   <span>Ponto A</span>
-                  <span className="font-mono text-neutral-300">
+                  <span className="font-mono text-ink-soft">
                     {points.a ? `${Math.round(points.a.x)}, ${Math.round(points.a.y)}` : '—'}
                   </span>
                 </div>
                 <div className="mt-1 flex justify-between gap-3">
                   <span>Ponto B</span>
-                  <span className="font-mono text-neutral-300">
+                  <span className="font-mono text-ink-soft">
                     {points.b ? `${Math.round(points.b.x)}, ${Math.round(points.b.y)}` : '—'}
                   </span>
                 </div>
                 <div className="mt-1 flex justify-between gap-3">
                   <span>Distância na foto</span>
-                  <span className="font-mono text-neutral-300">
+                  <span className="font-mono text-ink-soft">
                     {previewDistance === null ? '—' : `${numberFormat.format(previewDistance)} px`}
                   </span>
                 </div>
@@ -509,7 +509,7 @@ export default function CalibrationDialog({
               </Field>
 
               {realLength.trim() && measurement === null && (
-                <p className="text-xs text-red-300">Informe um número maior que zero.</p>
+                <p className="text-xs text-bad">Informe um número maior que zero.</p>
               )}
 
               {saveError && <ErrorNotice message={saveError} />}
@@ -531,7 +531,7 @@ export default function CalibrationDialog({
                 </Button>
               </div>
 
-              <p className="text-xs text-neutral-600">
+              <p className="text-xs text-ink-dim">
                 O fator px/{unitShort} é calculado no servidor a partir dos pontos e da medida que
                 você informou.
               </p>

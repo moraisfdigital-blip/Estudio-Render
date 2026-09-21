@@ -1,40 +1,111 @@
 @import "tailwindcss";
 
 /**
- * Tokens da interface.
+ * Tokens da interface, em dois modos.
  *
- * Os valores vêm do protótipo aprovado: fundo azul-marinho quase preto, painéis
- * um degrau acima dele, e UM azul vivo reservado para a ação principal. A cor
- * de destaque é escassa de propósito — se tudo é azul, nada é.
+ * ## Claro é o padrão
  *
- * Nenhum componente escreve cor literal: tudo passa por estes tokens, para
- * trocar a paleta ser uma edição num lugar só.
+ * O trabalho acontece em cima de fotografia de fachada e de cor de ACM. Fundo
+ * claro é o que não mente sobre a cor que o cliente vai ver na obra — e é o
+ * que o protótipo aprovado usa. O modo escuro existe porque foi pedido, não
+ * porque é o padrão: quem quiser troca no botão do topo, e a escolha fica
+ * guardada no navegador.
+ *
+ * A preferência do sistema operacional **não** é seguida de propósito. Claro é
+ * uma decisão do produto, não do sistema de quem abre.
+ *
+ * ## As cores da marca
+ *
+ * O logo ENBY PRO é magenta `#fc027a` e ciano `#02dfd8`. Puros, nenhum dos
+ * dois é legível como texto em fundo branco: 3,87:1 e 1,67:1, contra os 4,5:1
+ * que texto normal exige. Então o logo continua com as cores puras e a
+ * interface usa versões escurecidas — `#cc0064` (5,60:1) e `#0b7f7b`
+ * (4,84:1) — que são a mesma identidade, só que legíveis. No modo escuro o
+ * magenta pode subir de volta, porque o fundo é que mudou.
+ *
+ * Magenta é a ação principal; ciano é o apoio (passo concluído, seleção). A
+ * cor é escassa de propósito: se tudo é da marca, nada é.
+ *
+ * ## Como isto funciona
+ *
+ * O `@theme` define o modo claro. O bloco `[data-theme="dark"]` redefine as
+ * MESMAS variáveis — as utilidades do Tailwind leem `var(--color-…)`, então
+ * trocar o atributo no `<html>` troca a interface inteira, sem recarregar e
+ * sem nenhuma classe condicional espalhada pelos componentes.
+ *
+ * Nenhum componente escreve cor literal. Quando escreve, o modo claro quebra
+ * naquele pedaço — e quebra em silêncio, porque continua bonito no escuro.
  */
 @theme {
-  /* Fundo da aplicação e superfícies empilhadas sobre ele. */
+  /* Fundo da área de trabalho e superfícies empilhadas sobre ele. */
+  --color-app: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-raised: #f0f2f3;
+  --color-line: #e3e5e8;
+  --color-line-soft: #eceef0;
+
+  /* Texto. */
+  --color-ink: #23262a;
+  --color-ink-soft: #5c6166;
+  --color-ink-dim: #81858a;
+
+  /* Magenta da marca — a ação principal. */
+  --color-brand: #cc0064;
+  --color-brand-hover: #b00056;
+  --color-brand-soft: #fdeef5;
+  --color-brand-ink: #ffffff;
+
+  /* Ciano da marca — apoio: passo concluído, item selecionado. */
+  --color-accent: #0b7f7b;
+  --color-accent-soft: #e6f6f5;
+
+  /* Semânticas — separadas da marca de propósito. Verde de "deu certo" não
+     pode ser a mesma cor do botão principal, senão os dois se confundem. */
+  --color-good: #0f7a4d;
+  --color-good-soft: #e8f6ef;
+  --color-warn: #a2660a;
+  --color-warn-soft: #fdf3e3;
+  --color-bad: #c22a22;
+  --color-bad-soft: #fdecea;
+
+  /* Véu atrás dos diálogos. No claro é mais leve: escurecer demais uma tela
+     clara assusta, e o diálogo já se destaca pela sombra e pela borda. */
+  --color-overlay: rgb(35 38 42 / 0.45);
+
+  /* As cores puras do logo. Só para a marca em si. */
+  --color-logo-magenta: #fc027a;
+  --color-logo-ciano: #02dfd8;
+}
+
+:root[data-theme="dark"] {
   --color-app: #0b0f14;
   --color-surface: #111720;
   --color-raised: #161d27;
   --color-line: #1f2935;
   --color-line-soft: #18212b;
 
-  /* Texto. */
   --color-ink: #e7ecf3;
   --color-ink-soft: #aab6c5;
   --color-ink-dim: #7c8a9b;
 
-  /* Azul da ação principal. */
-  --color-brand: #2f6fed;
-  --color-brand-hover: #3f7df5;
-  --color-brand-soft: #16233c;
+  /* Fundo escuro aguenta o magenta mais vivo sem perder a legibilidade do
+     texto branco por cima (4,78:1). */
+  --color-brand: #e0006e;
+  --color-brand-hover: #fc027a;
+  --color-brand-soft: #2a0a1b;
+  --color-brand-ink: #ffffff;
 
-  /* Semânticas — separadas do azul de marca de propósito. */
+  --color-accent: #02dfd8;
+  --color-accent-soft: #08262a;
+
   --color-good: #3fb984;
   --color-good-soft: #10281f;
   --color-warn: #e0a552;
   --color-warn-soft: #2a2011;
   --color-bad: #ef6b63;
   --color-bad-soft: #2d1817;
+
+  --color-overlay: rgb(3 6 10 / 0.78);
 }
 
 /* O app ocupa a janela inteira: a área de trabalho rola por dentro, não a página. */
@@ -49,7 +120,16 @@ body {
   color: var(--color-ink);
 }
 
-/* Foco visível em tudo que recebe teclado — o padrão do navegador some no escuro. */
+/* Diz ao navegador em que modo estamos, para as barras de rolagem e os
+   controles nativos (data, cor, range) não virem do modo errado. */
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Foco visível em tudo que recebe teclado. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;

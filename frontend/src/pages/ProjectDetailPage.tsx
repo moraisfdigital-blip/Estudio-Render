@@ -13,9 +13,9 @@ const dateTimeFormat = new Intl.DateTimeFormat('pt-BR', {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-neutral-800 py-3 sm:flex-row sm:gap-6">
-      <dt className="w-40 shrink-0 text-sm text-neutral-500">{label}</dt>
-      <dd className="text-sm text-neutral-200">{value}</dd>
+    <div className="flex flex-col gap-1 border-b border-line py-3 sm:flex-row sm:gap-6">
+      <dt className="w-40 shrink-0 text-sm text-ink-dim">{label}</dt>
+      <dd className="text-sm text-ink">{value}</dd>
     </div>
   )
 }
@@ -50,7 +50,7 @@ export default function ProjectDetailPage({
           <header className="mt-2 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold">{resource.data.name}</h1>
-              <span className="mt-2 inline-block rounded-full border border-neutral-700 px-2.5 py-0.5 text-xs text-neutral-300">
+              <span className="mt-2 inline-block rounded-full border border-line px-2.5 py-0.5 text-xs text-ink-soft">
                 {resource.data.status_label}
               </span>
             </div>

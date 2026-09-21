@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ENBY PRO</title>
+    <script>
+      // Antes da primeira pintura: sem isto a tela aparece clara e só depois
+      // fica escura, e esse piscar é feio justamente para quem escolheu escuro.
+      try {
+        var t = localStorage.getItem("enby-pro.tema");
+        document.documentElement.dataset.theme = t === "escuro" ? "dark" : "light";
+      } catch (e) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,6 +1,8 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { CircleHelp, FolderOpen, Layers, LogOut, Plus } from 'lucide-react'
+import { CircleHelp, FolderOpen, Layers, LogOut, Moon, Plus, Sun } from 'lucide-react'
 import { useAuth } from '../../auth/context'
+import { useTema } from '../../hooks/useTema'
+import Marca from './Marca'
 
 /**
  * A moldura da aplicação: menu à esquerda, barra no topo, trabalho no meio.
@@ -46,7 +48,7 @@ function ItemMenu({
       className={({ isActive }) =>
         `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
           destaque
-            ? 'bg-brand text-white hover:bg-brand-hover'
+            ? 'bg-brand text-brand-ink hover:bg-brand-hover'
             : isActive
               ? 'bg-raised text-ink'
               : 'text-ink-soft hover:bg-raised/60 hover:text-ink'
@@ -61,6 +63,7 @@ function ItemMenu({
 
 export default function AppLayout() {
   const { state, signOut } = useAuth()
+  const { tema, alternar } = useTema()
   const navigate = useNavigate()
 
   if (state.kind !== 'authenticated') return null
@@ -82,7 +85,7 @@ export default function AppLayout() {
           onClick={() => navigate('/projetos')}
           className="flex flex-col items-start gap-0.5 px-5 py-5 text-left"
         >
-          <span className="text-lg leading-none font-bold tracking-tight">ENBY PRO</span>
+          <Marca className="text-lg leading-none" />
           <span className="text-[10px] tracking-[0.2em] text-ink-dim uppercase">
             Projeto visual
           </span>
@@ -127,6 +130,16 @@ export default function AppLayout() {
                 {user.role === 'owner' ? 'Owner' : 'Editor'}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={alternar}
+              className="grid size-9 place-items-center rounded-lg border border-line text-ink-dim transition hover:border-ink-dim hover:text-ink"
+              aria-label={tema === 'claro' ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'}
+              title={tema === 'claro' ? 'Modo escuro' : 'Modo claro'}
+            >
+              {tema === 'claro' ? <Moon size={17} strokeWidth={1.75} /> : <Sun size={17} strokeWidth={1.75} />}
+            </button>
+
             <span
               className="grid size-9 place-items-center rounded-full bg-raised text-xs font-semibold text-ink-soft"
               title={user.email}

@@ -41,9 +41,9 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-lg border border-neutral-800 p-5">
-      <h2 className="text-sm font-medium text-neutral-200">{title}</h2>
-      <p className="mt-1 text-xs text-neutral-500">{description}</p>
+    <section className="rounded-lg border border-line p-5">
+      <h2 className="text-sm font-medium text-ink">{title}</h2>
+      <p className="mt-1 text-xs text-ink-dim">{description}</p>
       <div className="mt-4">{children}</div>
     </section>
   )
@@ -83,7 +83,7 @@ function MaterialsSection({
       {error && <ErrorNotice message={error} />}
 
       {materials.length === 0 ? (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-ink-dim">
           Nenhum material ainda. Cadastre o primeiro para poder especificar elementos.
         </p>
       ) : (
@@ -91,10 +91,10 @@ function MaterialsSection({
           {materials.map((material) => (
             <li
               key={material.id}
-              className="flex items-baseline justify-between gap-3 border-b border-neutral-900 pb-1.5 text-sm"
+              className="flex items-baseline justify-between gap-3 border-b border-line-soft pb-1.5 text-sm"
             >
-              <span className="text-neutral-200">{material.name}</span>
-              <span className="shrink-0 text-xs text-neutral-600">
+              <span className="text-ink">{material.name}</span>
+              <span className="shrink-0 text-xs text-ink-dim">
                 {material.finish_count === 0
                   ? 'sem acabamento'
                   : `${material.finish_count} acabamento${material.finish_count > 1 ? 's' : ''}`}
@@ -173,31 +173,31 @@ function FinishesSection({
       {error && <ErrorNotice message={error} />}
 
       {materials.length === 0 ? (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-ink-dim">
           Cadastre um material primeiro: acabamento é sempre variante de algum material.
         </p>
       ) : (
         <>
           {finishes.length === 0 ? (
-            <p className="text-xs text-neutral-500">Nenhum acabamento cadastrado ainda.</p>
+            <p className="text-xs text-ink-dim">Nenhum acabamento cadastrado ainda.</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {finishes.map((finish) => (
                 <li
                   key={finish.id}
-                  className="flex items-center justify-between gap-3 border-b border-neutral-900 pb-1.5 text-sm"
+                  className="flex items-center justify-between gap-3 border-b border-line-soft pb-1.5 text-sm"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span
-                      className="inline-block size-3 shrink-0 rounded-sm border border-neutral-600"
+                      className="inline-block size-3 shrink-0 rounded-sm border border-ink-dim"
                       style={{ backgroundColor: finish.color_hex }}
                       role="img"
                       aria-label={`Cor ${finish.color_name}`}
                     />
-                    <span className="truncate text-neutral-200">{finish.name}</span>
-                    <span className="shrink-0 text-xs text-neutral-500">{finish.color_name}</span>
+                    <span className="truncate text-ink">{finish.name}</span>
+                    <span className="shrink-0 text-xs text-ink-dim">{finish.color_name}</span>
                   </span>
-                  <span className="shrink-0 text-xs text-neutral-600">{finish.material_name}</span>
+                  <span className="shrink-0 text-xs text-ink-dim">{finish.material_name}</span>
                 </li>
               ))}
             </ul>
@@ -244,13 +244,13 @@ function FinishesSection({
                 </Field>
               </div>
               <div>
-                <label htmlFor="finish-color-hex" className="text-sm text-neutral-300">
+                <label htmlFor="finish-color-hex" className="text-sm text-ink-soft">
                   Cor
                 </label>
                 <input
                   id="finish-color-hex"
                   type="color"
-                  className="mt-1.5 block h-9 w-16 cursor-pointer rounded-md border border-neutral-700 bg-neutral-900"
+                  className="mt-1.5 block h-9 w-16 cursor-pointer rounded-md border border-line bg-surface"
                   value={colorHex}
                   onChange={(event) => setColorHex(event.target.value)}
                 />
@@ -314,19 +314,19 @@ function BrandsSection({
       {error && <ErrorNotice message={error} />}
 
       {brands.length === 0 ? (
-        <p className="text-xs text-neutral-500">Nenhuma marca cadastrada ainda.</p>
+        <p className="text-xs text-ink-dim">Nenhuma marca cadastrada ainda.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {brands.map((brand) => (
             <li
               key={brand.id}
-              className="flex items-center justify-between gap-3 border-b border-neutral-900 pb-2 text-sm"
+              className="flex items-center justify-between gap-3 border-b border-line-soft pb-2 text-sm"
             >
               <span className="flex min-w-0 items-center gap-2">
                 {brand.logo && <BrandLogo brandId={brand.id} name={brand.name} />}
-                <span className="truncate text-neutral-200">{brand.name}</span>
+                <span className="truncate text-ink">{brand.name}</span>
               </span>
-              <label className="shrink-0 cursor-pointer text-xs text-neutral-500 underline-offset-2 hover:text-neutral-300 hover:underline">
+              <label className="shrink-0 cursor-pointer text-xs text-ink-dim underline-offset-2 hover:text-ink-soft hover:underline">
                 {uploading === brand.id
                   ? 'Enviando…'
                   : brand.logo
@@ -391,13 +391,13 @@ export default function CatalogPage({
       <button
         type="button"
         onClick={onBack}
-        className="text-sm text-neutral-400 transition hover:text-neutral-100"
+        className="text-sm text-ink-soft transition hover:text-ink"
       >
         ← Projetos
       </button>
 
       <h1 className="mt-4 text-2xl font-semibold">Catálogo</h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="mt-1 text-sm text-ink-dim">
         Material, acabamento e marca deste workspace. A cor da proposta sai daqui.
       </p>
 
