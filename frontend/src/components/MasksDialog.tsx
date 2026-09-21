@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../auth/context'
 import { Button, ErrorNotice, Loading } from '../components/ui'
 import { useResource } from '../hooks/useResource'
+import { useFotoGeometria } from '../hooks/useFotoGeometria'
 
 /**
  * Máscaras de intervenção e proteção — o Architecture Lock desenhado.
@@ -102,33 +103,15 @@ function Overlay({
   disabled: boolean
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null)
-  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null)
-  const [scale, setScale] = useState(1)
-
-  const medir = useCallback(() => {
-    const image = imageRef.current
-    if (!image || !image.naturalWidth) return
-    setNatural({ width: image.naturalWidth, height: image.naturalHeight })
-    const rect = image.getBoundingClientRect()
-    if (rect.width > 0) setScale(image.naturalWidth / rect.width)
-  }, [])
-
-  useEffect(() => {
-    window.addEventListener('resize', medir)
-    return () => window.removeEventListener('resize', medir)
-  }, [medir])
+  // Mesma conta do diálogo de calibração, no mesmo lugar: o clique só vira
+  // pixel certo se descontar a tarja do encaixe da foto na caixa.
+  const { natural, scale, medir, paraOriginal } = useFotoGeometria(imageRef)
 
   function coordenadaDo(event: React.PointerEvent<SVGSVGElement>): MaskPoint | null {
-    const image = imageRef.current
-    if (!image || !natural) return null
-    const rect = image.getBoundingClientRect()
-    if (!rect.width || !rect.height) return null
-    const x = ((event.clientX - rect.left) / rect.width) * natural.width
-    const y = ((event.clientY - rect.top) / rect.height) * natural.height
     // Clique fora da imagem não vira vértice: o servidor recusaria, e recusar
     // aqui evita o usuário desenhar algo que não pode ser salvo.
-    if (x < 0 || y < 0 || x > natural.width || y > natural.height) return null
-    return { x: Math.round(x), y: Math.round(y) }
+    const ponto = paraOriginal(event.clientX, event.clientY)
+    return ponto && { x: Math.round(ponto.x), y: Math.round(ponto.y) }
   }
 
   return (

@@ -12,6 +12,7 @@ import {
 } from '../api/client'
 import { Button, ErrorNotice, Field, Loading, inputClass } from '../components/ui'
 import { useResource } from '../hooks/useResource'
+import { useFotoGeometria } from '../hooks/useFotoGeometria'
 
 /**
  * Calibração de escala — dois pontos sobre a foto **original** e a medida real
@@ -139,44 +140,10 @@ function Overlay({
   disabled: boolean
 }) {
   const imageRef = useRef<HTMLImageElement>(null)
-  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null)
-  // Fator de conversão tela → original. Recalculado quando a janela muda de
-  // tamanho, senão o marcador desregula depois de um resize.
-  const [scale, setScale] = useState(1)
   const [dragging, setDragging] = useState<PointName | null>(null)
-
-  const measure = useCallback(() => {
-    const image = imageRef.current
-    if (!image || !image.naturalWidth) return
-    setNatural({ width: image.naturalWidth, height: image.naturalHeight })
-    const rect = image.getBoundingClientRect()
-    if (rect.width > 0) setScale(image.naturalWidth / rect.width)
-  }, [])
-
-  useEffect(() => {
-    const image = imageRef.current
-    if (!image) return
-    if (image.complete) measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(image)
-    return () => observer.disconnect()
-  }, [measure, url])
-
-  /** Converte a posição do ponteiro em coordenada de pixel do original. */
-  function toOriginal(event: React.PointerEvent): CalibrationPoint | null {
-    const image = imageRef.current
-    if (!image || !natural) return null
-    const rect = image.getBoundingClientRect()
-    if (rect.width === 0 || rect.height === 0) return null
-    const x = ((event.clientX - rect.left) / rect.width) * natural.width
-    const y = ((event.clientY - rect.top) / rect.height) * natural.height
-    // Clamp: o clique na borda não pode virar coordenada fora da foto — o
-    // servidor recusaria, e com razão.
-    return {
-      x: Math.min(Math.max(x, 0), natural.width),
-      y: Math.min(Math.max(y, 0), natural.height),
-    }
-  }
+  // A conta que transforma clique em pixel da foto mora no hook: ela precisa
+  // descontar a tarja que o `object-contain` cria, e errá-la é silencioso.
+  const { natural, scale, medir, paraOriginal, paraOriginalPreso } = useFotoGeometria(imageRef)
 
   const both = points.a !== null && points.b !== null
 
@@ -186,7 +153,7 @@ function Overlay({
         ref={imageRef}
         src={url}
         alt="Foto original do levantamento"
-        onLoad={measure}
+        onLoad={medir}
         draggable={false}
         className="block h-auto max-h-[62vh] w-full object-contain"
       />
@@ -204,12 +171,15 @@ function Overlay({
             // seria fácil perder uma calibração boa por um clique torto. Use
             // "Marcar de novo" ou arraste o marcador.
             if (both) return
-            const point = toOriginal(event)
+            // Clique na tarja é clique fora da foto: não vira ponto.
+            const point = paraOriginal(event.clientX, event.clientY)
             if (point) onSet(point)
           }}
           onPointerMove={(event) => {
             if (!dragging) return
-            const point = toOriginal(event)
+            // Arrastando, sair da foto prende o marcador na borda em vez de
+            // soltá-lo no meio do gesto.
+            const point = paraOriginalPreso(event.clientX, event.clientY)
             if (point) onMove(dragging, point)
           }}
           onPointerUp={() => setDragging(null)}

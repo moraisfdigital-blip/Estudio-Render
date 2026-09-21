@@ -67,10 +67,10 @@ variação: 26,80 px/m                 variação: 0,40 px/m
 Como rodar: com `front-visual/front` servido em `127.0.0.1:5500`,
 `node front-visual/testes/escala.mjs`. Usa Playwright com o Chrome do sistema.
 
-## O mesmo defeito existe no projeto React — latente
+## O mesmo defeito existia no projeto React — corrigido em 21/09/2026
 
-`frontend/src/components/CalibrationDialog.tsx` e `MasksDialog.tsx` medem a
-caixa certa (a da `<img>`), mas convertem o clique **linearmente** sobre ela,
+`frontend/src/components/CalibrationDialog.tsx` e `MasksDialog.tsx` mediam a
+caixa certa (a da `<img>`), mas convertiam o clique **linearmente** sobre ela,
 sem descontar a tarja preta que o `object-contain` cria. Enquanto a caixa tiver
 a mesma proporção da foto, dá na mesma. Quando `max-h-[62vh]` corta a altura —
 janela baixa, notebook de tela curta, ou foto em pé — a proporção muda e as
@@ -82,8 +82,38 @@ contas divergem. Medido numa réplica isolada da geometria, com foto 1600×1200:
 | 1400 × 600  | 700 × 372        | 1200                 | 1365                     | −165 px     |
 | 1400 × 450  | 700 × 279        | 1200                 | 1553                     | −353 px     |
 
-353 px de 1600 são ~22% — a mesma ordem de grandeza do bug do protótipo. Não foi
-corrigido: depende de autorização, por ser mudança no projeto oficial.
+353 px de 1600 são ~22% — a mesma ordem de grandeza do bug do protótipo.
+
+### A correção
+
+A conta saiu de dentro dos dois diálogos e virou `frontend/src/hooks/
+useFotoGeometria.ts`, num lugar só. Ela desconta a tarja, recalcula quando a
+janela muda (inclusive quando só a altura muda, que é o caso do `max-h-[62vh]`)
+e guarda o encaixe numa `ref`, para um arraste em andamento usar a geometria
+deste instante e não a da renderização anterior. Clique na tarja deixou de virar
+ponto — é clique fora da foto, e o servidor recusaria de todo jeito. Arrastar um
+marcador para fora prende ele na borda, em vez de soltá-lo no meio do gesto.
+
+`MasksDialog` hoje não tem `max-height` e por isso não chegava a errar, mas
+repetia a mesma conta frágil: passou a usar o mesmo hook, para uma regra de CSS
+futura não reabrir o buraco em silêncio.
+
+### A prova
+
+`frontend/testes/calibracao-geometria.mjs` faz o caminho real — entra, abre o
+projeto, abre a área, abre o diálogo — e clica em dois pontos de coordenada
+conhecida, conferindo o que o diálogo diz ter gravado. A janela de 560 px de
+altura existe para forçar a tarja a aparecer:
+
+```
+com a conta linear                                    corrigido
+ OK   1500x1000 | tarja  0px | gravado  400 | 0px      OK  gravado 400 | 0px
+ OK   1500x760  | tarja  0px | gravado  400 | 0px      OK  gravado 400 | 0px
+FALHA 1500x560  | tarja 42px | gravado  453 | 53px     OK  gravado 400 | 0px
+```
+
+Sem a janela baixa o teste passaria nas duas versões e não provaria nada — foi
+exatamente o que aconteceu na primeira tentativa do teste do protótipo.
 
 ## Dados de demonstração
 
