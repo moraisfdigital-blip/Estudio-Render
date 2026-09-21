@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/context'
 import { ProjetoAtualProvider } from '../../contexts/ProjetoAtual'
 import Cabecalho from './Cabecalho'
@@ -24,12 +24,14 @@ import Cabecalho from './Cabecalho'
  */
 export default function AppLayout() {
   const { state } = useAuth()
+  const { pathname } = useLocation()
+  const visual = /^\/projeto\/[^/]+\/(levantamento|especificacao|proposta|entrega)$/.test(pathname)
   if (state.kind !== 'authenticated') return null
 
   return (
     <ProjetoAtualProvider>
       <div className="flex h-full flex-col bg-app">
-        <Cabecalho />
+        {!visual && <Cabecalho />}
         <Outlet />
       </div>
     </ProjetoAtualProvider>

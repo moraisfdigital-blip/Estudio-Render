@@ -25,11 +25,13 @@ export default function CardsEtapa({
   projectId,
   atual,
   estado,
+  onFotoDoLocal,
 }: {
   projectId: string
   /** 1 a 4 — qual cartão está aceso agora. */
   atual: number
   estado: EstadoEtapas
+  onFotoDoLocal?: () => void
 }) {
   const navigate = useNavigate()
 
@@ -78,7 +80,10 @@ export default function CardsEtapa({
           <button
             key={cartao.numero}
             type="button"
-            onClick={() => navigate(cartao.ir)}
+            onClick={() => {
+              if (cartao.numero === '01' && onFotoDoLocal) onFotoDoLocal()
+              else navigate(cartao.ir)
+            }}
             className={`flex items-center gap-2.5 rounded-md border p-3 text-left transition ${
               aceso
                 ? 'border-brand bg-brand-soft shadow-[inset_0_-3px_var(--color-brand)]'

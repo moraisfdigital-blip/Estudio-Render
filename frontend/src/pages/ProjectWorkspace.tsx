@@ -1,15 +1,12 @@
-import { useCallback, useEffect } from 'react'
-import { Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
+import { lazy, Suspense, useCallback, useEffect } from 'react'
+import { Navigate, Outlet, useParams } from 'react-router-dom'
 
 import { getProject } from '../api/client'
-import PresentationPanel from '../components/PresentationPanel'
-import TakeoffPanel from '../components/TakeoffPanel'
 import Moldura from '../components/layout/Moldura'
-import TrilhaEtapas from '../components/layout/TrilhaEtapas'
 import { ErrorNotice, Loading } from '../components/ui'
 import { useProjetoAtual } from '../contexts/ProjetoAtual'
 import { useResource } from '../hooks/useResource'
-import Levantamento from './Levantamento'
+const Levantamento = lazy(() => import('./Levantamento'))
 
 /**
  * A tela de um projeto: cabeçalho, trilha de passos e o trabalho do passo atual.
@@ -52,7 +49,7 @@ export function ProjectWorkspace() {
 
   return (
     <>
-      <TrilhaEtapas projectId={projectId} />
+      <Suspense fallback={<Loading label="Carregando estúdio visual…" />}><Levantamento projectId={projectId} /></Suspense>
       <Outlet context={{ projectId }} />
     </>
   )
@@ -64,71 +61,8 @@ export function ProjectIndexRedirect() {
   return <Navigate to={`/projeto/${projectId}/levantamento`} replace />
 }
 
-export function StepLevantamento() {
-  const { projectId = '' } = useParams()
-  return (
-    <Levantamento projectId={projectId} />
-  )
-}
-
-/**
- * Aviso dos passos que ainda não migraram.
- *
- * Não é uma tela vazia prometendo função inexistente: a função existe e está
- * funcionando — só ainda mora dentro dos botões da foto. O aviso diz onde ela
- * está agora e leva até lá, em vez de fingir que o passo está pronto.
- */
-function EmMigracao({ titulo, descricao }: { titulo: string; descricao: string }) {
-  const { projectId = '' } = useParams()
-  const navigate = useNavigate()
-
-  return (
-    <Moldura>
-      <div className="mx-auto max-w-xl rounded-xl border border-dashed border-line-accent bg-surface p-6 text-center">
-        <h2 className="text-base font-semibold">{titulo}</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">{descricao}</p>
-        <p className="mt-4 text-xs text-ink-dim">
-          Estes controles já funcionam — hoje eles abrem pelos botões de cada foto, no passo 1.
-          Eles ganham painel próprio na próxima etapa do redesenho.
-        </p>
-        <button
-          type="button"
-          onClick={() => navigate(`/projeto/${projectId}/levantamento`)}
-          className="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-ink transition hover:bg-brand-hover"
-        >
-          Ir para as fotos
-        </button>
-      </div>
-    </Moldura>
-  )
-}
-
-export function StepEspecificacao() {
-  return (
-    <EmMigracao
-      titulo="Especificação"
-      descricao="Material, acabamento e cor de cada peça, e as áreas onde a geração pode mexer — com o resto da fachada protegido."
-    />
-  )
-}
-
-export function StepProposta() {
-  return (
-    <EmMigracao
-      titulo="Proposta"
-      descricao="Gerar a proposta visual, comparar com o original e promover até três versões para escolher uma."
-    />
-  )
-}
-
-export function StepEntrega() {
-  const { projectId = '' } = useParams()
-  return (
-    <Moldura>
-      <div className="flex flex-col gap-2">
-        <PresentationPanel projectId={projectId} />
-        <TakeoffPanel projectId={projectId} />
-      </div>
-    </Moldura>
-  )
-}
+// The parent keeps the visual session alive; the existing routes select its tab.
+export function StepLevantamento() { return null }
+export function StepEspecificacao() { return null }
+export function StepProposta() { return null }
+export function StepEntrega() { return null }
