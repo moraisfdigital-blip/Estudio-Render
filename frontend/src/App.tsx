@@ -8,6 +8,7 @@ import {
   useParams,
 } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
+import Moldura from './components/layout/Moldura'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/context'
 import CatalogPage from './pages/CatalogPage'
@@ -39,24 +40,24 @@ import {
 function DashboardRoute() {
   const navigate = useNavigate()
   return (
-    <div className="px-5 py-6">
+    <Moldura>
       <DashboardPage
         onNewProject={() => navigate('/projeto/novo')}
         onOpenProject={(id) => navigate(`/projeto/${id}`)}
       />
-    </div>
+    </Moldura>
   )
 }
 
 function NovoProjetoRoute() {
   const navigate = useNavigate()
   return (
-    <div className="px-5 py-6">
+    <Moldura>
       <ProjectFormPage
         onDone={(project) => navigate(`/projeto/${project.id}`)}
         onCancel={() => navigate('/projetos')}
       />
-    </div>
+    </Moldura>
   )
 }
 
@@ -64,13 +65,13 @@ function EditarProjetoRoute() {
   const { projectId = '' } = useParams()
   const navigate = useNavigate()
   return (
-    <div className="px-5 py-6">
+    <Moldura>
       <ProjectFormPage
         projectId={projectId}
         onDone={(project) => navigate(`/projeto/${project.id}`)}
         onCancel={() => navigate(`/projeto/${projectId}`)}
       />
-    </div>
+    </Moldura>
   )
 }
 
@@ -79,9 +80,9 @@ function MateriaisRoute() {
   const navigate = useNavigate()
   const podeGerenciar = state.kind === 'authenticated' && state.session.user.role === 'owner'
   return (
-    <div className="px-5 py-6">
+    <Moldura>
       <CatalogPage onBack={() => navigate('/projetos')} canManage={podeGerenciar} />
-    </div>
+    </Moldura>
   )
 }
 

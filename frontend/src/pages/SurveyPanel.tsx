@@ -515,7 +515,7 @@ export default function SurveyPanel({ projectId }: { projectId: string }) {
   }
 
   return (
-    <section className="mt-10 border-t border-line pt-8">
+    <section>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Levantamento</h2>

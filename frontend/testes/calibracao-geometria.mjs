@@ -21,8 +21,8 @@ const APP = process.env.APP_URL ?? 'http://localhost:5173'
 const EMAIL = process.env.EMAIL
 const SENHA = process.env.SENHA
 const PROJETO = process.env.PROJETO
-if (!EMAIL || !SENHA || !PROJETO) {
-  console.error('Defina EMAIL, SENHA e PROJETO (id de um projeto que tenha foto).')
+if (!PROJETO) {
+  console.error('Defina PROJETO (id de um projeto que tenha foto). EMAIL e SENHA só são necessários se a entrada automática estiver desligada.')
   process.exit(2)
 }
 
@@ -44,10 +44,16 @@ for (const janela of JANELAS) {
   pagina.on('pageerror', (e) => erros.push(`${janela.height}px: exceção ${e.message}`))
 
   await pagina.goto(APP, { waitUntil: 'networkidle' })
-  await pagina.fill('input[type="email"]', EMAIL)
-  await pagina.fill('input[type="password"]', SENHA)
-  await pagina.click('button[type="submit"]')
-  await pagina.waitForSelector('aside', { timeout: 15000 })
+  // Com a entrada automática de desenvolvimento ligada não há tela de senha.
+  // O teste serve nos dois casos: só preenche o formulário se ele existir.
+  const campoEmail = pagina.locator('input[type="email"]')
+  if (await campoEmail.count()) {
+    await campoEmail.fill(EMAIL)
+    await pagina.fill('input[type="password"]', SENHA)
+    await pagina.click('button[type="submit"]')
+  }
+  await pagina.waitForSelector('header', { timeout: 15000 })
+  await pagina.waitForTimeout(1500)
 
   // O projeto é indicado por variável: o teste não adivinha qual dos projetos
   // do ambiente tem foto, e apontar para um fixo no código deixaria o teste

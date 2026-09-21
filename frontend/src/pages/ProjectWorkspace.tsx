@@ -1,11 +1,13 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil } from 'lucide-react'
+
 import { getProject } from '../api/client'
 import PresentationPanel from '../components/PresentationPanel'
 import TakeoffPanel from '../components/TakeoffPanel'
-import StepNav from '../components/layout/StepNav'
+import Moldura from '../components/layout/Moldura'
+import TrilhaEtapas from '../components/layout/TrilhaEtapas'
 import { ErrorNotice, Loading } from '../components/ui'
+import { useProjetoAtual } from '../contexts/ProjetoAtual'
 import { useResource } from '../hooks/useResource'
 import SurveyPanel from './SurveyPanel'
 
@@ -19,69 +21,40 @@ import SurveyPanel from './SurveyPanel'
 
 export function ProjectWorkspace() {
   const { projectId = '' } = useParams()
-  const navigate = useNavigate()
+  const { definir } = useProjetoAtual()
 
   const carregar = useCallback(() => getProject(projectId), [projectId])
   const { resource, reload } = useResource(carregar, 'Não foi possível carregar o projeto.')
 
+  // O cabeçalho mostra o nome do projeto, mas quem o carrega é esta tela.
+  // Ao sair, limpa: um nome que ficou para trás no topo é pior que nenhum.
+  const pronto = resource.kind === 'ready' ? resource.data : null
+  useEffect(() => {
+    definir(pronto)
+    return () => definir(null)
+  }, [pronto, definir])
+
+  if (resource.kind === 'loading') {
+    return (
+      <Moldura>
+        <Loading label="Carregando projeto…" />
+      </Moldura>
+    )
+  }
+
+  if (resource.kind === 'error') {
+    return (
+      <Moldura>
+        <ErrorNotice message={resource.message} onRetry={reload} />
+      </Moldura>
+    )
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-5 py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/projetos')}
-            className="grid size-8 shrink-0 place-items-center rounded-lg border border-line text-ink-dim transition hover:border-ink-dim hover:text-ink"
-            aria-label="Voltar para os projetos"
-          >
-            <ArrowLeft size={16} strokeWidth={1.75} />
-          </button>
-
-          <div className="min-w-0">
-            {resource.kind === 'ready' ? (
-              <>
-                <h1 className="truncate text-lg leading-tight font-semibold">
-                  {resource.data.name}
-                </h1>
-                <p className="truncate text-xs text-ink-dim">
-                  {resource.data.client?.name ?? 'Cliente removido'} ·{' '}
-                  {resource.data.location?.name ?? 'Local removido'}
-                </p>
-              </>
-            ) : (
-              <h1 className="text-lg font-semibold text-ink-dim">Projeto</h1>
-            )}
-          </div>
-        </div>
-
-        {resource.kind === 'ready' && (
-          <button
-            type="button"
-            onClick={() => navigate(`/projeto/${projectId}/editar`)}
-            className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm text-ink-soft transition hover:border-ink-dim hover:text-ink"
-          >
-            <Pencil size={15} strokeWidth={1.75} />
-            Editar
-          </button>
-        )}
-      </div>
-
-      <StepNav projectId={projectId} />
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {resource.kind === 'loading' && (
-          <div className="p-6">
-            <Loading label="Carregando projeto…" />
-          </div>
-        )}
-        {resource.kind === 'error' && (
-          <div className="p-6">
-            <ErrorNotice message={resource.message} onRetry={reload} />
-          </div>
-        )}
-        {resource.kind === 'ready' && <Outlet context={{ projectId }} />}
-      </div>
-    </div>
+    <>
+      <TrilhaEtapas projectId={projectId} />
+      <Outlet context={{ projectId }} />
+    </>
   )
 }
 
@@ -94,9 +67,9 @@ export function ProjectIndexRedirect() {
 export function StepLevantamento() {
   const { projectId = '' } = useParams()
   return (
-    <div className="px-5 py-5">
+    <Moldura>
       <SurveyPanel projectId={projectId} />
-    </div>
+    </Moldura>
   )
 }
 
@@ -112,8 +85,8 @@ function EmMigracao({ titulo, descricao }: { titulo: string; descricao: string }
   const navigate = useNavigate()
 
   return (
-    <div className="px-5 py-5">
-      <div className="mx-auto max-w-xl rounded-xl border border-dashed border-line bg-surface p-6 text-center">
+    <Moldura>
+      <div className="mx-auto max-w-xl rounded-xl border border-dashed border-line-accent bg-surface p-6 text-center">
         <h2 className="text-base font-semibold">{titulo}</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">{descricao}</p>
         <p className="mt-4 text-xs text-ink-dim">
@@ -128,7 +101,7 @@ function EmMigracao({ titulo, descricao }: { titulo: string; descricao: string }
           Ir para as fotos
         </button>
       </div>
-    </div>
+    </Moldura>
   )
 }
 
@@ -153,9 +126,11 @@ export function StepProposta() {
 export function StepEntrega() {
   const { projectId = '' } = useParams()
   return (
-    <div className="flex flex-col gap-2 px-5 pb-8">
-      <PresentationPanel projectId={projectId} />
-      <TakeoffPanel projectId={projectId} />
-    </div>
+    <Moldura>
+      <div className="flex flex-col gap-2">
+        <PresentationPanel projectId={projectId} />
+        <TakeoffPanel projectId={projectId} />
+      </div>
+    </Moldura>
   )
 }
