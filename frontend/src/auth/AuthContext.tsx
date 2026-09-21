@@ -11,9 +11,27 @@ import {
 } from '../api/client'
 import { AuthContext, type AuthState } from './context'
 
+/**
+ * Entrada automática de desenvolvimento.
+ *
+ * Existe para olhar a interface sem digitar senha a cada visita. As credenciais
+ * vêm de `frontend/.env.local`, que o git ignora; sem o arquivo, isto devolve
+ * `null` e a tela de entrada funciona como sempre.
+ *
+ * `import.meta.env.DEV` é `false` no build de produção, e o Vite apaga o bloco
+ * inteiro ao compilar — não existe caminho em que isto rode no ar. Não é uma
+ * porta dos fundos: é o `vite dev` desta máquina.
+ */
+function credenciaisDeDesenvolvimento(): { email: string; senha: string } | null {
+  if (!import.meta.env.DEV) return null
+  const email = import.meta.env.VITE_DEV_AUTOLOGIN_EMAIL
+  const senha = import.meta.env.VITE_DEV_AUTOLOGIN_SENHA
+  return email && senha ? { email, senha } : null
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(() =>
-    getToken() ? { kind: 'hydrating' } : { kind: 'anonymous' },
+    getToken() || credenciaisDeDesenvolvimento() ? { kind: 'hydrating' } : { kind: 'anonymous' },
   )
 
   /** Carrega usuário + tenant do token corrente. */
@@ -25,14 +43,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Hidratação na abertura: sincroniza o token guardado com a API.
   // Token expirado/inválido volta para a tela de login.
   useEffect(() => {
-    if (!getToken()) return
+    const dev = credenciaisDeDesenvolvimento()
+    if (!getToken() && !dev) return
     let alive = true
     void (async () => {
       try {
+        if (!getToken() && dev) {
+          const { access_token } = await loginRequest(dev.email, dev.senha)
+          setToken(access_token)
+        }
         await loadSession()
       } catch {
         if (!alive) return
         setToken(null)
+        // Token vencido com entrada automática ligada: entra de novo em vez de
+        // devolver a tela de senha, que é justamente o que se quer evitar.
+        if (dev) {
+          try {
+            const { access_token } = await loginRequest(dev.email, dev.senha)
+            setToken(access_token)
+            await loadSession()
+            return
+          } catch {
+            // Servidor fora do ar ou senha mudou: cai na tela normal.
+          }
+        }
         setState({ kind: 'anonymous' })
       }
     })()
