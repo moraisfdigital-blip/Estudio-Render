@@ -85,7 +85,7 @@ export default function AppLayout() {
           onClick={() => navigate('/projetos')}
           className="flex flex-col items-start gap-0.5 px-5 py-5 text-left"
         >
-          <Marca className="text-lg leading-none" />
+          <Marca className="h-12 w-36" />
           <span className="text-[10px] tracking-[0.2em] text-ink-dim uppercase">
             Projeto visual
           </span>

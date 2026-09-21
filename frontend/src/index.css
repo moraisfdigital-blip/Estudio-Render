@@ -14,17 +14,20 @@
  * A preferência do sistema operacional **não** é seguida de propósito. Claro é
  * uma decisão do produto, não do sistema de quem abre.
  *
- * ## As cores da marca
+ * ## As cores vêm do protótipo, não do logo
  *
- * O logo ENBY PRO é magenta `#fc027a` e ciano `#02dfd8`. Puros, nenhum dos
- * dois é legível como texto em fundo branco: 3,87:1 e 1,67:1, contra os 4,5:1
- * que texto normal exige. Então o logo continua com as cores puras e a
- * interface usa versões escurecidas — `#cc0064` (5,60:1) e `#0b7f7b`
- * (4,84:1) — que são a mesma identidade, só que legíveis. No modo escuro o
- * magenta pode subir de volta, porque o fundo é que mudou.
+ * Elas estão declaradas em `front-visual/front/calibration.css` — que apesar
+ * do nome é a camada de tema do protótipo. Turquesa `#00bdb5` é a AÇÃO
+ * (botão principal, aba ativa); rosa `#f20a76` é o DESTAQUE (item
+ * selecionado, passo concluído); laranja `#f28a2e` é pendência.
  *
- * Magenta é a ação principal; ciano é o apoio (passo concluído, seleção). A
- * cor é escassa de propósito: se tudo é da marca, nada é.
+ * Essa separação é o que faz a tela ser lida de relance: se o rosa também
+ * fosse botão, "onde eu clico" e "o que está selecionado" se confundiriam.
+ *
+ * Ressalva registrada: branco sobre o turquesa dá 2,35:1, abaixo dos 4,5:1
+ * que texto normal exige. É o valor do protótipo e foi mantido de propósito
+ * — trocar por `#008f89` (3,97:1) resolveria quase tudo, mas muda a cor da
+ * ferramenta e essa é uma decisão de produto, não de código.
  *
  * ## Como isto funciona
  *
@@ -38,39 +41,45 @@
  */
 @theme {
   /* Fundo da área de trabalho e superfícies empilhadas sobre ele. */
-  --color-app: #f5f6f7;
+  --color-app: #fff9fc;
   --color-surface: #ffffff;
-  --color-raised: #f0f2f3;
-  --color-line: #e3e5e8;
-  --color-line-soft: #eceef0;
+  --color-raised: #fafbfb;
+  --color-line: #dce8e7;
+  --color-line-soft: #eceeef;
+  /* Os botões comuns do protótipo têm a borda levemente rosada — é o que
+     amarra a interface à marca sem pintar tudo. */
+  --color-line-accent: #efbfd5;
 
   /* Texto. */
-  --color-ink: #23262a;
-  --color-ink-soft: #5c6166;
-  --color-ink-dim: #81858a;
+  --color-ink: #2d3438;
+  --color-ink-soft: #4b5155;
+  --color-ink-dim: #727d80;
 
-  /* Magenta da marca — a ação principal. */
-  --color-brand: #cc0064;
-  --color-brand-hover: #b00056;
-  --color-brand-soft: #fdeef5;
+  /* Turquesa: a AÇÃO. Botão principal, aba ativa, foto selecionada. */
+  --color-brand: #00bdb5;
+  --color-brand-hover: #008f89;
+  --color-brand-soft: #eefaf9;
   --color-brand-ink: #ffffff;
 
-  /* Ciano da marca — apoio: passo concluído, item selecionado. */
-  --color-accent: #0b7f7b;
-  --color-accent-soft: #e6f6f5;
+  /* Rosa: o DESTAQUE. Elemento selecionado, passo concluído, o bloco do
+     projeto atual, a borda pontilhada do "novo elemento". Nunca é o botão
+     de ação — essa separação é o que faz a tela ser legível de relance. */
+  --color-accent: #f20a76;
+  --color-accent-strong: #cf075f;
+  --color-accent-soft: #fff1f7;
 
-  /* Semânticas — separadas da marca de propósito. Verde de "deu certo" não
-     pode ser a mesma cor do botão principal, senão os dois se confundem. */
-  --color-good: #0f7a4d;
-  --color-good-soft: #e8f6ef;
-  --color-warn: #a2660a;
-  --color-warn-soft: #fdf3e3;
-  --color-bad: #c22a22;
+  /* Laranja: pendência. Foto que ainda não foi calibrada. */
+  --color-warn: #f28a2e;
+  --color-warn-soft: #fff6eb;
+
+  /* Semânticas que o protótipo não tem, e que a ferramenta precisa. */
+  --color-good: #2f7d52;
+  --color-good-soft: #eef7f1;
+  --color-bad: #c0392b;
   --color-bad-soft: #fdecea;
 
-  /* Véu atrás dos diálogos. No claro é mais leve: escurecer demais uma tela
-     clara assusta, e o diálogo já se destaca pela sombra e pela borda. */
-  --color-overlay: rgb(35 38 42 / 0.45);
+  /* Véu atrás dos diálogos. */
+  --color-overlay: rgb(45 52 56 / 0.45);
 
   /* As cores puras do logo. Só para a marca em si. */
   --color-logo-magenta: #fc027a;
@@ -78,30 +87,31 @@
 }
 
 :root[data-theme="dark"] {
-  --color-app: #0b0f14;
-  --color-surface: #111720;
-  --color-raised: #161d27;
-  --color-line: #1f2935;
-  --color-line-soft: #18212b;
+  --color-app: #0f1416;
+  --color-surface: #151b1e;
+  --color-raised: #1b2225;
+  --color-line: #26322f;
+  --color-line-soft: #1e2729;
+  --color-line-accent: #4a1f33;
 
-  --color-ink: #e7ecf3;
-  --color-ink-soft: #aab6c5;
-  --color-ink-dim: #7c8a9b;
+  --color-ink: #e7ecee;
+  --color-ink-soft: #b3bec1;
+  --color-ink-dim: #889397;
 
-  /* Fundo escuro aguenta o magenta mais vivo sem perder a legibilidade do
-     texto branco por cima (4,78:1). */
-  --color-brand: #e0006e;
-  --color-brand-hover: #fc027a;
-  --color-brand-soft: #2a0a1b;
+  --color-brand: #00bdb5;
+  --color-brand-hover: #19d6ce;
+  --color-brand-soft: #06272a;
   --color-brand-ink: #ffffff;
 
-  --color-accent: #02dfd8;
-  --color-accent-soft: #08262a;
+  --color-accent: #f20a76;
+  --color-accent-strong: #ff3a93;
+  --color-accent-soft: #2a0a1b;
+
+  --color-warn: #f28a2e;
+  --color-warn-soft: #2a2011;
 
   --color-good: #3fb984;
   --color-good-soft: #10281f;
-  --color-warn: #e0a552;
-  --color-warn-soft: #2a2011;
   --color-bad: #ef6b63;
   --color-bad-soft: #2d1817;
 

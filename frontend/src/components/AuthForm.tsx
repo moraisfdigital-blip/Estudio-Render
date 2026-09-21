@@ -21,7 +21,7 @@ export function AuthCard({
     <main className="min-h-dvh bg-app text-ink flex items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
         <header className="space-y-1">
-          <Marca className="text-xl" />
+          <Marca className="h-14 w-40" />
           <h1 className="text-2xl font-semibold">{title}</h1>
           <p className="text-sm text-ink-soft">{subtitle}</p>
         </header>

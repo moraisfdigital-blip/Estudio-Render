@@ -1,17 +1,20 @@
 /**
- * A marca ENBY PRO escrita com as cores do logo.
+ * A marca ENBY PRO.
  *
- * O logo original é magenta `#fc027a` e ciano `#02dfd8` puros. Aqui a palavra
- * usa os tokens `brand` e `accent`, que são as mesmas cores ajustadas para
- * serem legíveis em cada modo — o ciano puro sobre branco dá 1,67:1, e ninguém
- * lê uma marca que some no fundo.
+ * É o arquivo do logo, não texto imitando o logo: o desenho tem recortes
+ * (o corte diagonal do "e", a perna do "y") que nenhuma fonte reproduz. No
+ * protótipo ele ocupa 190×70 e é isso que está replicado aqui.
+ *
+ * Fundo escuro não precisa de versão própria: o magenta e o ciano do logo
+ * têm contraste de sobra nos dois modos.
  */
-export default function Marca({ className = '' }: { className?: string }) {
+export default function Marca({ className = 'h-[70px] w-[190px]' }: { className?: string }) {
   return (
-    <span className={`font-bold tracking-tight ${className}`}>
-      <span className="text-accent">EN</span>
-      <span className="text-brand">BY</span>
-      <span className="text-ink"> PRO</span>
-    </span>
+    <img
+      src="/enby-pro-logo.png"
+      alt="ENBY PRO"
+      className={`block object-contain ${className}`}
+      draggable={false}
+    />
   )
 }
