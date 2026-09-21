@@ -12,7 +12,7 @@ export type AuthValue = {
   state: AuthState
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string) => Promise<void>
-  signOut: () => void
+  signOut: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthValue | null>(null)

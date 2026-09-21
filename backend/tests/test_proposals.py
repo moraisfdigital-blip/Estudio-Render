@@ -406,8 +406,11 @@ async def test_original_intacto_e_derivado_em_pasta_propria(
     raiz = sorted(p.name for p in pasta.iterdir())
     assert raiz == ["derived", "original.jpg"], f"derivado fica ao lado, nunca no lugar: {raiz}"
 
-    derivados = sorted(p.suffix for p in (pasta / "derived").iterdir())
-    assert derivados == [".png"]
+    # Em `derived/` moram a imagem gerada (.png) e a cópia de exibição sem
+    # EXIF (display.jpg). Nenhuma das duas encosta no original.
+    derivados = sorted(p.name for p in (pasta / "derived").iterdir())
+    assert "display.jpg" in derivados
+    assert any(nome.endswith(".png") for nome in derivados), derivados
 
 
 async def test_derivado_nasce_somente_leitura(api, owner, banco, midia, levantamento):

@@ -527,6 +527,73 @@ número digitado não vira medida de campo.
 preserva preço, observações e quantidade informada de cada elemento que
 continua no quantitativo. Linhas manuais (instalação, frete) ficam intactas.
 
+## EXIF: cópia limpa, original intocado
+
+As fotos saem do celular com EXIF, e EXIF carrega **GPS e modelo do aparelho**.
+O blueprint proíbe alterar a foto original, então a limpeza não acontece nela.
+
+No upload, uma **cópia sem metadado** é gravada em `derived/display.jpg`. É ela
+que a interface usa — grid, calibração, elementos, máscaras e comparação — e é
+ela que alimenta o PDF. O original continua no disco, byte a byte, somente
+leitura.
+
+| Rota | O que entrega |
+| --- | --- |
+| `GET /api/photos/{id}/display` | A cópia sem EXIF. É o que a tela mostra |
+| `GET /api/photos/{id}/original` | O arquivo como veio da câmera, EXIF incluído |
+
+O botão **"Ver original"** continua apontando para o original — é a porta
+explícita para quem quer o arquivo como enviado.
+
+A limpeza é a própria reencodificação: abrir e salvar sem passar `exif` nem
+`icc_profile` não leva metadado junto. Não é remoção campo a campo, que
+deixaria passar o que ninguém lembrou de listar.
+
+Foto enviada antes desta mudança não tem cópia; ela é criada no primeiro
+acesso. A chave é determinística (`display.jpg`, não um uid), então dois
+pedidos simultâneos convergem para o mesmo arquivo em vez de criarem dois.
+
+## Achados de média severidade
+
+Fechados depois da auditoria, exceto o EXIF (SEC-09), que é decisão de produto.
+
+### Sem enumeração de usuário
+
+O registro responde a mesma coisa para e-mail novo e e-mail já cadastrado, e o
+login gasta o tempo do bcrypt **mesmo quando o usuário não existe**. Sem isso a
+mensagem idêntica era inútil: a duração da resposta entregava a informação.
+
+### Logout revoga o token
+
+JWT é autocontido — apagar do navegador não invalidava nada, e uma cópia valia
+12 horas. Agora cada token tem um `jti` e o logout o revoga, com índice TTL que
+apaga o registro quando o token expiraria sozinho. A revogação é **por token**:
+sair no celular não derruba a sessão do computador.
+
+### O link interno não vaza pelo `Referer`
+
+O token fica no caminho da URL porque é o que faz dele um link para copiar e
+colar. O custo é o cabeçalho `Referer`; a rota `/api/p/` responde com
+`Referrer-Policy: no-referrer`, que corta o vazamento sem tirar a natureza de
+link.
+
+### Dado do usuário delimitado no prompt
+
+Nome de elemento e rótulo de camada entram entre `<<< >>>`, e a instrução diz
+que esses trechos são cadastro, não comando. Tentar fechar o delimitador de
+dentro não funciona — os marcadores são removidos do próprio dado.
+
+Isto **não substitui** a proteção real: a composição sob máscara continua
+limitando qualquer estrago a pixels dentro da área de intervenção. É a segunda
+camada, para o dia em que um provedor real entrar.
+
+### Senha: 12 caracteres e nada previsível
+
+Mínimo do ASVS, mais uma checagem local contra sequência, repetição e senhas
+batidas. A consulta ao Have I Been Pwned ficou de fora: seria mais completa,
+mas adiciona chamada de rede no cadastro e uma dependência externa que o
+projeto não tem.
+
 ## Endurecimento para deploy
 
 Correções de prioridade 1 da auditoria de segurança.
@@ -645,6 +712,8 @@ de carregar a app.
 | --- | --- | --- |
 | `tests/test_elements.py` | 6 | Medida sempre com procedência declarada; estimativa pela escala é calculada na leitura e **nunca** gravada como medida; soft-delete; isolamento por tenant |
 | `tests/test_catalog.py` | 7 | Cor vem do catálogo e não do frontend; catálogo é do owner e o editor só aplica; logo novo nunca sobrescreve o anterior |
+| `tests/test_exif.py` | — | Original mantém o EXIF byte a byte; a cópia não tem nenhum; foto antiga ganha cópia no primeiro acesso |
+| `tests/test_medios.py` | — | Sem enumeração nem diferença de tempo; logout revoga só o token da sessão; prompt delimitado; senha previsível recusada |
 | `tests/test_hardening_deploy.py` | — | Bomba de descompressão recusada; docs fechado; CSP e headers; teto de paginação; log sem senha nem token |
 | `tests/test_auth_hardening.py` | — | Registro fechado por padrão; limite de tentativas por IP; `alg: none` recusado de ponta a ponta |
 | `tests/test_takeoff.py` | 12 | Só conferido entra; estimativa contamina a linha; preço nunca inventado e total parcial; regerar preserva os preços |

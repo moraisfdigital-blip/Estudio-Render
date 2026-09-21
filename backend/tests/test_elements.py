@@ -576,8 +576,11 @@ async def test_foto_original_intacta_depois_de_tudo(
 
     doc = await banco["photos"].find_one({"_id": ObjectId(levantamento.foto_id)})
     pasta = (midia / doc["storage_key"]).parent
-    arquivos = sorted(p.name for p in pasta.rglob("*"))
-    assert arquivos == ["original.jpg"], f"nenhum derivado devia existir: {arquivos}"
+    # Derivado (cópia sem EXIF, imagem gerada) vive em `derived/`. A regra é
+    # que o original não seja tocado nem substituído — não que derivados não
+    # existam.
+    raiz = sorted(p.name for p in pasta.iterdir() if p.is_file())
+    assert raiz == ["original.jpg"], raiz
     modo = (pasta / "original.jpg").stat().st_mode & 0o777
     assert modo & 0o222 == 0, f"original devia ser somente-leitura: {oct(modo)}"
 

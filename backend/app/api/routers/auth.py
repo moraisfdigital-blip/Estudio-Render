@@ -5,12 +5,17 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request, status
 from pymongo.errors import DuplicateKeyError
 
-from app.api.deps import CurrentUser
-from app.core import audit, ratelimit
+from app.api.deps import CurrentUser, TokenPayload
+from app.core import audit, ratelimit, revocation
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.seed import ensure_default_tenant
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    burn_password_time,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
 from app.models import user as user_model
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserOut
 
@@ -81,9 +86,19 @@ async def register(payload: RegisterRequest, request: Request) -> TokenResponse:
     try:
         result = await get_db()[user_model.COLLECTION].insert_one(doc)
     except DuplicateKeyError:
+        # Mensagem genérica de propósito: "já existe um usuário com este
+        # e-mail" confirma quem está cadastrado para qualquer um que teste
+        # endereços. Quem tem a conta descobre pelo login, não por aqui.
+        await ratelimit.record_failure(request, scope="register")
+        audit.log(
+            audit.REGISTRO_DUPLICADO,
+            ip=ratelimit.client_ip(request),
+            email=payload.email,
+            tenant_id=tenant_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Já existe um usuário com este e-mail.",
+            detail="Não foi possível criar o acesso com estes dados.",
         ) from None
 
     criado = {**doc, "_id": result.inserted_id}
@@ -117,6 +132,12 @@ async def login(payload: LoginRequest, request: Request) -> TokenResponse:
         {"tenant_id": tenant_id, "email": user_model.normalize_email(payload.email)}
     )
     # Mesma resposta para usuário inexistente e senha errada: não revela quem existe.
+    if doc is None:
+        # Gasta o tempo do bcrypt mesmo sem ter o que conferir: a diferença de
+        # duração entre "não existe" e "senha errada" revelaria quem está
+        # cadastrado, tornando a mensagem idêntica inútil.
+        burn_password_time(payload.password)
+
     if doc is None or not verify_password(payload.password, doc["password_hash"]):
         await ratelimit.record_failure(request, scope="login")
         # Só o e-mail tentado. A senha chutada não entra no log: não ajuda em
@@ -137,6 +158,23 @@ async def login(payload: LoginRequest, request: Request) -> TokenResponse:
         user_id=str(doc["_id"]),
     )
     return token_response(doc)
+
+
+@router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(user: CurrentUser, payload: TokenPayload) -> None:
+    """Invalida **este** token.
+
+    Revoga por `jti`, então sair num aparelho não derruba a sessão do outro. O
+    registro é apagado sozinho quando o token expiraria — a lista não cresce.
+    """
+    jti = payload.get("jti")
+    if jti:
+        await revocation.revoke(
+            jti=jti,
+            expires_at=revocation.expiry_of(payload),
+            user_id=str(user["_id"]),
+        )
+    audit.log(audit.LOGOUT, tenant_id=user["tenant_id"], user_id=str(user["_id"]))
 
 
 @router.get("/auth/me", response_model=UserOut)

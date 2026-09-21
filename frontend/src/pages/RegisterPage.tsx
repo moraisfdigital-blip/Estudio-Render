@@ -4,7 +4,8 @@ import { errorMessage } from '../api/client'
 import { useAuth } from '../auth/context'
 import { AuthCard, Field, LinkButton, SubmitButton } from '../components/AuthForm'
 
-const PASSWORD_MIN_LENGTH = 8
+// Espelha o mínimo do servidor (ASVS v5.0 §2.1). Quem recusa de verdade é a API.
+const PASSWORD_MIN_LENGTH = 12
 
 export default function RegisterPage({ onGoToLogin }: { onGoToLogin: () => void }) {
   const { signUp } = useAuth()

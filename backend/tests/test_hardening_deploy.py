@@ -294,3 +294,85 @@ async def test_papel_negado_e_registrado(api, editor, levantamento, caplog):
     linhas = [registro.message for registro in caplog.records if "SEGURANCA" in registro.message]
     assert any("evento=papel_negado" in linha for linha in linhas), linhas
     assert any("papel=editor" in linha for linha in linhas)
+
+
+# ----------------------------------- SEC-11/12: o que viaja com o deploy
+
+
+async def test_health_confirma_o_banco(api):
+    """Health que só devolve 200 responde 200 com o banco fora.
+
+    O orquestrador veria "saudável", manteria o container na rotação, e quem
+    receberia o erro seria o usuário.
+    """
+    resposta = await api.get("/api/health")
+    assert resposta.status_code == 200
+    corpo = resposta.json()
+    assert corpo["status"] == "ok", "contrato da Fase 1 preservado"
+    assert corpo["database"] == "ok"
+
+
+async def test_health_responde_503_com_o_banco_fora(api, monkeypatch):
+    """O 503 é o sinal que o orquestrador entende para tirar o container da rotação."""
+    from app.api import health as rota
+
+    class ClienteMorto:
+        class admin:
+            @staticmethod
+            async def command(_):
+                raise ConnectionError("sem rota para o banco")
+
+    monkeypatch.setattr(rota, "get_client", lambda: ClienteMorto())
+
+    resposta = await api.get("/api/health")
+    assert resposta.status_code == 503, resposta.text
+    corpo = resposta.json()
+    assert corpo["status"] == "degradado"
+    assert "indisponível" in corpo["database"]
+
+
+async def test_health_nao_vaza_endereco_do_banco(api, monkeypatch):
+    """Este endpoint costuma ficar aberto ao orquestrador — às vezes sem auth."""
+    from app.api import health as rota
+    from app.core.config import get_settings
+
+    class ClienteMorto:
+        class admin:
+            @staticmethod
+            async def command(_):
+                raise ConnectionError(f"falha ao conectar em {get_settings().mongo_url}")
+
+    monkeypatch.setattr(rota, "get_client", lambda: ClienteMorto())
+
+    corpo = (await api.get("/api/health")).text
+    assert "mongodb://" not in corpo, "a string de conexão vazou na resposta"
+
+
+async def test_senha_minima_de_doze_caracteres(api, sufixo):
+    """Subir o mínimo depois de a equipe existir não revalida senha antiga.
+
+    Por isso ele muda antes do primeiro cadastro, e não depois.
+    """
+    from app.schemas.auth import PASSWORD_MIN_LENGTH
+
+    assert PASSWORD_MIN_LENGTH == 12
+
+    curta = await api.post(
+        "/api/auth/register",
+        json={
+            "email": f"curta-{sufixo}@exemplo-teste.com",
+            "password": "12345678901",
+            "name": "Senha curta",
+        },
+    )
+    assert curta.status_code == 422, curta.text
+
+    aceita = await api.post(
+        "/api/auth/register",
+        json={
+            "email": f"longa-{sufixo}@exemplo-teste.com",
+            "password": "senha-com-doze-ou-mais",
+            "name": "Senha aceita",
+        },
+    )
+    assert aceita.status_code == 201, aceita.text

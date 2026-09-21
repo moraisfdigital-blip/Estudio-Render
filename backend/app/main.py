@@ -90,11 +90,20 @@ _SECURITY_HEADERS = {
 }
 
 
+# O token do link interno vive no caminho da URL — é o que faz dele um link
+# que dá para copiar e colar. O custo disso é que o caminho viaja no cabeçalho
+# `Referer` para qualquer coisa que a página abrir depois. `no-referrer`
+# nesta rota corta esse vazamento sem tirar a natureza de link.
+_SHARED_PREFIX = "/api/p/"
+
+
 @app.middleware("http")
 async def security_headers(request, call_next):
     resposta = await call_next(request)
     for chave, valor in _SECURITY_HEADERS.items():
         resposta.headers.setdefault(chave, valor)
+    if request.url.path.startswith(_SHARED_PREFIX):
+        resposta.headers["Referrer-Policy"] = "no-referrer"
     # HSTS só em produção: em desenvolvimento o app roda em http, e mandar o
     # navegador exigir https para localhost quebra a máquina de quem desenvolve
     # por meses (o cabeçalho fica cacheado).

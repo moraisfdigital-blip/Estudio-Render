@@ -231,6 +231,8 @@ export type Photo = {
   checksum_sha256: string
   created_at: string
   original_url: string
+  /** Cópia sem EXIF — é a que a interface exibe. */
+  display_url: string
   /** Fase 5: já tem escala? O grid mostra "não calibrado" sem abrir foto por foto. */
   calibrated: boolean
   /** Fase 6: quantos elementos já foram marcados nesta foto. */
@@ -301,7 +303,25 @@ export async function deletePhoto(photoId: string): Promise<void> {
  * O `<img src>` puro não carrega o header Authorization, e a rota do original
  * exige token — então a miniatura busca os bytes por aqui e vira object URL.
  */
+/**
+ * Foto para exibir: a cópia SEM EXIF.
+ *
+ * O original guarda GPS e modelo do aparelho e não pode ser alterado (regra do
+ * blueprint), então o que circula na interface é a cópia limpa. Vale para o
+ * grid, os diálogos de calibração, elementos e máscaras, e a comparação.
+ */
 export async function fetchPhotoBlob(photoId: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/photos/${photoId}/display`, { responseType: 'blob' })
+  return data
+}
+
+/**
+ * O arquivo original, byte a byte, com o EXIF que veio da câmera.
+ *
+ * Usado só pelo "Ver original", que é a porta explícita para quem quer o
+ * arquivo como enviado — inclusive os metadados.
+ */
+export async function fetchPhotoOriginalBlob(photoId: string): Promise<Blob> {
   const { data } = await api.get<Blob>(`/photos/${photoId}/original`, { responseType: 'blob' })
   return data
 }
@@ -1046,6 +1066,17 @@ export type BudgetItemPatch = {
   unit?: string
   unit_price?: number
   notes?: string
+}
+
+/**
+ * Invalida ESTE token no servidor.
+ *
+ * Apagar o token do navegador não bastava: o JWT é autocontido e continuaria
+ * valendo até expirar para quem tivesse uma cópia. A revogação é por token,
+ * então sair num aparelho não derruba a sessão do outro.
+ */
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout')
 }
 
 export async function getTakeoff(projectId: string): Promise<Takeoff> {
