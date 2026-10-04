@@ -2,6 +2,8 @@
 
 Atualizado em 04/10/2026. **Implementação local testada; produção ainda não publicada.**
 
+**Trabalho pausado pelo usuário em 04/10/2026.** Para retomar, ler primeiro [RETOMAR-ENBYPRO.md](RETOMAR-ENBYPRO.md), que registra a confirmação da VPS do cliente, o DNS mais recente e as tentativas de liberação do terminal.
+
 ## Código e escopo
 
 - Repositório: `moraisfdigital-blip/estudio-render`.
