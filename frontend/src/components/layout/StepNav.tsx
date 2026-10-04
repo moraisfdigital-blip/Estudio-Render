@@ -26,7 +26,7 @@ type Step = {
   descricao: string
 }
 
-export const STEPS: Step[] = [
+const STEPS: Step[] = [
   {
     id: 'levantamento',
     numero: 1,

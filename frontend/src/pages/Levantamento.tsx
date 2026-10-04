@@ -4,6 +4,9 @@ import * as visualApi from '../api/client'
 import type { Project } from '../api/client'
 import PresentationPanel from '../components/PresentationPanel'
 import TakeoffPanel from '../components/TakeoffPanel'
+import MasksDialog from '../components/MasksDialog'
+import ProposalDialog from '../components/ProposalDialog'
+import VersionsDialog from '../components/VersionsDialog'
 import Cabecalho from '../components/layout/Cabecalho'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -73,26 +76,26 @@ function LevantamentoPersistido({ projectId }: { projectId: string }) {
   const [recado, setRecado] = useState<string | null>(null)
   const seletorArquivo = useRef<HTMLInputElement>(null)
 
+  const buscar = useCallback(() => listAreas(projectId)
+    .then(async areas => {
+      const comFotos = await Promise.all(areas.map(async area => ({ area, fotos: await listAreaPhotos(area.id) })))
+      setGrupos(comFotos)
+      setAreaDestino((atual) => atual || (areas[0]?.id ?? 'preset:Fachada principal'))
+    }).catch(() => {
+      setErro('Não foi possível carregar as áreas deste projeto.')
+    }).finally(() => {
+      setCarregando(false)
+    }), [projectId])
+
   const carregar = useCallback(async () => {
     setCarregando(true)
     setErro(null)
-    try {
-      const areas = await listAreas(projectId)
-      const comFotos = await Promise.all(
-        areas.map(async (area) => ({ area, fotos: await listAreaPhotos(area.id) })),
-      )
-      setGrupos(comFotos)
-      setAreaDestino((atual) => atual || (areas[0]?.id ?? 'preset:Fachada principal'))
-    } catch {
-      setErro('Não foi possível carregar as áreas deste projeto.')
-    } finally {
-      setCarregando(false)
-    }
-  }, [projectId])
+    await buscar()
+  }, [buscar])
 
   useEffect(() => {
-    void carregar()
-  }, [carregar])
+    void buscar()
+  }, [buscar])
 
   useEffect(() => {
     let vivo = true
@@ -110,13 +113,8 @@ function LevantamentoPersistido({ projectId }: { projectId: string }) {
 
   // Os elementos são da foto aberta: trocar de foto troca a coluna da esquerda.
   useEffect(() => {
-    if (!fotoAberta) {
-      setElementos([])
-      setElementoAberto(null)
-      return
-    }
+    if (!fotoAberta) return
     let vivo = true
-    setCarregandoElementos(true)
     void listElements(fotoAberta)
       .then((lista) => {
         if (!vivo) return
@@ -375,7 +373,12 @@ function LevantamentoPersistido({ projectId }: { projectId: string }) {
                       <button
                         key={foto.id}
                         type="button"
-                        onClick={() => setFotoAberta(aberta ? null : foto.id)}
+                        onClick={() => {
+                          setElementos([])
+                          setElementoAberto(null)
+                          setCarregandoElementos(!aberta)
+                          setFotoAberta(aberta ? null : foto.id)
+                        }}
                         aria-pressed={aberta}
                         className={`flex w-[205px] shrink-0 items-center gap-[9px] rounded border bg-surface p-1.5 text-left transition ${
                           aberta
@@ -454,9 +457,9 @@ const VISUAL_HTML = `
 <section class="workspace"><div class="work-head"><div><span class="eyebrow" id="workEyebrow">LEVANTAMENTO</span><h1 id="workTitle">A base do projeto.</h1></div><div class="view-tools" hidden><div class="segmented" id="viewMode"><button class="active" data-view="elevation">Elevação</button><button data-view="photo">Sobre a foto</button></div><button id="dimensions" aria-pressed="true">Cotas visíveis</button><button id="resetView">Ajustar vista</button></div></div><div class="project-progress" id="projectProgress"><button class="active" data-go="survey"><span>01</span><div><b>Foto do local</b><small id="photoStatus">Adicionar fotografia</small></div></button><button data-go="survey"><span>02</span><div><b>Definir escala</b><small id="scaleStatus">Aguardando foto</small></div></button><button data-go="design"><span>03</span><div><b>Montar projeto</b><small id="elementStatus">4 elementos de exemplo</small></div></button><button data-go="presentation"><span>04</span><div><b>Apresentar</b><small id="presentationStatus">Pendente</small></div></button></div>
 <section id="survey"><div class="survey-project"><div><span class="step-kicker">PROJETO ATUAL</span><h2 id="surveyProjectTitle">Posto Horizonte</h2><p id="surveyProjectMeta">Cliente e endereço ainda não informados.</p></div><button id="editProject">Editar dados</button></div><div class="photo-library"><div class="library-head"><div><span class="step-kicker">ETAPA 01 · LEVANTAMENTO FOTOGRÁFICO</span><h2>Fotos organizadas por área</h2><p>Adicione todas as vistas necessárias e calibre cada imagem separadamente.</p></div><div class="library-actions"><button id="addArea">＋ Nova área</button><button class="primary" id="uploadMain">＋ Adicionar fotos</button></div></div><div class="area-select-row"><label>Área das próximas fotos<select id="uploadArea"><option>Fachada principal</option><option>Lateral</option><option>Totem e acesso</option></select></label><small>JPG, PNG ou WebP · até 15 MB por imagem</small></div><div id="photoAreas" class="photo-areas"></div></div><div class="upload-box" id="uploadBox"><span class="step-kicker">NENHUMA FOTO ADICIONADA</span><h2>Comece pela fachada principal.</h2><p>A imagem real será usada para calibrar a escala e posicionar a nova identidade visual.</p><button class="primary" id="uploadEmpty">Selecionar fotografias</button></div><div id="calibration" hidden><div class="calibration-title"><div><span class="step-kicker">ETAPA 02 · ESCALA DA FOTOGRAFIA</span><h2 id="activePhotoName">Fotografia selecionada</h2></div><span id="activePhotoArea" class="area-badge">Fachada principal</span></div><div class="calibration-layout"><div class="photo-stage calibration-stage" id="calibrationStage"><img id="surveyPhoto" alt="Fotografia enviada do local"><svg id="calibrationOverlay" aria-label="Pontos usados para calibrar a fotografia"></svg><div class="stage-hint" id="stageHint">Clique no primeiro ponto da medida conhecida</div></div><aside class="calibration-panel"><span class="section-title">CALIBRAÇÃO DA ESCALA</span><h2>Uma medida conhecida</h2><p>Marque na foto as duas extremidades de uma medida conferida no local.</p><div class="calibration-points"><span id="pointA">Ponto A · aguardando</span><span id="pointB">Ponto B · aguardando</span></div><label>Distância real <span>m</span><input id="referenceDistance" placeholder="Informe a medida real" type="number" min="0.1" step="0.01" value=""></label><button id="calibrate" class="primary wide" disabled>Calibrar fotografia</button><button id="clearCalibration" class="wide">Marcar novamente</button><div class="calibration-result" id="calibrationResult">A escala ainda não foi definida.</div><button id="saveMeasurement" class="wide" disabled>Salvar medida desta foto</button><button id="usePhoto" class="wide" disabled>Usar no projeto visual →</button></aside></div></div></section>
 <div id="design" hidden><div id="elevationView"><div class="drawing-board"><div class="board-label">ELEVAÇÃO FRONTAL <span>Estudo dimensional</span></div><svg id="drawing" role="img" aria-label="Elevação frontal do projeto com dimensões proporcionais"></svg><div class="board-bottom"><span id="extent"></span><span>Dimensões do exemplo, editáveis</span></div></div></div><div id="photoView" hidden><div class="surface-toolbar" id="surfaceToolbar"><div class="tool-group"><button id="markSurface" class="active-tool">⌖ Marcar área</button><button id="finishSurface" disabled>Concluir contorno</button><button id="undoSurface" disabled>Desfazer ponto</button><button id="clearSurface" disabled>Excluir área</button></div><div class="surface-status"><span></span><b id="surfaceStatus">Clique nos cantos da área que receberá ACM</b></div></div><div class="photo-stage composition-stage" id="compositionStage"><img id="compositionPhoto" alt="Fotografia de referência do projeto"><svg id="compositionOverlay" aria-label="Áreas de acabamento e projeto proporcional aplicados sobre a fotografia"></svg><div class="empty-photo" id="emptyPhoto"><b>Adicione e calibre uma fotografia</b><span>Depois você poderá marcar as áreas que receberão ACM.</span><button id="addPhotoFromDesign">Ir para levantamento</button></div></div></div><div class="under-board"><div><b id="selectionSummary">Testeira principal</b><span id="measureSummary"></span></div><label class="opacity-control" id="opacityControl" hidden>Opacidade <input type="range" min="20" max="100" value="82" id="overlayOpacity"><output id="opacityValue">82%</output></label><label class="zoom">Zoom <input type="range" min="70" max="150" value="100" id="zoom"><output id="zoomValue">100%</output></label></div></div>
-<section id="presentation" hidden><div class="presentation-intro"><span class="step-kicker">ESTUDO DE COMUNICAÇÃO VISUAL</span><h2 id="presentationName"></h2><p id="presentationClient"></p><p>Simulação visual para avaliação de cores, materiais e composição.</p></div><div id="presentationPhotos"></div><h2>Elevação e dimensões</h2><div id="presentationDrawing" class="drawing-board"></div><div class="presentation-specs"><h2>Materiais e medidas</h2><div class="table-scroll"><table><thead><tr><th>Elemento / área</th><th>Material e acabamento</th><th>Cor</th><th>Dimensões</th><th>Conferência</th></tr></thead><tbody id="presentationMaterials"></tbody></table></div></div><div class="presentation-actions"><button id="exportSvg" class="primary">Baixar elevação SVG</button><button id="print">Imprimir estudo / PDF</button><button disabled title="Motor 3D ainda não conectado">Renderizar em 3D · em desenvolvimento</button></div><p class="muted">Estudo visual — não constitui detalhamento de fabricação ou montagem.</p></section>
-<footer><span>Estudo visual local · composição não salva no banco</span><span id="stateNote">Sem medidas verificadas</span></footer></section>
-<aside class="right"><div class="section-title">PROPRIEDADES</div><div id="elementProperties"><div class="object-heading"><h2 id="objectTitle"></h2><span id="objectType">Revestimento</span></div><form id="properties"><fieldset><legend>Dimensões e posição</legend><div class="fields"><label>Largura <span>m</span><input id="width" type="number" min="0.1" max="30" step="0.05" required></label><label>Altura <span>m</span><input id="height" type="number" min="0.1" max="15" step="0.05" required></label><label>Posição horizontal <span>m</span><input id="x" type="number" min="0" max="30" step="0.05" required></label><label>Altura da base <span>m</span><input id="y" type="number" min="0" max="15" step="0.05" required></label></div><label class="check"><input id="confirmed" type="checkbox"> Medidas conferidas no local</label></fieldset><fieldset><legend>Material e acabamento</legend><label>Material<select id="material"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Inox</option><option>PVC</option></select></label><label>Acabamento<select id="finish"><option>Fosco</option><option>Brilhante</option><option>Escovado</option></select></label><label>Cor de referência</label><div class="swatches" id="swatches"></div><div class="color-row"><input id="color" type="color" aria-label="Cor personalizada"><span id="colorName"></span></div><p class="hint">Paleta ilustrativa. O catálogo oficial e a aparência física dos materiais ainda serão integrados.</p></fieldset><fieldset><legend>Identidade visual</legend><label>Texto aplicado<input id="label" maxlength="35" placeholder="Nome ou identificação"></label></fieldset><button class="primary wide" type="submit">Aplicar ao projeto</button><div class="object-actions"><button id="duplicateElement" type="button">Duplicar</button><button id="deleteElement" type="button">Excluir</button></div><p id="formMessage" role="status"></p></form></div><section id="surfaceProperties" hidden><div class="object-heading"><h2 id="surfaceTitle">Nova área de ACM</h2><span>Revestimento sobre a fotografia</span></div><fieldset><legend>Material</legend><label>Revestimento<select id="surfaceMaterial"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Adesivo</option></select></label><label>Acabamento<select id="surfaceFinish"><option>Brilhante</option><option>Fosco</option><option>Escovado</option></select></label></fieldset><fieldset><legend>Cores ACM</legend><p class="hint">Cores ilustrativas para estudo; conferir com o catálogo físico.</p><div class="catalog-grid" id="catalogColors"></div><div class="catalog-selected"><span id="catalogColorDot"></span><div><small>Cor selecionada</small><b id="catalogColorName">Branco</b></div></div></fieldset><fieldset><legend>Visualização</legend><div class="segmented surface-light" id="lightMode"><button class="active" data-light="day">Dia</button><button data-light="night">Noite</button></div><label class="surface-opacity">Intensidade do material<input type="range" min="25" max="95" value="74" id="surfaceOpacity"><output id="surfaceOpacityValue">74%</output></label><label class="check"><input id="preserveOpenings" type="checkbox" checked> Contorno respeita portas e janelas</label><p class="hint">Marque apenas o revestimento, sem incluir aberturas. Este protótipo não recorta portas e janelas automaticamente.</p></fieldset><div class="surface-metrics"><span>Área marcada</span><b id="surfaceArea">Aguardando contorno</b><small>Cálculo técnico será conectado depois.</small></div><button class="primary wide" id="applySurface" disabled>Aplicar acabamento</button><button class="wide" id="newSurface">＋ Marcar outra superfície</button><p id="surfaceMessage" role="status"></p></section></aside></main>
+<section id="presentation" hidden><div class="presentation-intro"><span class="step-kicker">ESTUDO DE COMUNICAÇÃO VISUAL</span><h2 id="presentationName"></h2><p id="presentationClient"></p><p>Simulação visual para avaliação de cores, materiais e composição.</p></div><div id="presentationPhotos"></div><h2>Elevação e dimensões</h2><div id="presentationDrawing" class="drawing-board"></div><div class="presentation-specs"><h2>Materiais e medidas</h2><div class="table-scroll"><table><thead><tr><th>Elemento / área</th><th>Material e acabamento</th><th>Cor</th><th>Dimensões</th><th>Conferência</th></tr></thead><tbody id="presentationMaterials"></tbody></table></div></div><div class="presentation-actions"><button id="exportSvg" class="primary">Baixar elevação SVG</button><button id="print">Imprimir estudo / PDF</button></div><p class="muted">Estudo visual — não constitui detalhamento de fabricação ou montagem.</p></section>
+<footer><span>Estudo visual · salve a composição antes de sair</span><span id="stateNote">Sem medidas verificadas</span></footer></section>
+<aside class="right"><div class="section-title">PROPRIEDADES</div><div id="elementProperties"><div class="object-heading"><h2 id="objectTitle"></h2><span id="objectType">Revestimento</span></div><form id="properties"><fieldset><legend>Dimensões e posição</legend><div class="fields"><label>Largura <span>m</span><input id="width" type="number" min="0.1" max="30" step="0.05" required></label><label>Altura <span>m</span><input id="height" type="number" min="0.1" max="15" step="0.05" required></label><label>Posição horizontal <span>m</span><input id="x" type="number" min="0" max="30" step="0.05" required></label><label>Altura da base <span>m</span><input id="y" type="number" min="0" max="15" step="0.05" required></label></div><label class="check"><input id="confirmed" type="checkbox"> Medidas conferidas no local</label></fieldset><fieldset><legend>Material e acabamento</legend><label>Material<select id="material"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Inox</option><option>PVC</option></select></label><label>Acabamento<select id="finish"><option>Fosco</option><option>Brilhante</option><option>Escovado</option></select></label><label>Cor de referência</label><div class="swatches" id="swatches"></div><div class="color-row"><input id="color" type="color" aria-label="Cor personalizada"><span id="colorName"></span></div><p class="hint">Paleta ilustrativa. Confira os materiais cadastrados e o catálogo físico.</p></fieldset><fieldset><legend>Identidade visual</legend><label>Texto aplicado<input id="label" maxlength="35" placeholder="Nome ou identificação"></label></fieldset><button class="primary wide" type="submit">Aplicar ao projeto</button><div class="object-actions"><button id="duplicateElement" type="button">Duplicar</button><button id="deleteElement" type="button">Excluir</button></div><p id="formMessage" role="status"></p></form></div><section id="surfaceProperties" hidden><div class="object-heading"><h2 id="surfaceTitle">Nova área de ACM</h2><span>Revestimento sobre a fotografia</span></div><fieldset><legend>Material</legend><label>Revestimento<select id="surfaceMaterial"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Adesivo</option></select></label><label>Acabamento<select id="surfaceFinish"><option>Brilhante</option><option>Fosco</option><option>Escovado</option></select></label></fieldset><fieldset><legend>Cores ACM</legend><p class="hint">Cores ilustrativas para estudo; conferir com o catálogo físico.</p><div class="catalog-grid" id="catalogColors"></div><div class="catalog-selected"><span id="catalogColorDot"></span><div><small>Cor selecionada</small><b id="catalogColorName">Branco</b></div></div></fieldset><fieldset><legend>Visualização</legend><div class="segmented surface-light" id="lightMode"><button class="active" data-light="day">Dia</button><button data-light="night">Noite</button></div><label class="surface-opacity">Intensidade do material<input type="range" min="25" max="95" value="74" id="surfaceOpacity"><output id="surfaceOpacityValue">74%</output></label><label class="check"><input id="preserveOpenings" type="checkbox" checked> Contorno respeita portas e janelas</label><p class="hint">Marque apenas o revestimento, sem incluir aberturas. Use Máscaras e proteção para preservar portas e janelas na geração.</p></fieldset><div class="surface-metrics"><span>Área marcada</span><b id="surfaceArea">Aguardando contorno</b><small>Estimativa pela escala da foto; confira no local.</small></div><button class="primary wide" id="applySurface" disabled>Aplicar acabamento</button><button class="wide" id="newSurface">＋ Marcar outra superfície</button><p id="surfaceMessage" role="status"></p></section></aside></main>
 <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp" multiple hidden><dialog id="projectDialog"><form method="dialog" id="projectForm"><div class="dialog-head"><div><span class="step-kicker">DADOS DO LEVANTAMENTO</span><h2>Novo projeto</h2></div><button type="button" id="closeProject" aria-label="Fechar">×</button></div><label>Nome do projeto<input id="dialogProjectName" required placeholder="Ex.: Identidade visual · Posto Horizonte"></label><label>Cliente<input id="clientName" required placeholder="Nome do cliente ou empresa"></label><label>Local da obra<input id="siteLocation" required placeholder="Cidade, endereço ou unidade"></label><div class="dialog-actions"><button type="button" id="cancelProject">Cancelar</button><button class="primary" type="submit">Salvar projeto</button></div></form></dialog><div class="toast" id="toast" role="status"></div>`;
 const VISUAL_CSS = `:host{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#303337;background:#fff;font-size:14px;--line:#e5e6e8;--muted:#81858a}*{box-sizing:border-box}.visual-body{margin:0}button,input,select{font:inherit}button{cursor:pointer;border:1px solid #dddfe2;background:white;color:#45494d;border-radius:6px;padding:10px 15px;font-weight:500}button:hover{background:#f2f3f4}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #547488;outline-offset:3px}button:disabled{cursor:not-allowed;opacity:.48}.primary{background:#303438;border-color:#303438;color:white}.primary:hover{background:#484d52}header{display:flex;align-items:center;gap:14px;height:88px;padding:0 28px;border-bottom:1px solid var(--line)}.brand{color:#282c30;text-decoration:none;font-size:23px;letter-spacing:2px;font-weight:800;min-width:210px}.brand span{display:block;font-size:9px;letter-spacing:2px;font-weight:500;margin-top:3px}.project-name{flex:1;border-left:1px solid var(--line);padding-left:24px}.project-name input{border:0;padding:0;font-weight:600;width:100%;background:transparent}.project-name small{display:block;font-size:12px;color:var(--muted);margin-top:7px}.stages{height:60px;display:flex;align-items:stretch;gap:32px;padding:0 28px;border-bottom:1px solid var(--line)}.stages button{border:0;border-radius:0;color:#92959a;font-size:12px;padding:0 2px;background:none}.stages button span{margin-left:8px;font-size:14px}.stages button.active{color:#303438;border-bottom:2px solid #303438}.prototype{margin-left:auto;align-self:center;color:#83878b;font-size:12px}main{display:grid;grid-template-columns:234px minmax(350px,1fr) 294px;min-height:calc(100vh - 148px)}aside{padding:27px 20px}.left{border-right:1px solid var(--line);display:flex;flex-direction:column}.right{border-left:1px solid var(--line)}.section-title,.eyebrow{font-size:10px;letter-spacing:1.5px;font-weight:600;color:#8a8e93}h2{font-size:17px;font-weight:600;letter-spacing:-.4px;margin:16px 0 9px}.muted{color:#80858a;line-height:1.65;font-size:13px}.element{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid transparent;padding:13px 10px;margin:5px 0}.element.active{background:#f0f2f3;border-color:#e0e3e6}.element .square{width:13px;height:13px;border:1px solid #a0a6ad;border-radius:2px}.element span:last-child{margin-left:auto;color:#949a9e;font-size:11px}.side-note{border-top:1px solid var(--line);margin-top:28px;padding-top:24px}.side-note>span{font-size:10px;letter-spacing:1px;color:#8a8e93}.side-note button{margin-top:13px;width:100%;font-size:12px}.side-note p,.side-bottom small{font-size:12px;color:#95999d;line-height:1.6}.side-bottom{margin-top:auto;padding-top:50px;display:grid;gap:7px}.side-bottom span{font-size:12px;color:#95999d}.side-bottom b{font-size:13px;font-weight:500}.workspace{background:#f7f8f9;padding:30px 28px 18px;min-width:0}.work-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:30px}h1{font-size:27px;font-weight:500;letter-spacing:-1px;margin:7px 0 0}.view-tools{display:flex;gap:7px}.view-tools button{font-size:12px;padding:8px 10px;background:transparent}.drawing-board{position:relative;background:#fff;border:1px solid #e2e5e7;border-radius:3px;min-height:410px;overflow:hidden;box-shadow:0 6px 22px #1b253003}.board-label{position:absolute;top:22px;left:22px;font-size:10px;letter-spacing:1.3px;color:#60676d}.board-label span{display:block;letter-spacing:0;color:#a0a5aa;margin-top:7px}#drawing{width:100%;height:480px;display:block}.board-bottom{display:flex;justify-content:space-between;font-size:10px;color:#969ca1;padding:0 22px 20px}.under-board{display:flex;justify-content:space-between;align-items:center;padding:19px 0;gap:12px}.under-board b{display:block;font-size:13px;font-weight:600}.under-board span{font-size:12px;color:#8a8e93;display:block;margin-top:4px}.zoom{display:flex;align-items:center;gap:9px;font-size:11px;color:#858b90}.zoom input{width:70px;accent-color:#686f74}.object-heading{padding-bottom:20px;border-bottom:1px solid var(--line)}.object-heading span{color:#8b9095;font-size:12px}.object-heading h2{margin-bottom:5px}fieldset{border:0;border-bottom:1px solid var(--line);margin:22px 0;padding:0 0 20px}legend{font-weight:600;font-size:13px;margin-bottom:16px}label{display:block;font-size:12px;color:#777e84;margin-bottom:12px}input:not([type=checkbox]):not([type=range]):not([type=color]),select{width:100%;display:block;margin-top:6px;padding:9px;border:1px solid #e0e3e6;border-radius:5px;color:#383e44;background:#fff;min-width:0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.fields label span{float:right;font-size:10px;color:#a8acb0}.check{display:flex;align-items:center;font-size:11px;gap:5px;margin:5px 0 0}.check input{accent-color:#545e64}.swatches{display:flex;gap:10px}.swatches button{height:24px;width:24px;padding:0;border:1px solid #ccc;border-radius:50%}.swatches button.selected{outline:1px solid #555;outline-offset:3px}.color-row{display:flex;align-items:center;gap:9px;font-size:12px;margin-top:15px}.color-row input{width:26px;height:24px;padding:0;border:0;background:none}.hint{font-size:11px;line-height:1.5;color:#95999d}.wide{width:100%}#formMessage{font-size:12px;color:#657581}footer{display:flex;justify-content:space-between;border-top:1px solid #e1e4e7;padding-top:18px;margin-top:25px;font-size:11px;color:#94999e;gap:15px}.upload-box{background:#fff;border:1px dashed #ccd2d7;padding:40px;text-align:center}.upload-box p{color:#828a91;line-height:1.7}.upload-box small{display:block;margin-top:15px;color:#94999e}.survey-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:22px 0}.survey-grid h3{font-size:14px}.survey-grid p{font-size:13px;line-height:1.6;color:#858b90}#surveyPhoto{width:100%;max-height:420px;object-fit:contain}.presentation-intro p{color:#858b90;line-height:1.7;max-width:520px}.presentation-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}#presentationDrawing svg{width:100%;height:430px}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:15px 20px;background:#303438;color:white;border-radius:7px;display:none;z-index:20}.toast.visible{display:block}[hidden]{display:none!important}.visual-body.presenting .left,.visual-body.presenting .right{display:none}.visual-body.presenting main{grid-template-columns:1fr}.visual-body.presenting .workspace{max-width:1300px;width:100%;margin:auto}svg [data-object]{cursor:pointer}svg [data-object]:hover{opacity:.8}@media(min-width:1600px){#drawing{height:580px}.workspace{padding:35px 40px}}@media(max-width:1150px){main{grid-template-columns:180px minmax(280px,1fr) 250px}aside{padding:22px 14px}.workspace{padding:24px 17px}.work-head{align-items:start;flex-direction:column}header{padding:0 18px}.brand{min-width:150px}header>button{font-size:12px}.project-name{padding-left:14px}}@media(max-width:850px){header{height:auto;min-height:85px;flex-wrap:wrap;padding:16px}.brand{min-width:130px}.project-name{min-width:160px}main{grid-template-columns:1fr}.left{border:0;padding-bottom:12px}.left>.muted,.side-note,.side-bottom{display:none}#elements{display:flex;flex-wrap:wrap}.element{width:auto}.workspace{order:2}.right{order:3;display:block}.right form{max-width:500px}.stages{padding:0 16px;gap:18px}.prototype{display:none}.stages button span{font-size:12px}.work-head{flex-direction:row}.view-tools{flex-direction:column}.under-board{flex-wrap:wrap}.survey-grid{grid-template-columns:1fr}#drawing{height:360px}.drawing-board{min-height:360px}}@media print{header,.stages,aside,.presentation-actions,footer,.work-head{display:none!important}main{display:block}.workspace{padding:0}#presentation{display:block!important}#design,#survey{display:none!important}.drawing-board{border:0}.visual-body{background:white}}
 
@@ -589,7 +592,8 @@ type VisualElement = { name: string; type: string; width: number; height: number
 type VisualPoint = { x: number; y: number };
 type VisualSurface = { id: string; name: string; points: VisualPoint[]; material: string; finish: string; color: string; colorName: string; opacity: number; preserveOpenings: boolean };
 type VisualPhoto = { id: string; name: string; area: string; url: string; width: number; height: number; points: VisualPoint[]; referenceDistance: number; pixelsPerMeter: number | null; origin: VisualPoint | null; saved: boolean; surfaces: VisualSurface[]; records?: SurveyElement[] };
-type VisualBridge = { project: Project; onTab: (tab: string) => void; onTools: () => void; onProject: (project: Project) => void };
+type PhotoAction = 'mascaras' | 'proposta' | 'versoes';
+type VisualBridge = { project: Project; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void };
 type VisualController = { setTab: (tab: string) => void; reload: () => Promise<void>; destroy: () => void };
 
 export default function Levantamento({ projectId }: { projectId: string }) {
@@ -602,6 +606,8 @@ export default function Levantamento({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
   const [tools, setTools] = useState(false);
   const [tool, setTool] = useState('levantamento');
+  const [photoAction, setPhotoAction] = useState<{photo: Photo; action: PhotoAction} | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const toolsDialog = useRef<HTMLDialogElement>(null);
   const tab = location.pathname.endsWith('/entrega') ? 'presentation' : /\/(especificacao|proposta)$/.test(location.pathname) ? 'design' : 'survey';
   const nav = useRef(navigate);
@@ -648,7 +654,13 @@ export default function Levantamento({ projectId }: { projectId: string }) {
         const route = { survey: 'levantamento', design: 'especificacao', presentation: 'entrega' }[next];
         if (route) nav.current('/projeto/' + projectId + '/' + route);
       },
-      onTools: () => setTools(true),
+      onTools: (nextTool = 'levantamento') => { setTool(nextTool); setTools(true); },
+      onPhotoAction: (id, action) => {
+        setActionError(null);
+        void visualApi.api.get<Photo>('/photos/' + id)
+          .then(({data})=>setPhotoAction({photo:data, action}))
+          .catch(error=>setActionError(visualApi.errorMessage(error,'Não foi possível abrir a fotografia.')));
+      },
       onProject: (p) => { definirRef.current(p); if (p.id !== projectId) nav.current('/projeto/' + p.id + '/levantamento'); },
     });
     controller.current = instance;
@@ -662,6 +674,10 @@ export default function Levantamento({ projectId }: { projectId: string }) {
     await controller.current?.reload();
   }
   return <>
+    {actionError && <div role="alert" className="p-3 text-bad">{actionError}</div>}
+    {photoAction?.action === 'mascaras' && <MasksDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onSaved={()=>{ void controller.current?.reload(); }} />}
+    {photoAction?.action === 'proposta' && <ProposalDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onGenerated={()=>{ void controller.current?.reload(); }} />}
+    {photoAction?.action === 'versoes' && <VersionsDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onChanged={()=>{ void controller.current?.reload(); }} />}
     <div ref={host} data-theme={tema} data-artelux-visual="true" style={{ flex: 1, minWidth: 0 }} />
     {tools && <dialog ref={toolsDialog} onCancel={() => { void closeTools(); }} className="fixed inset-0 m-auto h-[92vh] w-[96vw] max-w-none overflow-auto rounded-lg border border-line bg-app p-0 text-ink backdrop:bg-black/40">
       <div className="flex items-center justify-between border-b border-line p-4"><h2 className="font-semibold">Ferramentas do projeto · dados salvos</h2><button type="button" onClick={() => void closeTools()} className="rounded border border-line-accent px-4 py-2">Voltar ao estudo visual</button></div>
@@ -936,8 +952,8 @@ function updateColor() {
 
 function projectBounds() {
   return {
-    maxX: Math.max(...objects.map((object) => object.x + object.width)),
-    maxY: Math.max(...objects.map((object) => object.y + object.height))
+    maxX: Math.max(1, ...objects.map((object) => object.x + object.width)),
+    maxY: Math.max(1, ...objects.map((object) => object.y + object.height))
   };
 }
 
@@ -1444,7 +1460,8 @@ function download(data: string, type: string, name: string) {
 $('#download').onclick = () => download(JSON.stringify({
   project: projectData,
   units: 'm',
-  kind: 'estudo-visual-local-nao-persistido',
+  kind: 'estudo-visual',
+  revision: studyRevision,
   photos: photos.map(({ name, area, referenceDistance, pixelsPerMeter, saved, surfaces = [] }) => ({
     name,
     area,
@@ -1492,7 +1509,7 @@ function presentationPhoto(photo: VisualPhoto, proposed: boolean) {
   let markup = '<image href="' + escapeHtml(photo.url) + '" width="' + w + '" height="' + h + '"' + (proposed && lightMode === 'night' ? ' style="filter:brightness(.36) saturate(.76)"' : '') + '/>';
   if (proposed && photo.saved) {
     markup += (photo.surfaces || []).map(surface => '<polygon points="' + surface.points.map(p => p.x + ',' + p.y).join(' ') + '" fill="' + surface.color + '" fill-opacity="' + surface.opacity / 100 + '"/>').join('');
-    objects.forEach(object => {
+    (photo.id === objectPhotoId ? objects : localElements.get(photo.id) ?? []).forEach(object => {
       const x = photo.origin!.x + object.x * photo.pixelsPerMeter!;
       const y = photo.origin!.y - (object.y + object.height) * photo.pixelsPerMeter!;
       const width = object.width * photo.pixelsPerMeter!, height = object.height * photo.pixelsPerMeter!;
@@ -1529,11 +1546,88 @@ let applying = false;
 let loading = false;
 let uploading = false;
 let projectSaving = false;
+let studyRevision = 0;
+let studyLoaded = false;
+let studySaving = false;
+let savedStudyJson = '';
+const saveStudyButton = window.document.createElement('button');
+saveStudyButton.id = 'saveStudy';
+saveStudyButton.textContent = 'Salvar estudo';
+saveStudyButton.className = 'primary';
+saveStudyButton.disabled = true;
+$('#download').before(saveStudyButton);
+const saveStatus = window.document.createElement('span');
+saveStatus.setAttribute('role','status');
+saveStatus.style.cssText = 'font-size:12px;align-self:center';
+saveStudyButton.after(saveStatus);
 const projectId = bridge.project.id;
 projectData = { name: bridge.project.name, client: bridge.project.client?.name ?? '', location: bridge.project.location?.name ?? '' };
 const localElements = new Map<string, VisualElement[]>();
 localElements.set('examples', objects);
 let objectPhotoId = 'examples';
+function studyElement(object: VisualElement): visualApi.StudyElement {
+  const { record, ...draft } = object;
+  return { ...draft, estimated: object.estimated ?? true, record_id: record?.id ?? null };
+}
+function studySnapshot(): visualApi.VisualStudy {
+  localElements.set(objectPhotoId, objects);
+  return {
+    revision: studyRevision,
+    objects: (localElements.get('examples') ?? []).map(studyElement),
+    photos: photos.map(photo => ({ photo_id:photo.id,
+      objects:(localElements.get(photo.id) ?? []).map(studyElement), surfaces:photo.surfaces })),
+    light_mode: lightMode === 'night' ? 'night' : 'day',
+    overlay_opacity:overlayOpacity, active_photo_id:activePhotoId,
+  };
+}
+function studyContent(study: visualApi.VisualStudy) {
+  const { revision: _revision, updated_at: _updated, ...content } = study;
+  return JSON.stringify(content);
+}
+async function persistStudy() {
+  if (!studyLoaded || studySaving || loading || disposed) return;
+  studySaving = true; saveStudyButton.disabled = true;
+  saveStatus.textContent = 'Salvando…';
+  const snapshot = studySnapshot();
+  try {
+    const saved = await visualApi.saveVisualStudy(projectId, snapshot);
+    if (disposed) return;
+    studyRevision = saved.revision;
+    savedStudyJson = studyContent(snapshot);
+    dirty = studyContent(studySnapshot()) !== savedStudyJson;
+    saveStatus.textContent = dirty ? 'Há alterações posteriores para salvar' : 'Estudo salvo';
+  } catch(error) {
+    if (!disposed) saveStatus.textContent = visualApi.errorMessage(error,'Não foi possível salvar o estudo.');
+  } finally {
+    studySaving = false;
+    if (!disposed) saveStudyButton.disabled = false;
+  }
+}
+saveStudyButton.onclick = () => { void persistStudy(); };
+function restoreStudy(study: visualApi.VisualStudy) {
+  studyRevision = study.revision;
+  if (study.revision > 0) {
+    localElements.clear();
+    const restore = (draft: visualApi.StudyElement, photo?: VisualPhoto): VisualElement => {
+      const {record_id, ...object} = draft;
+      return {...object, record: photo?.records?.find(record=>record.id===record_id)};
+    };
+    localElements.set('examples', study.objects.map(draft=>restore(draft)));
+    for (const saved of study.photos) {
+      const photo = photos.find(p=>p.id===saved.photo_id);
+      if (!photo) continue;
+      photo.surfaces = saved.surfaces;
+      if (saved.objects.length) localElements.set(photo.id,saved.objects.map(draft=>restore(draft,photo)));
+    }
+    objects = localElements.get('examples') ?? [];
+    objectPhotoId = 'examples';
+    activePhotoId = study.active_photo_id;
+    lightMode = study.light_mode; overlayOpacity = study.overlay_opacity;
+    $('#overlayOpacity').value = overlayOpacity;
+    $('#opacityValue').value = overlayOpacity + '%';
+    $('#compositionStage').classList.toggle('night-mode', lightMode==='night');
+  }
+}
 const selectPhotoOriginal = loadActivePhoto;
 loadActivePhoto = (id: string) => {
   localElements.set(objectPhotoId, objects);
@@ -1541,7 +1635,7 @@ loadActivePhoto = (id: string) => {
   const photo = photos.find(p=>p.id === id)!;
   const imported = photo.pixelsPerMeter && photo.origin ? (photo.records ?? []).map(record=>elementFromRecord(record,photo)) : [];
   objects = localElements.get(id) ?? (imported.length ? imported : localElements.get('examples')!.map(o => ({ ...o, confirmed: false })));
-  if (!imported.length) $('#formMessage').textContent = 'Exemplos locais; os elementos salvos continuam nas Ferramentas do projeto.';
+  if (!imported.length) $('#formMessage').textContent = 'Elementos ilustrativos do estudo. Cadastre as medidas conferidas nas Ferramentas do projeto.';
   localElements.set(id, objects);
   selected = Math.min(selected, objects.length - 1);
   selectPhotoOriginal(id);
@@ -1583,7 +1677,7 @@ updateForm = () => {
     $('#material').value = object.record.spec.material?.id ?? '';
     finishOptions($('#material').value);
     $('#finish').value = object.record.spec.finish?.id ?? '';
-    $('#properties .hint').textContent = 'Catálogo cadastrado. Cores personalizadas são apenas do estudo local.';
+    $('#properties .hint').textContent = 'Catálogo cadastrado. Cores personalizadas ficam no estudo visual, sem alterar o catálogo.';
     $('#formMessage').textContent = object.estimated ? 'Há dimensões estimadas; elas não equivalem a medidas conferidas em campo.' : '';
     $('#width').readOnly = false; $('#height').readOnly = false;
     $('#colorName').textContent = object.record.spec.finish?.color_name ?? 'Sem acabamento';
@@ -1591,7 +1685,7 @@ updateForm = () => {
     $('#material').innerHTML = initialMaterialOptions; $('#material').value=object.material;
     $('#finish').innerHTML = initialFinishOptions; $('#finish').value=object.finish;
     $('#swatches').innerHTML = colors.map(([name,color])=>'<button type="button" data-color="'+color+'" style="background:'+color+'" aria-label="'+name+'" title="'+name+'"></button>').join('');
-    $('#properties .hint').textContent = 'Paleta ilustrativa. As alterações deste elemento são locais, sem gravação no banco.';
+    $('#properties .hint').textContent = 'Paleta ilustrativa. Use Salvar estudo para guardar esta composição. Confira cores no catálogo físico.';
     updateColor();
   }
 };
@@ -1649,7 +1743,7 @@ $('#properties').onsubmit = async (event: Event) => {
     Object.assign(object,elementFromRecord(record,photo));
     if(color !== finish?.color_hex) object.color=color;
     updateForm(); draw();
-    $('#formMessage').textContent='Dados do elemento salvos. Cor personalizada e composição permanecem locais.';
+    $('#formMessage').textContent='Dados do elemento salvos. Use Salvar estudo para guardar também a composição visual.';
   } catch(error) {
     object.record=record;
     $('#formMessage').textContent=visualApi.errorMessage(error,'Não foi possível aplicar todas as alterações. Confira os dados salvos nas Ferramentas do projeto.');
@@ -1691,7 +1785,7 @@ async function reload() {
   $('#loadStatus').textContent = 'Carregando fotos e medidas salvas…';
   ['uploadMain','uploadEmpty','uploadSide','addArea'].forEach(id => $( '#' + id).disabled = true);
   try {
-    const [nextAreas,nextLimits,nextCatalog] = await Promise.all([visualApi.listAreas(projectId),visualApi.getMediaLimits(),visualApi.listMaterials()]);
+    const [nextAreas,nextLimits,nextCatalog,study] = await Promise.all([visualApi.listAreas(projectId),visualApi.getMediaLimits(),visualApi.listMaterials(),studyLoaded ? Promise.resolve(null) : visualApi.getVisualStudy(projectId)]);
     const nextFinishes = (await Promise.all(nextCatalog.map(m=>visualApi.listFinishes(m.id)))).flat();
     const nextPhotos = await Promise.all(nextAreas.map(async area => {
       const records = await visualApi.listAreaPhotos(area.id);
@@ -1701,6 +1795,7 @@ async function reload() {
     const oldUrls = photos.map(p=>p.url);
     areas = nextAreas; limits = nextLimits; catalog = nextCatalog; finishes = nextFinishes;
     areaNames = areas.map(a=>a.name); photos = nextPhotos.flat();
+    if (study) restoreStudy(study);
     oldUrls.forEach(url=>{ URL.revokeObjectURL(url); urls.delete(url); });
     $('#photoInput').accept = limits.accepted_content_types.join(',');
     $('.area-select-row small').textContent = limits.accepted_labels.join(', ') + ' · até ' + limits.max_upload_mb + ' MB por imagem';
@@ -1709,6 +1804,11 @@ async function reload() {
     else { activePhotoId = null; $('#calibration').hidden = true; $('#compositionPhoto').removeAttribute('src'); }
     $('#loadStatus').textContent = '';
     setTab(currentTab); drawPhotoOverlay();
+    if (!studyLoaded) {
+      studyLoaded = true; savedStudyJson = studyContent(studySnapshot());
+      saveStatus.textContent = studyRevision ? 'Estudo salvo carregado' : 'Estudo ainda não salvo';
+      saveStudyButton.disabled = false;
+    }
   } catch (error) { setLoadError(error); }
   finally {
     loading = false;
@@ -1716,7 +1816,26 @@ async function reload() {
   }
 }
 
-$('#serverTools').onclick = bridge.onTools;
+$('#serverTools').onclick = () => bridge.onTools();
+const proposalActions = window.document.createElement('div');
+proposalActions.className = 'surface-toolbar';
+proposalActions.setAttribute('aria-label','Proposta e aprovação');
+for (const [label,action] of [['Máscaras e proteção','mascaras'],['Gerar proposta com IA','proposta'],['Versões e aprovação','versoes']] as const) {
+  const button = window.document.createElement('button');
+  button.textContent = label;
+  if (action==='proposta') button.className='primary';
+  button.onclick = () => {
+    if (!activePhotoId) { notify('Selecione uma fotografia no levantamento para continuar.'); setTab('survey'); return; }
+    bridge.onPhotoAction(activePhotoId,action);
+  };
+  proposalActions.append(button);
+}
+$('#design').prepend(proposalActions);
+const deliveryButton = window.document.createElement('button');
+deliveryButton.textContent = 'Apresentação aprovada, PDF e orçamento';
+deliveryButton.className = 'primary';
+deliveryButton.onclick = () => bridge.onTools('entrega');
+$('.presentation-actions').prepend(deliveryButton);
 $('.brand').href = '/projetos';
 $('#addArea').onclick = async () => {
   const name = window.prompt('Nome da nova área do levantamento:')?.trim();
@@ -1819,7 +1938,14 @@ $('#projectForm').onsubmit = async (event: Event) => {
   finally { projectSaving=false; if (!disposed) submit.disabled=false; }
 };
 // Local edits are never sent as catalog, mask, measurement or approval mutations.
-body.addEventListener('change',()=>{ dirty=true; },{signal:abort.signal});
+const trackStudy = () => {
+  if (!studyLoaded || disposed || studySaving) return;
+  dirty = studyContent(studySnapshot()) !== savedStudyJson;
+  saveStatus.textContent = dirty ? 'Alterações não salvas' : (studyRevision ? 'Estudo salvo' : 'Estudo ainda não salvo');
+};
+body.addEventListener('change',trackStudy,{signal:abort.signal});
+body.addEventListener('click',()=>{ later(trackStudy); },{signal:abort.signal});
+body.addEventListener('pointerup',()=>{ later(trackStudy); },{signal:abort.signal});
 listen('beforeunload',(event: BeforeUnloadEvent)=>{ if(dirty){ event.preventDefault(); event.returnValue=''; } });
 syncProjectUI(); setTab(initialTab); void reload();
 return {

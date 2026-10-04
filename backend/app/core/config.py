@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import ClassVar
 
-from pydantic import field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # .../backend/app/core/config.py -> raiz do repositório
@@ -70,6 +70,11 @@ class Settings(BaseSettings):
         return value
 
     image_gen_provider: str = "mock"
+    openrouter_api_key: SecretStr = SecretStr("")
+    openrouter_image_model: str = "google/gemini-2.5-flash-image"
+    openrouter_timeout_seconds: int = Field(default=180, ge=10, le=300)
+    openrouter_max_response_mb: int = Field(default=32, ge=1, le=64)
+    generation_limit_per_hour: int = Field(default=20, ge=1, le=200)
     pdf_provider: str = "mock"
 
     default_tenant_slug: str = "artelux"

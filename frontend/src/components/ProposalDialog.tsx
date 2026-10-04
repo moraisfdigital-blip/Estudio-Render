@@ -4,6 +4,7 @@ import {
   fetchGeneratedImageBlob,
   fetchPhotoBlob,
   generateProposal,
+  getGenerationConfig,
   getComparison,
   type Comparison,
   type Photo,
@@ -128,6 +129,7 @@ export default function ProposalDialog({
   onGenerated: () => void
 }) {
   const carregar = useCallback(() => getComparison(photo.id), [photo.id])
+  const generation = useResource(getGenerationConfig, 'Não foi possível verificar o serviço de geração.')
   const { resource, reload } = useResource(
     carregar,
     'Não foi possível carregar a comparação desta foto.',
@@ -251,8 +253,20 @@ export default function ProposalDialog({
 
             {erroGeracao && <ErrorNotice message={erroGeracao} />}
 
+            {generation.resource.kind === 'loading' && <Loading label="Verificando serviço de geração…" />}
+            {generation.resource.kind === 'error' && <ErrorNotice message={generation.resource.message} onRetry={generation.reload} />}
+            {generation.resource.kind === 'ready' && (
+              <p className="text-sm text-ink-soft" role="status">
+                {generation.resource.data.simulation
+                  ? 'Modo de demonstração: esta geração é uma simulação local, sem inteligência artificial.'
+                  : generation.resource.data.ready
+                    ? 'Geração com OpenRouter. A fotografia e as áreas marcadas serão enviadas ao serviço de IA.'
+                    : 'A geração com IA está indisponível. A equipe precisa configurar o serviço.'}
+              </p>
+            )}
+
             <div className="flex flex-wrap items-center gap-3">
-              <Button type="button" onClick={() => void gerar()} disabled={gerando}>
+              <Button type="button" onClick={() => void gerar()} disabled={gerando || generation.resource.kind !== 'ready' || !generation.resource.data.ready}>
                 {gerando
                   ? 'Gerando…'
                   : comparacao.generated

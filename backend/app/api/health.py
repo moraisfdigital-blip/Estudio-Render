@@ -24,6 +24,12 @@ from app.core.db import get_client
 router = APIRouter()
 
 
+@router.get("/public-config")
+async def public_config() -> dict[str, bool]:
+    from app.core.config import get_settings
+    return {"allow_self_register": get_settings().allow_self_register}
+
+
 @router.get("/health")
 async def health() -> JSONResponse:
     """Liveness + prontidão. 503 quando a dependência essencial está fora."""

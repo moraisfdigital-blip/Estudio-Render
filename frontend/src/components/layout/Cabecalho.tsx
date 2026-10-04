@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FolderOpen, Layers, LogOut, Moon, Plus, Sun } from 'lucide-react'
 import { updateProject } from '../../api/client'
@@ -21,35 +21,35 @@ import Marca from './Marca'
 
 function NomeDoProjeto() {
   const { projeto, definir } = useProjetoAtual()
-  const [rascunho, setRascunho] = useState('')
+  const [rascunho, setRascunho] = useState(projeto?.name ?? '')
+  const [fonte, setFonte] = useState(projeto)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
-  const original = useRef('')
+  const original = projeto?.name ?? ''
 
-  useEffect(() => {
+  if (fonte !== projeto) {
+    setFonte(projeto)
     setRascunho(projeto?.name ?? '')
-    original.current = projeto?.name ?? ''
     setErro(null)
-  }, [projeto])
+  }
 
   if (!projeto) return null
 
   async function salvar() {
     const nome = rascunho.trim()
-    if (!projeto || !nome || nome === original.current) {
-      setRascunho(original.current)
+    if (!projeto || !nome || nome === original) {
+      setRascunho(original)
       return
     }
     setSalvando(true)
     setErro(null)
     try {
       const atualizado = await updateProject(projeto.id, { name: nome })
-      original.current = atualizado.name
       definir(atualizado)
     } catch {
       // O nome volta ao que era: deixar na tela um nome que não foi salvo
       // seria pior do que não ter editado.
-      setRascunho(original.current)
+      setRascunho(original)
       setErro('Não foi possível salvar o nome.')
     } finally {
       setSalvando(false)
@@ -65,7 +65,7 @@ function NomeDoProjeto() {
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()
           if (e.key === 'Escape') {
-            setRascunho(original.current)
+            setRascunho(original)
             e.currentTarget.blur()
           }
         }}

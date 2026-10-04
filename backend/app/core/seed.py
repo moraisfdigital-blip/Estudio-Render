@@ -213,6 +213,7 @@ async def ensure_seed_owner(tenant_id: str) -> None:
 
 async def run_seed() -> str:
     await ensure_indexes()
+    await get_db()["generation_usage"].create_index("expires_at", expireAfterSeconds=0)
     tenant_id = await ensure_default_tenant()
     await ensure_seed_owner(tenant_id)
     return tenant_id

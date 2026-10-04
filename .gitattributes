@@ -1,0 +1,2 @@
+# Deployment files must keep Unix line endings even in Windows worktrees.
+deploy/* text eol=lf

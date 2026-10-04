@@ -58,8 +58,10 @@ export default function PainelPropriedades({
   const [salvando, setSalvando] = useState(false)
   const [recado, setRecado] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [fonte, setFonte] = useState<SurveyElement | null>(null)
 
-  useEffect(() => {
+  if (fonte !== elemento) {
+    setFonte(elemento)
     setRascunho({
       largura: paraCampo(elemento.measurements.width?.value),
       altura: paraCampo(elemento.measurements.height?.value),
@@ -71,7 +73,7 @@ export default function PainelPropriedades({
     setAcabamentoId(elemento.spec.finish?.id ?? '')
     setRecado(null)
     setErro(null)
-  }, [elemento])
+  }
 
   useEffect(() => {
     let vivo = true
@@ -89,10 +91,7 @@ export default function PainelPropriedades({
 
   useEffect(() => {
     let vivo = true
-    if (!materialId) {
-      setAcabamentos([])
-      return
-    }
+    if (!materialId) return
     void listFinishes(materialId)
       .then((lista) => {
         if (vivo) setAcabamentos(lista)
@@ -249,6 +248,7 @@ export default function PainelPropriedades({
               onChange={(e) => {
                 setMaterialId(e.target.value)
                 setAcabamentoId('')
+                setAcabamentos([])
               }}
               className={entradaClasse}
             >

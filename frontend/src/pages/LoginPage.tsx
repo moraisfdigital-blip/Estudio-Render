@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { errorMessage } from '../api/client'
+import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/context'
 import { AuthCard, Field, LinkButton, SubmitButton } from '../components/AuthForm'
 
@@ -10,6 +10,14 @@ export default function LoginPage({ onGoToRegister }: { onGoToRegister: () => vo
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [registrationOpen, setRegistrationOpen] = useState(false)
+  useEffect(() => {
+    let alive = true
+    void api.get<{allow_self_register: boolean}>('/public-config')
+      .then(({data}) => { if (alive) setRegistrationOpen(data.allow_self_register) })
+      .catch(() => { /* Closed by default when the configuration is unavailable. */ })
+    return () => { alive = false }
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -31,7 +39,7 @@ export default function LoginPage({ onGoToRegister }: { onGoToRegister: () => vo
       onSubmit={handleSubmit}
       footer={
         <>
-          Não tem acesso ainda? <LinkButton onClick={onGoToRegister}>Registrar</LinkButton>
+          {registrationOpen ? <>Não tem acesso ainda? <LinkButton onClick={onGoToRegister}>Registrar</LinkButton></> : 'Acesso restrito à equipe. Solicite sua conta ao administrador.'}
         </>
       }
     >

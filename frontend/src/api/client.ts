@@ -3,6 +3,33 @@ import axios from 'axios'
 // Mesma origem: em produção o FastAPI serve o build e a API sob /api.
 export const api = axios.create({ baseURL: '/api' })
 
+export async function getGenerationConfig(): Promise<{provider: string; ready: boolean; simulation: boolean}> {
+  return (await api.get('/generation/config')).data
+}
+
+export type StudyElement = {
+  name: string; type: string; width: number; height: number; x: number; y: number;
+  color: string; material: string; finish: string; label: string; confirmed: boolean;
+  estimated: boolean; record_id: string | null;
+}
+export type StudySurface = {
+  id: string; name: string; points: { x: number; y: number }[];
+  material: string; finish: string; color: string; colorName: string;
+  opacity: number; preserveOpenings: boolean;
+}
+export type VisualStudy = {
+  revision: number; objects: StudyElement[];
+  photos: { photo_id: string; objects: StudyElement[]; surfaces: StudySurface[] }[];
+  light_mode: 'day' | 'night'; overlay_opacity: number; active_photo_id: string | null;
+  updated_at?: string | null;
+}
+export async function getVisualStudy(projectId: string): Promise<VisualStudy> {
+  return (await api.get<VisualStudy>(`/projects/${projectId}/study`)).data
+}
+export async function saveVisualStudy(projectId: string, study: VisualStudy): Promise<VisualStudy> {
+  return (await api.put<VisualStudy>(`/projects/${projectId}/study`, study)).data
+}
+
 // ---- token ------------------------------------------------------------
 
 const TOKEN_KEY = 'render-artelux.token'
