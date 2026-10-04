@@ -57,6 +57,15 @@ export function ProjectWorkspace() {
   )
 }
 
+/** O painel oficial sem projeto aberto: o protótipo com o exemplo, nada salvo. */
+export function EstudioSemProjeto() {
+  return (
+    <Suspense fallback={<Loading label="Carregando estúdio visual…" />}>
+      <Levantamento />
+    </Suspense>
+  )
+}
+
 /** Redireciona `/projeto/:id` para o primeiro passo. */
 export function ProjectIndexRedirect() {
   const { projectId = '' } = useParams()

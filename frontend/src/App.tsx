@@ -14,6 +14,7 @@ import Inicio from './pages/Inicio'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import {
+  EstudioSemProjeto,
   ProjectIndexRedirect,
   ProjectWorkspace,
   StepEntrega,
@@ -53,6 +54,7 @@ function Autenticado() {
         {/* Endereço da antiga tela de formulário; sem isto "novo" seria lido
             como o id de um projeto. */}
         <Route path="/projeto/novo" element={<Inicio />} />
+        <Route path="/estudio/*" element={<EstudioSemProjeto />} />
 
         <Route path="/projeto/:projectId" element={<ProjectWorkspace />}>
           <Route index element={<ProjectIndexRedirect />} />

@@ -589,10 +589,11 @@ type VisualPoint = { x: number; y: number };
 type VisualSurface = { id: string; name: string; points: VisualPoint[]; material: string; finish: string; color: string; colorName: string; opacity: number; preserveOpenings: boolean };
 type VisualPhoto = { id: string; name: string; area: string; url: string; width: number; height: number; points: VisualPoint[]; referenceDistance: number; pixelsPerMeter: number | null; origin: VisualPoint | null; saved: boolean; surfaces: VisualSurface[]; records?: SurveyElement[] };
 type PhotoAction = 'mascaras' | 'proposta' | 'versoes';
-type VisualBridge = { project: Project; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
+type VisualBridge = { project: Project | null; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
 type VisualController = { setTab: (tab: string) => void; reload: () => Promise<void>; destroy: () => void };
 
-export default function Levantamento({ projectId }: { projectId: string }) {
+/** Sem `projectId`, abre a mesa como o protótipo, com o exemplo e sem salvar nada. */
+export default function Levantamento({ projectId }: { projectId?: string }) {
   const { tema, alternar } = useTema();
   const themeAction = useRef(alternar);
   const host = useRef<HTMLDivElement>(null);
@@ -622,7 +623,8 @@ export default function Levantamento({ projectId }: { projectId: string }) {
     projectRef.current = projeto; definirRef.current = definir;
   }, [alternar, navigate, tab, projeto, definir, signOut]);
   useEffect(() => {
-    if (!host.current || !projectRef.current || projectRef.current.id !== projectId) return;
+    if (!host.current) return;
+    if (projectId && (!projectRef.current || projectRef.current.id !== projectId)) return;
     const shadow = host.current.shadowRoot ?? host.current.attachShadow({ mode: 'open' });
     const style = window.document.createElement('style');
     style.textContent = VISUAL_CSS;
@@ -654,11 +656,11 @@ export default function Levantamento({ projectId }: { projectId: string }) {
     style.textContent += DARK_VISUAL_CSS;
     shadow.replaceChildren(style, body);
     const instance = mountVisual(body, tabRef.current, {
-      project: projectRef.current,
+      project: projectId ? projectRef.current : null,
       onTab: (next) => {
         if (next === tabRef.current) return;
         const route = { survey: 'levantamento', design: 'especificacao', presentation: 'entrega' }[next];
-        if (route) nav.current('/projeto/' + projectId + '/' + route);
+        if (route) nav.current((projectId ? '/projeto/' + projectId : '/estudio') + '/' + route);
       },
       onTools: (nextTool = 'levantamento') => { setTool(nextTool); setTools(true); },
       onPhotoAction: (id, action) => {
@@ -682,12 +684,12 @@ export default function Levantamento({ projectId }: { projectId: string }) {
   }
   return <>
     {actionError && <div role="alert" className="p-3 text-bad">{actionError}</div>}
-    {projetos && <ProjetosDialog atual={projectId} onClose={() => setProjetos(false)} onAbrir={(id) => { setProjetos(false); navigate('/projeto/' + id + '/levantamento'); }} />}
+    {projetos && <ProjetosDialog atual={projectId ?? ''} onClose={() => setProjetos(false)} onAbrir={(id) => { setProjetos(false); navigate('/projeto/' + id + '/levantamento'); }} />}
     {photoAction?.action === 'mascaras' && <MasksDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onSaved={()=>{ void controller.current?.reload(); }} />}
     {photoAction?.action === 'proposta' && <ProposalDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onGenerated={()=>{ void controller.current?.reload(); }} />}
     {photoAction?.action === 'versoes' && <VersionsDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onChanged={()=>{ void controller.current?.reload(); }} />}
     <div ref={host} data-theme={tema} data-artelux-visual="true" style={{ flex: 1, minWidth: 0 }} />
-    {tools && <dialog ref={toolsDialog} onCancel={() => { void closeTools(); }} className="fixed inset-0 m-auto h-[92vh] w-[96vw] max-w-none overflow-auto rounded-lg border border-line bg-app p-0 text-ink backdrop:bg-black/40">
+    {tools && projectId && <dialog ref={toolsDialog} onCancel={() => { void closeTools(); }} className="fixed inset-0 m-auto h-[92vh] w-[96vw] max-w-none overflow-auto rounded-lg border border-line bg-app p-0 text-ink backdrop:bg-black/40">
       <div className="flex items-center justify-between border-b border-line p-4"><h2 className="font-semibold">Ferramentas do projeto · dados salvos</h2><button type="button" onClick={() => void closeTools()} className="rounded border border-line-accent px-4 py-2">Voltar ao estudo visual</button></div>
       <Cabecalho />
       <div className="p-4"><label>Ferramentas <select aria-label="Ferramentas" value={tool} onChange={e=>setTool(e.target.value)} className="rounded border border-line bg-surface p-2"><option value="levantamento">Fotos, elementos, catálogo, máscaras, geração e versões</option><option value="entrega">Apresentação, PDF e orçamento</option></select></label></div>
@@ -1447,6 +1449,7 @@ $('#photoAreas').onclick = (event: VisualEvent) => {
   }
   const areaButton = event.target.closest<HTMLElement>('[data-add-to-area]');
   if (areaButton) {
+    if (pedirProjeto('As fotos ficam guardadas no projeto.')) return;
     $('#uploadArea').value = areaButton.dataset.addToArea;
     $('#photoInput').click();
   }
@@ -1568,8 +1571,21 @@ const saveStatus = window.document.createElement('span');
 saveStatus.setAttribute('role','status');
 saveStatus.style.cssText = 'font-size:12px;align-self:center';
 saveStudyButton.after(saveStatus);
-const projectId = bridge.project.id;
-projectData = { name: bridge.project.name, client: bridge.project.client?.name ?? '', location: bridge.project.location?.name ?? '' };
+// Sem projeto, a mesa abre como o protótipo: o exemplo do Posto Horizonte só
+// na tela. Explorar é livre; o que precisa ser guardado pede o projeto antes.
+const projectId: string | null = bridge.project?.id ?? null;
+if (bridge.project) projectData = { name: bridge.project.name, client: bridge.project.client?.name ?? '', location: bridge.project.location?.name ?? '' };
+function pedirProjeto(motivo: string): boolean {
+  if (projectId) return false;
+  notify(motivo + ' Crie o projeto para salvar.');
+  openProjectDialog(true);
+  return true;
+}
+if (!projectId) {
+  ['uploadMain', 'uploadEmpty', 'uploadSide'].forEach((id) => $('#' + id).onclick = () => { pedirProjeto('As fotos ficam guardadas no projeto.'); });
+  saveStudyButton.disabled = false;
+  saveStatus.textContent = 'Exemplo · nada é salvo';
+}
 const localElements = new Map<string, VisualElement[]>();
 localElements.set('examples', objects);
 let objectPhotoId = 'examples';
@@ -1593,12 +1609,13 @@ function studyContent(study: visualApi.VisualStudy) {
   return JSON.stringify(content);
 }
 async function persistStudy() {
+  if (pedirProjeto('O exemplo não é salvo.')) return;
   if (!studyLoaded || studySaving || loading || disposed) return;
   studySaving = true; saveStudyButton.disabled = true;
   saveStatus.textContent = 'Salvando…';
   const snapshot = studySnapshot();
   try {
-    const saved = await visualApi.saveVisualStudy(projectId, snapshot);
+    const saved = await visualApi.saveVisualStudy(projectId!, snapshot);
     if (disposed) return;
     studyRevision = saved.revision;
     savedStudyJson = studyContent(snapshot);
@@ -1788,12 +1805,12 @@ async function toPhoto(record: Photo, area: string): Promise<VisualPhoto> {
 }
 
 async function reload() {
-  if (loading || disposed) return;
+  if (loading || disposed || !projectId) return;
   loading = true;
   $('#loadStatus').textContent = 'Carregando fotos e medidas salvas…';
   ['uploadMain','uploadEmpty','uploadSide','addArea'].forEach(id => $( '#' + id).disabled = true);
   try {
-    const [nextAreas,nextLimits,nextCatalog,study] = await Promise.all([visualApi.listAreas(projectId),visualApi.getMediaLimits(),visualApi.listMaterials(),studyLoaded ? Promise.resolve(null) : visualApi.getVisualStudy(projectId)]);
+    const [nextAreas,nextLimits,nextCatalog,study] = await Promise.all([visualApi.listAreas(projectId!),visualApi.getMediaLimits(),visualApi.listMaterials(),studyLoaded ? Promise.resolve(null) : visualApi.getVisualStudy(projectId!)]);
     const nextFinishes = (await Promise.all(nextCatalog.map(m=>visualApi.listFinishes(m.id)))).flat();
     const nextPhotos = await Promise.all(nextAreas.map(async area => {
       const records = await visualApi.listAreaPhotos(area.id);
@@ -1824,7 +1841,7 @@ async function reload() {
   }
 }
 
-$('#serverTools').onclick = () => bridge.onTools();
+$('#serverTools').onclick = () => { if (!pedirProjeto('As ferramentas usam os dados salvos do projeto.')) bridge.onTools(); };
 const proposalActions = window.document.createElement('div');
 proposalActions.className = 'surface-toolbar';
 proposalActions.setAttribute('aria-label','Proposta e aprovação');
@@ -1842,17 +1859,18 @@ $('#design').prepend(proposalActions);
 const deliveryButton = window.document.createElement('button');
 deliveryButton.textContent = 'Apresentação aprovada, PDF e orçamento';
 deliveryButton.className = 'primary';
-deliveryButton.onclick = () => bridge.onTools('entrega');
+deliveryButton.onclick = () => { if (!pedirProjeto('A apresentação aprovada usa os dados salvos do projeto.')) bridge.onTools('entrega'); };
 $('.presentation-actions').prepend(deliveryButton);
 $('.brand').href = '/';
 $('.brand').onclick = (event: Event) => { event.preventDefault(); bridge.onProjects(); };
 $('#openProjects').onclick = () => bridge.onProjects();
 $('#addArea').onclick = async () => {
+  if (pedirProjeto('As áreas ficam guardadas no projeto.')) return;
   const name = window.prompt('Nome da nova área do levantamento:')?.trim();
   if (!name || loading) return;
   $('#addArea').disabled = true;
   try {
-    const area = await visualApi.createArea(projectId, { name });
+    const area = await visualApi.createArea(projectId!, { name });
     if (disposed) return;
     areas.push(area); areaNames = areas.map(a=>a.name);
     renderPhotoLibrary(); $('#uploadArea').value = area.name;
@@ -1871,7 +1889,7 @@ $('#photoInput').onchange = async (event: Event) => {
   let firstId: string | null = null;
   try {
     if (!area) {
-      area = await visualApi.createArea(projectId, { name: areaName });
+      area = await visualApi.createArea(projectId!, { name: areaName });
       if (disposed) return;
       areas.push(area); areaNames = areas.map(a=>a.name);
       renderPhotoLibrary(); $('#uploadArea').value = area.name;
@@ -1913,9 +1931,10 @@ $('#referenceDistance').oninput = () => {
 $('#projectName').onchange = async () => {
   const name = $('#projectName').value.trim();
   if (!name) { syncProjectUI(); return; }
+  if (!projectId) { projectData.name = name; syncProjectUI(); return; }
   $('#projectName').disabled = true;
   try {
-    const updated = await visualApi.updateProject(projectId,{ name });
+    const updated = await visualApi.updateProject(projectId!,{ name });
     if (disposed) return;
     projectData.name = updated.name; bridge.onProject(updated); syncProjectUI();
   } catch(error) { syncProjectUI(); notify(visualApi.errorMessage(error,'Não foi possível salvar o nome.')); }
@@ -1936,7 +1955,7 @@ $('#projectForm').onsubmit = async (event: Event) => {
   }
   errorNotice.textContent = '';
   try {
-    const result = await visualApi.salvarProjetoPorNomes({ name,clientName,locationName:site }, isNew ? undefined : projectId);
+    const result = await visualApi.salvarProjetoPorNomes({ name,clientName,locationName:site }, isNew || !projectId ? undefined : projectId);
     if (disposed) return;
     projectData = { name:result.name,client:result.client?.name ?? clientName,location:result.location?.name ?? site };
     syncProjectUI(); $('#projectDialog').close(); bridge.onProject(result); notify('Projeto salvo.');
