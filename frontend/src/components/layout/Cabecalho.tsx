@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderOpen, Layers, LogOut, Moon, Plus, Sun } from 'lucide-react'
+import { Layers, LogOut, Moon, Plus, Sun } from 'lucide-react'
 import { updateProject } from '../../api/client'
 import { useAuth } from '../../auth/context'
 import { useProjetoAtual } from '../../contexts/ProjetoAtual'
@@ -128,9 +128,9 @@ export default function Cabecalho() {
       <div className="flex h-[88px] items-center gap-3.5 px-7">
         <button
           type="button"
-          onClick={() => navigate('/projetos')}
+          onClick={() => navigate('/')}
           className="shrink-0"
-          aria-label="Ir para os projetos"
+          aria-label="Voltar ao estúdio"
         >
           <Marca className="h-[70px] w-[190px]" />
         </button>
@@ -138,10 +138,6 @@ export default function Cabecalho() {
         <NomeDoProjeto />
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <BotaoTopo onClick={() => navigate('/projeto/novo')}>＋ Novo projeto</BotaoTopo>
-          <BotaoTopo onClick={() => navigate('/projetos')} title="Meus projetos">
-            <FolderOpen size={16} strokeWidth={1.75} className="inline" />
-          </BotaoTopo>
           {usuario?.role === 'owner' && (
             <BotaoTopo onClick={() => navigate('/materiais')} title="Materiais (ACM)">
               <Layers size={16} strokeWidth={1.75} className="inline" />

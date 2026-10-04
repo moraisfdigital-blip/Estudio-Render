@@ -8,6 +8,8 @@ import MasksDialog from '../components/MasksDialog'
 import ProposalDialog from '../components/ProposalDialog'
 import VersionsDialog from '../components/VersionsDialog'
 import Cabecalho from '../components/layout/Cabecalho'
+import ProjetosDialog from '../components/ProjetosDialog'
+import { useAuth } from '../auth/context'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createArea,
@@ -293,12 +295,6 @@ function LevantamentoPersistido({ projectId }: { projectId: string }) {
             {projeto?.location?.name ?? 'Endereço ou unidade ainda não informado.'}
           </p>
         </div>
-        <a
-          href={`/projeto/${projectId}/editar`}
-          className="shrink-0 rounded-md border border-[#8ed7d2] bg-surface px-[15px] py-[10px] text-sm font-medium text-brand-hover transition hover:border-brand hover:bg-brand-soft"
-        >
-          Editar dados
-        </a>
       </div>
 
       {/* Biblioteca de fotos por área. */}
@@ -451,7 +447,7 @@ function LevantamentoPersistido({ projectId }: { projectId: string }) {
 // The approved HTML/CSS is isolated from Tailwind. Only this React-owned DOM island
 // is imperative; authentication, routing, API client and existing tools stay intact.
 const VISUAL_HTML = `
-<header><a class="brand" href="./" aria-label="ENBY PRO"><img src="/enby-pro-logo.png" alt="ENBY PRO"></a><div class="project-name"><input id="projectName" aria-label="Nome do projeto" value="Estudo de identidade · Posto Horizonte"><small id="projectMeta">Projeto demonstrativo · local não informado</small></div><button id="newProject">＋ Novo projeto</button><button id="download">Baixar estudo</button><button class="primary" id="present">Apresentar projeto ↗</button></header>
+<header><a class="brand" href="./" aria-label="ENBY PRO"><img src="/enby-pro-logo.png" alt="ENBY PRO"></a><div class="project-name"><input id="projectName" aria-label="Nome do projeto" value="Estudo de identidade · Posto Horizonte"><small id="projectMeta">Projeto demonstrativo · local não informado</small></div><button id="openProjects" title="Abrir outro projeto">Projetos</button><button id="newProject">＋ Novo projeto</button><button id="download">Baixar estudo</button><button class="primary" id="present">Apresentar projeto ↗</button></header>
 <nav class="stages" aria-label="Etapas do projeto"><button class="active" data-tab="survey">01 <span>Levantamento</span></button><button data-tab="design">02 <span>Projeto visual</span></button><button data-tab="presentation">03 <span>Apresentação</span></button><button class="prototype" id="serverTools" title="Abrir funções existentes e dados persistidos">Ferramentas do projeto</button></nav>
 <div id="loadStatus" role="status"></div><main><aside class="left"><div class="section-title">ESTRUTURA DO PROJETO</div><h2>Elementos da obra</h2><p class="muted">Selecione um elemento para definir suas dimensões e acabamento.</p><div id="elements"></div><button class="add-element" id="addElement">＋ Novo elemento</button><div class="side-note"><span>REFERÊNCIA DO LOCAL</span><button id="uploadSide">＋ Adicionar fotografia</button><p>A foto original permanece como referência do levantamento.</p></div><div class="side-bottom"><span>Unidade do projeto</span><b>Metros (m)</b><small>Vista frontal proporcional</small></div></aside>
 <section class="workspace"><div class="work-head"><div><span class="eyebrow" id="workEyebrow">LEVANTAMENTO</span><h1 id="workTitle">A base do projeto.</h1></div><div class="view-tools" hidden><div class="segmented" id="viewMode"><button class="active" data-view="elevation">Elevação</button><button data-view="photo">Sobre a foto</button></div><button id="dimensions" aria-pressed="true">Cotas visíveis</button><button id="resetView">Ajustar vista</button></div></div><div class="project-progress" id="projectProgress"><button class="active" data-go="survey"><span>01</span><div><b>Foto do local</b><small id="photoStatus">Adicionar fotografia</small></div></button><button data-go="survey"><span>02</span><div><b>Definir escala</b><small id="scaleStatus">Aguardando foto</small></div></button><button data-go="design"><span>03</span><div><b>Montar projeto</b><small id="elementStatus">4 elementos de exemplo</small></div></button><button data-go="presentation"><span>04</span><div><b>Apresentar</b><small id="presentationStatus">Pendente</small></div></button></div>
@@ -593,7 +589,7 @@ type VisualPoint = { x: number; y: number };
 type VisualSurface = { id: string; name: string; points: VisualPoint[]; material: string; finish: string; color: string; colorName: string; opacity: number; preserveOpenings: boolean };
 type VisualPhoto = { id: string; name: string; area: string; url: string; width: number; height: number; points: VisualPoint[]; referenceDistance: number; pixelsPerMeter: number | null; origin: VisualPoint | null; saved: boolean; surfaces: VisualSurface[]; records?: SurveyElement[] };
 type PhotoAction = 'mascaras' | 'proposta' | 'versoes';
-type VisualBridge = { project: Project; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void };
+type VisualBridge = { project: Project; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
 type VisualController = { setTab: (tab: string) => void; reload: () => Promise<void>; destroy: () => void };
 
 export default function Levantamento({ projectId }: { projectId: string }) {
@@ -605,6 +601,9 @@ export default function Levantamento({ projectId }: { projectId: string }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [tools, setTools] = useState(false);
+  const [projetos, setProjetos] = useState(false);
+  const { signOut } = useAuth();
+  const sair = useRef(signOut);
   const [tool, setTool] = useState('levantamento');
   const [photoAction, setPhotoAction] = useState<{photo: Photo; action: PhotoAction} | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -619,9 +618,9 @@ export default function Levantamento({ projectId }: { projectId: string }) {
   const definirRef = useRef(definir);
 
   useEffect(() => {
-    themeAction.current = alternar; nav.current = navigate; tabRef.current = tab;
+    themeAction.current = alternar; nav.current = navigate; tabRef.current = tab; sair.current = signOut;
     projectRef.current = projeto; definirRef.current = definir;
-  }, [alternar, navigate, tab, projeto, definir]);
+  }, [alternar, navigate, tab, projeto, definir, signOut]);
   useEffect(() => {
     if (!host.current || !projectRef.current || projectRef.current.id !== projectId) return;
     const shadow = host.current.shadowRoot ?? host.current.attachShadow({ mode: 'open' });
@@ -636,6 +635,13 @@ export default function Levantamento({ projectId }: { projectId: string }) {
     themeButton.style.cssText = 'align-self:center;margin-left:14px;font-size:12px;padding:6px 10px';
     themeButton.onclick = () => themeAction.current();
     body.querySelector('.stages')!.append(themeButton);
+    const signOutButton = window.document.createElement('button');
+    signOutButton.id = 'signOut';
+    signOutButton.textContent = 'Sair';
+    signOutButton.title = 'Sair da conta';
+    signOutButton.style.cssText = 'align-self:center;margin-left:8px;font-size:12px;padding:6px 10px';
+    signOutButton.onclick = () => { void sair.current(); };
+    body.querySelector('.stages')!.append(signOutButton);
     const refreshTheme = () => {
       const dark = window.document.documentElement.dataset.theme === 'dark';
       body.classList.toggle('dark-ui', dark);
@@ -662,6 +668,7 @@ export default function Levantamento({ projectId }: { projectId: string }) {
           .catch(error=>setActionError(visualApi.errorMessage(error,'Não foi possível abrir a fotografia.')));
       },
       onProject: (p) => { definirRef.current(p); if (p.id !== projectId) nav.current('/projeto/' + p.id + '/levantamento'); },
+      onProjects: () => setProjetos(true),
     });
     controller.current = instance;
     return () => { observer.disconnect(); instance.destroy(); controller.current = null; shadow.replaceChildren(); };
@@ -675,6 +682,7 @@ export default function Levantamento({ projectId }: { projectId: string }) {
   }
   return <>
     {actionError && <div role="alert" className="p-3 text-bad">{actionError}</div>}
+    {projetos && <ProjetosDialog atual={projectId} onClose={() => setProjetos(false)} onAbrir={(id) => { setProjetos(false); navigate('/projeto/' + id + '/levantamento'); }} />}
     {photoAction?.action === 'mascaras' && <MasksDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onSaved={()=>{ void controller.current?.reload(); }} />}
     {photoAction?.action === 'proposta' && <ProposalDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onGenerated={()=>{ void controller.current?.reload(); }} />}
     {photoAction?.action === 'versoes' && <VersionsDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onChanged={()=>{ void controller.current?.reload(); }} />}
@@ -1836,7 +1844,9 @@ deliveryButton.textContent = 'Apresentação aprovada, PDF e orçamento';
 deliveryButton.className = 'primary';
 deliveryButton.onclick = () => bridge.onTools('entrega');
 $('.presentation-actions').prepend(deliveryButton);
-$('.brand').href = '/projetos';
+$('.brand').href = '/';
+$('.brand').onclick = (event: Event) => { event.preventDefault(); bridge.onProjects(); };
+$('#openProjects').onclick = () => bridge.onProjects();
 $('#addArea').onclick = async () => {
   const name = window.prompt('Nome da nova área do levantamento:')?.trim();
   if (!name || loading) return;
@@ -1926,11 +1936,7 @@ $('#projectForm').onsubmit = async (event: Event) => {
   }
   errorNotice.textContent = '';
   try {
-    const [clients,locations] = await Promise.all([visualApi.listClients(),visualApi.listLocations()]);
-    const client = clients.find(c=>c.name.toLowerCase() === clientName.toLowerCase()) ?? await visualApi.createClient({ name:clientName });
-    const location = locations.find(l=>l.name.toLowerCase() === site.toLowerCase()) ?? await visualApi.createLocation({ name:site,client_id:client.id });
-    const input = { name,client_id:client.id,location_id:location.id };
-    const result = isNew ? await visualApi.createProject(input) : await visualApi.updateProject(projectId,input);
+    const result = await visualApi.salvarProjetoPorNomes({ name,clientName,locationName:site }, isNew ? undefined : projectId);
     if (disposed) return;
     projectData = { name:result.name,client:result.client?.name ?? clientName,location:result.location?.name ?? site };
     syncProjectUI(); $('#projectDialog').close(); bridge.onProject(result); notify('Projeto salvo.');

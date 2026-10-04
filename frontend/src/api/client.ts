@@ -232,6 +232,27 @@ export async function updateProject(id: string, input: Partial<ProjectInput>): P
   return data
 }
 
+/**
+ * Cria (ou atualiza) um projeto a partir dos nomes digitados, como na janela
+ * do protótipo. Cliente e local com o mesmo nome (sem diferenciar maiúsculas)
+ * são reaproveitados; os que não existem são criados.
+ */
+export async function salvarProjetoPorNomes(
+  input: { name: string; clientName: string; locationName: string },
+  projectId?: string,
+): Promise<Project> {
+  const [clients, locations] = await Promise.all([listClients(), listLocations()])
+  const igual = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+  const client =
+    clients.find((c) => igual(c.name, input.clientName)) ??
+    (await createClient({ name: input.clientName }))
+  const location =
+    locations.find((l) => igual(l.name, input.locationName)) ??
+    (await createLocation({ name: input.locationName, client_id: client.id }))
+  const payload = { name: input.name, client_id: client.id, location_id: location.id }
+  return projectId ? updateProject(projectId, payload) : createProject(payload)
+}
+
 // ---- Fase 4: áreas e fotos -------------------------------------------
 // O original é imutável: a API só cria e lê binário. Remover uma foto tira o
 // registro do levantamento — o arquivo original continua no storage.

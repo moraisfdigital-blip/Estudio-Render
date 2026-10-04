@@ -5,6 +5,7 @@ import { getProject } from '../api/client'
 import Moldura from '../components/layout/Moldura'
 import { ErrorNotice, Loading } from '../components/ui'
 import { useProjetoAtual } from '../contexts/ProjetoAtual'
+import { lembrarProjeto } from '../contexts/ultimoProjeto'
 import { useResource } from '../hooks/useResource'
 const Levantamento = lazy(() => import('./Levantamento'))
 
@@ -28,6 +29,7 @@ export function ProjectWorkspace() {
   const pronto = resource.kind === 'ready' ? resource.data : null
   useEffect(() => {
     definir(pronto)
+    if (pronto) lembrarProjeto(pronto.id)
     return () => definir(null)
   }, [pronto, definir])
 

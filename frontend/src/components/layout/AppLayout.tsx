@@ -13,9 +13,9 @@ import Cabecalho from './Cabecalho'
  * ## Onde foi parar o menu lateral
  *
  * Ele não existe no protótipo: a coluna da esquerda ali é do trabalho
- * ("Elementos da obra"), não de navegação. Então "Novo projeto", "Meus
- * projetos" e "Materiais" subiram para o topo, que é onde o protótipo põe as
- * ações. Nada foi removido — só mudou de lugar.
+ * ("Elementos da obra"), não de navegação. "Novo projeto" e "Projetos" ficam
+ * no topo da mesa de trabalho, como no protótipo; não há tela de lista nem
+ * formulário à parte.
  *
  * ## Marca
  *
@@ -25,13 +25,15 @@ import Cabecalho from './Cabecalho'
 export default function AppLayout() {
   const { state } = useAuth()
   const { pathname } = useLocation()
-  const visual = /^\/projeto\/[^/]+\/(levantamento|especificacao|proposta|entrega)$/.test(pathname)
+  // A mesa de trabalho e a entrada têm topo próprio, no desenho do protótipo.
+  // Só o catálogo de materiais usa este cabeçalho.
+  const comCabecalho = pathname === '/materiais'
   if (state.kind !== 'authenticated') return null
 
   return (
     <ProjetoAtualProvider>
       <div className="flex h-full flex-col bg-app">
-        {!visual && <Cabecalho />}
+        {comCabecalho && <Cabecalho />}
         <Outlet />
       </div>
     </ProjetoAtualProvider>
