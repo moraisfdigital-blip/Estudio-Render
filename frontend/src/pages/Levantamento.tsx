@@ -9,6 +9,8 @@ import ProposalDialog from '../components/ProposalDialog'
 import VersionsDialog from '../components/VersionsDialog'
 import Cabecalho from '../components/layout/Cabecalho'
 import ProjetosDialog from '../components/ProjetosDialog'
+import JanelaPainel from '../components/JanelaPainel'
+import CatalogPage from './CatalogPage'
 import { useAuth } from '../auth/context'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -589,7 +591,8 @@ type VisualPoint = { x: number; y: number };
 type VisualSurface = { id: string; name: string; points: VisualPoint[]; material: string; finish: string; color: string; colorName: string; opacity: number; preserveOpenings: boolean };
 type VisualPhoto = { id: string; name: string; area: string; url: string; width: number; height: number; points: VisualPoint[]; referenceDistance: number; pixelsPerMeter: number | null; origin: VisualPoint | null; saved: boolean; surfaces: VisualSurface[]; records?: SurveyElement[] };
 type PhotoAction = 'mascaras' | 'proposta' | 'versoes';
-type VisualBridge = { project: Project | null; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
+type Janela = 'catalogo' | 'pdf' | 'orcamento';
+type VisualBridge = { onJanela: (nome: Janela) => void; project: Project | null; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
 type VisualController = { setTab: (tab: string) => void; reload: () => Promise<void>; destroy: () => void };
 
 /** Sem `projectId`, abre a mesa como o protótipo, com o exemplo e sem salvar nada. */
@@ -603,7 +606,9 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
   const navigate = useNavigate();
   const [tools, setTools] = useState(false);
   const [projetos, setProjetos] = useState(false);
-  const { signOut } = useAuth();
+  const [janela, setJanela] = useState<Janela | null>(null);
+  const { state: auth, signOut } = useAuth();
+  const ehOwner = auth.kind === 'authenticated' && auth.session.user.role === 'owner';
   const sair = useRef(signOut);
   const [tool, setTool] = useState('levantamento');
   const [photoAction, setPhotoAction] = useState<{photo: Photo; action: PhotoAction} | null>(null);
@@ -671,6 +676,7 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
       },
       onProject: (p) => { definirRef.current(p); if (p.id !== projectId) nav.current('/projeto/' + p.id + '/levantamento'); },
       onProjects: () => setProjetos(true),
+      onJanela: (nome) => setJanela(nome),
     });
     controller.current = instance;
     return () => { observer.disconnect(); instance.destroy(); controller.current = null; shadow.replaceChildren(); };
@@ -684,6 +690,9 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
   }
   return <>
     {actionError && <div role="alert" className="p-3 text-bad">{actionError}</div>}
+    {janela === 'catalogo' && <JanelaPainel rotulo="Material e acabamento" titulo="Catálogo de materiais" onClose={() => { setJanela(null); void controller.current?.reload(); }}><CatalogPage canManage={ehOwner} /></JanelaPainel>}
+    {janela === 'pdf' && projectId && <JanelaPainel rotulo="Apresentação" titulo="Apresentação aprovada e PDF" onClose={() => setJanela(null)}><PresentationPanel projectId={projectId} emJanela /></JanelaPainel>}
+    {janela === 'orcamento' && projectId && <JanelaPainel rotulo="Apresentação" titulo="Quantitativo e orçamento" onClose={() => setJanela(null)}><TakeoffPanel projectId={projectId} emJanela /></JanelaPainel>}
     {projetos && <ProjetosDialog atual={projectId ?? ''} onClose={() => setProjetos(false)} onAbrir={(id) => { setProjetos(false); navigate('/projeto/' + id + '/levantamento'); }} />}
     {photoAction?.action === 'mascaras' && <MasksDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onSaved={()=>{ void controller.current?.reload(); }} />}
     {photoAction?.action === 'proposta' && <ProposalDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onGenerated={()=>{ void controller.current?.reload(); }} />}
@@ -1857,10 +1866,21 @@ for (const [label,action] of [['Máscaras e proteção','mascaras'],['Gerar prop
 }
 $('#design').prepend(proposalActions);
 const deliveryButton = window.document.createElement('button');
-deliveryButton.textContent = 'Apresentação aprovada, PDF e orçamento';
+deliveryButton.textContent = 'Apresentação aprovada e PDF';
 deliveryButton.className = 'primary';
-deliveryButton.onclick = () => { if (!pedirProjeto('A apresentação aprovada usa os dados salvos do projeto.')) bridge.onTools('entrega'); };
+deliveryButton.onclick = () => { if (!pedirProjeto('A apresentação aprovada usa os dados salvos do projeto.')) bridge.onJanela('pdf'); };
+const budgetButton = window.document.createElement('button');
+budgetButton.textContent = 'Quantitativo e orçamento';
+budgetButton.onclick = () => { if (!pedirProjeto('O orçamento usa os dados salvos do projeto.')) bridge.onJanela('orcamento'); };
+const catalogButton = window.document.createElement('button');
+catalogButton.type = 'button';
+catalogButton.className = 'wide';
+catalogButton.textContent = 'Catálogo de materiais';
+catalogButton.style.marginTop = '10px';
+catalogButton.onclick = () => bridge.onJanela('catalogo');
+$('#colorName').closest('fieldset').append(catalogButton);
 $('.presentation-actions').prepend(deliveryButton);
+deliveryButton.after(budgetButton);
 $('.brand').href = '/';
 $('.brand').onclick = (event: Event) => { event.preventDefault(); bridge.onProjects(); };
 $('#openProjects').onclick = () => bridge.onProjects();

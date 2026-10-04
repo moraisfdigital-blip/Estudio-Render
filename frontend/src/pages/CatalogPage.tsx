@@ -372,7 +372,8 @@ export default function CatalogPage({
   onBack,
   canManage,
 }: {
-  onBack: () => void
+  /** Sem `onBack`, o catálogo está dentro de uma janela do painel e não mostra "voltar". */
+  onBack?: () => void
   canManage: boolean
 }) {
   const load = useCallback(async (): Promise<Catalog> => {
@@ -388,15 +389,18 @@ export default function CatalogPage({
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={onBack}
-        className="text-sm text-ink-soft transition hover:text-ink"
-      >
-        ← Projetos
-      </button>
-
-      <h1 className="mt-4 text-2xl font-semibold">Catálogo</h1>
+      {onBack && (
+        <>
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm text-ink-soft transition hover:text-ink"
+          >
+            ← Voltar ao estúdio
+          </button>
+          <h1 className="mt-4 text-2xl font-semibold">Catálogo</h1>
+        </>
+      )}
       <p className="mt-1 text-sm text-ink-dim">
         Material, acabamento e marca deste workspace. A cor da proposta sai daqui.
       </p>
@@ -458,9 +462,11 @@ export default function CatalogPage({
               title="Catálogo é do owner"
               description="Você entra como editor: dá para escolher material, acabamento e marca nos elementos, mas cadastrar itens novos é do owner do workspace."
               action={
-                <Button variant="ghost" type="button" onClick={onBack}>
-                  Voltar para os projetos
-                </Button>
+                onBack && (
+                  <Button variant="ghost" type="button" onClick={onBack}>
+                    Voltar ao estúdio
+                  </Button>
+                )
               }
             />
           </div>

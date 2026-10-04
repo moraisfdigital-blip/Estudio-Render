@@ -145,7 +145,14 @@ function Linha({
   )
 }
 
-export default function TakeoffPanel({ projectId }: { projectId: string }) {
+export default function TakeoffPanel({
+  projectId,
+  emJanela = false,
+}: {
+  projectId: string
+  /** Dentro de uma janela do painel o título já está no topo da janela. */
+  emJanela?: boolean
+}) {
   const carregar = useCallback(() => getTakeoff(projectId), [projectId])
   const { resource, reload } = useResource(
     carregar,
@@ -194,8 +201,8 @@ export default function TakeoffPanel({ projectId }: { projectId: string }) {
   }
 
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold text-ink">Quantitativo e orçamento</h2>
+    <section className={emJanela ? '' : 'mt-10'}>
+      {!emJanela && <h2 className="text-lg font-semibold text-ink">Quantitativo e orçamento</h2>}
       <p className="mt-1 text-sm text-ink-dim">
         Sai dos elementos conferidos. O preço é sempre informado por você — não existe tabela
         nem valor de referência neste sistema.

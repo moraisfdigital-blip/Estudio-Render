@@ -112,7 +112,14 @@ function CardSlide({
   )
 }
 
-export default function PresentationPanel({ projectId }: { projectId: string }) {
+export default function PresentationPanel({
+  projectId,
+  emJanela = false,
+}: {
+  projectId: string
+  /** Dentro de uma janela do painel o título já está no topo da janela. */
+  emJanela?: boolean
+}) {
   const carregar = useCallback(() => getPresentation(projectId), [projectId])
   const { resource, reload } = useResource(
     carregar,
@@ -197,8 +204,8 @@ export default function PresentationPanel({ projectId }: { projectId: string }) 
   }
 
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold text-ink">Apresentação</h2>
+    <section className={emJanela ? '' : 'mt-10'}>
+      {!emJanela && <h2 className="text-lg font-semibold text-ink">Apresentação</h2>}
       <p className="mt-1 text-sm text-ink-dim">
         Reúne as versões aprovadas do projeto. O que vai para o cliente é só o que foi aprovado.
       </p>
