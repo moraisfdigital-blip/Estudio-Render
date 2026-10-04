@@ -1,4 +1,5 @@
-import type { FormEvent, ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import Marca from './layout/Marca'
 
 /** Casca das telas de auth: título, erro e ação secundária. */
@@ -59,19 +60,39 @@ export function Field({
   disabled?: boolean
   minLength?: number
 }) {
+  // Campo de senha ganha o "olho": mostrar o que foi digitado evita erro de
+  // digitação numa senha longa. O tipo volta a `password` a cada montagem.
+  const [visivel, setVisivel] = useState(false)
+  const senha = type === 'password'
+
   return (
     <label className="block space-y-1.5">
       <span className="text-sm text-ink-soft">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        autoComplete={autoComplete}
-        disabled={disabled}
-        minLength={minLength}
-        required
-        className="w-full rounded-md border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-ink-dim disabled:opacity-60"
-      />
+      <span className="relative block">
+        <input
+          type={senha && visivel ? 'text' : type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          autoComplete={autoComplete}
+          disabled={disabled}
+          minLength={minLength}
+          required
+          className={`w-full rounded-md border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-ink-dim disabled:opacity-60 ${senha ? 'pr-10' : ''}`}
+        />
+        {senha && (
+          <button
+            type="button"
+            onClick={() => setVisivel((atual) => !atual)}
+            disabled={disabled}
+            aria-label={visivel ? 'Ocultar senha' : 'Mostrar senha'}
+            aria-pressed={visivel}
+            title={visivel ? 'Ocultar senha' : 'Mostrar senha'}
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60"
+          >
+            {visivel ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+          </button>
+        )}
+      </span>
     </label>
   )
 }
