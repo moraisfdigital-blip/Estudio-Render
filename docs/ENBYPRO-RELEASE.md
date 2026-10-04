@@ -6,6 +6,7 @@ Atualizado em 04/10/2026. **Implementação local testada; produção ainda não
 
 - Repositório: `moraisfdigital-blip/estudio-render`.
 - Branch: `codex/enbypro-release`, criada a partir de `bf15b4d`.
+- Implementação: commit `4873a70`; [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18), aberto em rascunho e sem conflitos ao verificar.
 - Worktree: `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`.
 - O usuário autorizou worktree Git sem Orca, implementação, testes, deploy na única VPS da Hostinger e domínio `enbypro.com`. Não é necessário pedir novamente autorização para essas etapas.
 - Checkout original preservado. Sem merge em main.
@@ -38,6 +39,8 @@ Ambiente Windows, Python 3.14, MongoDB local real e banco temporário exclusivo 
 | `git diff --check` | passou; Git informou apenas conversão de finais de linha Windows |
 
 Cobertura inclui autenticação, isolamento entre tenants, uploads, preservação do original, máscaras, calibração, propostas, aprovação, PDF, orçamento e controles de segurança já existentes. Novos testes verificam estudos persistidos, conflito de revisão, referências entre projetos/tenants, cores e coordenadas inválidas, respostas inseguras do provedor e concorrência do limite de geração.
+
+O GitHub ainda reportou 26 alertas abertos de PyJWT nos manifests de produção/desenvolvimento da branch padrão. Os alertas com correção indicam 2.14.0/2.15.0; o alerta sem versão corrigida informada (`GHSA-gvp8-978c-rx2q`) declara faixa afetada até 2.13.0. Esta entrega usa 2.15.0 e passou no pip-audit. Os alertas da main não foram encerrados manualmente; a branch padrão continua sem merge.
 
 No Chrome, usando somente dados sintéticos locais:
 
