@@ -7,53 +7,15 @@ import TakeoffPanel from '../components/TakeoffPanel'
 import MasksDialog from '../components/MasksDialog'
 import ProposalDialog from '../components/ProposalDialog'
 import VersionsDialog from '../components/VersionsDialog'
-import Cabecalho from '../components/layout/Cabecalho'
 import ProjetosDialog from '../components/ProjetosDialog'
 import JanelaPainel from '../components/JanelaPainel'
 import CatalogPage from './CatalogPage'
 import MinhaConta from '../components/MinhaConta'
 import { useAuth } from '../auth/context'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  createArea,
-  createElement,
-  getMediaLimits,
-  listAreaPhotos,
-  listAreas,
-  listElements,
-  uploadPhoto,
-} from '../api/client'
-import type { Area, MediaLimits, Photo, SurveyElement } from '../api/client'
-import PhotoThumb from '../components/PhotoThumb'
-import BlocoFotoAberta from '../components/prototipo/BlocoFotoAberta'
-import CardsEtapa from '../components/prototipo/CardsEtapa'
-import PainelEstrutura from '../components/prototipo/PainelEstrutura'
-import PainelPropriedades from '../components/prototipo/PainelPropriedades'
-import { Botao, Cartao, Rotulo, entradaClasse } from '../components/prototipo/pecas'
-import Moldura from '../components/layout/Moldura'
+import { useEffect, useRef, useState } from 'react'
+import type { Area, Photo, SurveyElement } from '../api/client'
 import { useProjetoAtual } from '../contexts/ProjetoAtual'
-import { ErrorNotice, Loading } from '../components/ui'
-
-/**
- * A etapa 01 do protótipo, na estrutura dele: elementos à esquerda, o trabalho
- * no meio, propriedades à direita.
- *
- * ## Por que tudo mora aqui
- *
- * As três colunas conversam: escolher uma foto no meio troca a lista da
- * esquerda, e escolher um elemento na esquerda troca o painel da direita. Esse
- * estado tem de morar num lugar só, acima das três — senão cada coluna
- * adivinha o que as outras estão mostrando.
- *
- * ## O que substituiu os modais
- *
- * As propriedades do elemento abriam numa janela por cima. Agora ficam na
- * coluna da direita, visíveis enquanto se trabalha — como no protótipo. As
- * outras janelas (escala, máscaras, proposta, versões) continuam existindo e
- * seguem pelos botões de cada foto até terem sua própria fatia.
- */
-
-type AreaComFotos = { area: Area; fotos: Photo[] }
+import ElementsDialog from '../components/ElementsDialog'
 
 const AREAS_DO_PROTOTIPO = ['Fachada principal', 'Lateral', 'Totem e acesso']
 function nomesDeAreasDisponiveis(cadastradas: string[]) {
@@ -61,397 +23,13 @@ function nomesDeAreasDisponiveis(cadastradas: string[]) {
     !cadastradas.some(atual => atual.toLocaleLowerCase() === nome.toLocaleLowerCase()))]
 }
 
-function LevantamentoPersistido({ projectId }: { projectId: string }) {
-  const { projeto } = useProjetoAtual()
-  const bibliotecaFotos = useRef<HTMLHeadingElement>(null)
-
-  const [carregando, setCarregando] = useState(true)
-  const [erro, setErro] = useState<string | null>(null)
-  const [grupos, setGrupos] = useState<AreaComFotos[]>([])
-  const [limites, setLimites] = useState<MediaLimits | null>(null)
-
-  const [areaDestino, setAreaDestino] = useState('')
-  const [fotoAberta, setFotoAberta] = useState<string | null>(null)
-  const [elementos, setElementos] = useState<SurveyElement[]>([])
-  const [carregandoElementos, setCarregandoElementos] = useState(false)
-  const [elementoAberto, setElementoAberto] = useState<string | null>(null)
-
-  const [enviando, setEnviando] = useState(false)
-  const [progresso, setProgresso] = useState(0)
-  const [recado, setRecado] = useState<string | null>(null)
-  const seletorArquivo = useRef<HTMLInputElement>(null)
-
-  const buscar = useCallback(() => listAreas(projectId)
-    .then(async areas => {
-      const comFotos = await Promise.all(areas.map(async area => ({ area, fotos: await listAreaPhotos(area.id) })))
-      setGrupos(comFotos)
-      setAreaDestino((atual) => atual || (areas[0]?.id ?? 'preset:Fachada principal'))
-    }).catch(() => {
-      setErro('Não foi possível carregar as áreas deste projeto.')
-    }).finally(() => {
-      setCarregando(false)
-    }), [projectId])
-
-  const carregar = useCallback(async () => {
-    setCarregando(true)
-    setErro(null)
-    await buscar()
-  }, [buscar])
-
-  useEffect(() => {
-    void buscar()
-  }, [buscar])
-
-  useEffect(() => {
-    let vivo = true
-    void getMediaLimits()
-      .then((valor) => {
-        if (vivo) setLimites(valor)
-      })
-      .catch(() => {
-        if (vivo) setLimites(null)
-      })
-    return () => {
-      vivo = false
-    }
-  }, [])
-
-  // Os elementos são da foto aberta: trocar de foto troca a coluna da esquerda.
-  useEffect(() => {
-    if (!fotoAberta) return
-    let vivo = true
-    void listElements(fotoAberta)
-      .then((lista) => {
-        if (!vivo) return
-        setElementos(lista)
-        setElementoAberto(lista[0]?.id ?? null)
-      })
-      .catch(() => {
-        if (vivo) setElementos([])
-      })
-      .finally(() => {
-        if (vivo) setCarregandoElementos(false)
-      })
-    return () => {
-      vivo = false
-    }
-  }, [fotoAberta])
-
-  const todasAsFotos = useMemo(() => grupos.flatMap((g) => g.fotos), [grupos])
-
-  const estado = useMemo(
-    () => ({
-      fotos: todasAsFotos.length,
-      areas: grupos.length,
-      calibradas: todasAsFotos.filter((f) => f.calibrated).length,
-      elementos: elementos.length,
-      conferidos: elementos.filter((e) => e.conference.status === 'conferido').length,
-    }),
-    [todasAsFotos, grupos.length, elementos],
-  )
-
-  const elementoSelecionado = elementos.find((e) => e.id === elementoAberto) ?? null
-  const fotoSelecionada = todasAsFotos.find((f) => f.id === fotoAberta) ?? null
-
-  async function novaArea() {
-    const nome = window.prompt('Nome da nova área (ex.: Fachada principal)')?.trim()
-    if (!nome) return
-    try {
-      const area = await createArea(projectId, { name: nome })
-      setGrupos((atual) => [...atual, { area, fotos: [] }])
-      setAreaDestino(area.id)
-    } catch {
-      setRecado('Não foi possível criar a área.')
-    }
-  }
-
-  function escolherArquivos(areaId?: string) {
-    if (areaId) setAreaDestino(areaId)
-    setRecado(null)
-    seletorArquivo.current?.click()
-  }
-
-  async function enviarArquivos(lista: FileList | null) {
-    if (!lista || lista.length === 0) return
-    let destino = areaDestino || grupos[0]?.area.id || 'preset:Fachada principal'
-    setEnviando(true)
-    setRecado(null)
-    try {
-      if (destino.startsWith('preset:')) {
-        const nome = destino.slice('preset:'.length)
-        const area = grupos.find(g => g.area.name.toLocaleLowerCase() === nome.toLocaleLowerCase())?.area
-          ?? await createArea(projectId, { name: nome })
-        destino = area.id
-        setGrupos(atual => atual.some(g => g.area.id === area.id) ? atual : [...atual, { area, fotos: [] }])
-        setAreaDestino(area.id)
-      }
-      for (const arquivo of Array.from(lista)) {
-        const foto = await uploadPhoto(destino, arquivo, setProgresso)
-        setGrupos((atual) =>
-          atual.map((g) => (g.area.id === destino ? { ...g, fotos: [...g.fotos, foto] } : g)),
-        )
-      }
-    } catch {
-      setRecado('Não foi possível enviar. Confira o tamanho e o formato do arquivo.')
-    } finally {
-      setEnviando(false)
-      setProgresso(0)
-      if (seletorArquivo.current) seletorArquivo.current.value = ''
-    }
-  }
-
-  async function novoElemento() {
-    if (!fotoAberta) return
-    const nome = window.prompt('Nome do elemento (ex.: Testeira principal)')?.trim()
-    if (!nome) return
-    try {
-      const elemento = await createElement(fotoAberta, {
-        name: nome,
-        kind: 'outro',
-        box: { x: 0, y: 0, width: 100, height: 100 },
-      })
-      setElementos((atual) => [...atual, elemento])
-      setElementoAberto(elemento.id)
-    } catch {
-      setRecado('Não foi possível criar o elemento.')
-    }
-  }
-
-  if (carregando) {
-    return (
-      <Moldura>
-        <Loading label="Carregando levantamento…" />
-      </Moldura>
-    )
-  }
-
-  if (erro) {
-    return (
-      <Moldura>
-        <ErrorNotice message={erro} onRetry={() => void carregar()} />
-      </Moldura>
-    )
-  }
-
-  return (
-    <Moldura
-      esquerda={
-        <PainelEstrutura
-          elementos={elementos}
-          selecionado={elementoAberto}
-          onSelecionar={setElementoAberto}
-          onNovo={() => void novoElemento()}
-          onAdicionarFoto={() => escolherArquivos()}
-          temFoto={Boolean(fotoAberta)}
-          carregando={carregandoElementos}
-        />
-      }
-      direita={
-        elementoSelecionado ? (
-          <PainelPropriedades
-            elemento={elementoSelecionado}
-            onAtualizado={(atualizado) =>
-              setElementos((atual) =>
-                atual.map((e) => (e.id === atualizado.id ? atualizado : e)),
-              )
-            }
-            onRemovido={(id) => {
-              setElementos((atual) => atual.filter((e) => e.id !== id))
-              setElementoAberto(null)
-            }}
-          />
-        ) : undefined
-      }
-    >
-      <input
-        ref={seletorArquivo}
-        type="file"
-        accept={limites?.accepted_content_types.join(',')}
-        multiple
-        hidden
-        onChange={(e) => void enviarArquivos(e.target.files)}
-      />
-
-      <div className="mb-[30px]">
-        <Rotulo>Levantamento</Rotulo>
-        <h1 className="mt-[7px] text-[27px] leading-tight font-medium tracking-[-1px]">
-          A base do projeto.
-        </h1>
-      </div>
-
-      <CardsEtapa projectId={projectId} atual={estado.fotos ? 2 : 1} estado={estado}
-        onFotoDoLocal={() => {
-          bibliotecaFotos.current?.scrollIntoView({ block: 'start' })
-          bibliotecaFotos.current?.focus({ preventScroll: true })
-        }}
-      />
-
-      {/* Projeto atual — o bloco em destaque do protótipo. */}
-      <div className="mb-3.5 flex items-center justify-between gap-5 rounded border border-[#f1d2e1] border-l-4 border-l-accent bg-[linear-gradient(110deg,#fff3f8_0%,#fff_56%,#f1fbfa_100%)] px-5 py-[18px] shadow-[0_8px_24px_rgba(207,7,95,.05)] [html[data-theme=dark]_&]:bg-[linear-gradient(110deg,var(--color-accent-soft)_0%,var(--color-surface)_56%,var(--color-brand-soft)_100%)]">
-        <div className="min-w-0">
-          <Rotulo cor="marca">Projeto atual</Rotulo>
-          <h2 className="mt-[7px] mb-1 truncate text-[19px] font-semibold">
-            {projeto?.name ?? 'Projeto'}
-          </h2>
-          <p className="truncate text-xs text-ink-soft">
-            {projeto?.client?.name ?? 'Cliente não informado'} ·{' '}
-            {projeto?.location?.name ?? 'Endereço ou unidade ainda não informado.'}
-          </p>
-        </div>
-      </div>
-
-      {/* Biblioteca de fotos por área. */}
-      <Cartao>
-        <div className="flex items-start justify-between gap-5">
-          <div>
-            <Rotulo cor="destaque">Etapa 01 · Levantamento fotográfico</Rotulo>
-            <h2 ref={bibliotecaFotos} tabIndex={-1} className="mt-2 mb-[5px] text-xl font-semibold">Fotos organizadas por área</h2>
-            <p className="text-xs text-ink-dim">
-              Adicione todas as vistas necessárias e calibre cada imagem separadamente.
-            </p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Botao onClick={() => void novaArea()}>＋ Nova área</Botao>
-            <Botao principal onClick={() => escolherArquivos()} disabled={enviando}>
-              {enviando ? `Enviando… ${progresso}%` : '＋ Adicionar fotos'}
-            </Botao>
-          </div>
-        </div>
-
-        <div className="flex items-end justify-between gap-4 border-b border-line-soft pt-[18px] pb-3.5">
-          <label className="m-0 min-w-[220px] text-xs text-ink-soft">
-            Área das próximas fotos
-            <select
-              value={areaDestino}
-              onChange={(e) => setAreaDestino(e.target.value)}
-              className={entradaClasse}
-            >
-              {nomesDeAreasDisponiveis(grupos.map(g => g.area.name)).map(nome => {
-                const area = grupos.find(g => g.area.name === nome)?.area
-                return <option key={nome} value={area?.id ?? `preset:${nome}`}>{nome}</option>
-              })}
-            </select>
-          </label>
-          <small className="text-[11px] text-ink-dim">
-            {limites
-              ? `${limites.accepted_labels.join(', ')} · até ${limites.max_upload_mb} MB por imagem`
-              : 'Carregando limites…'}
-          </small>
-        </div>
-
-        {enviando && (
-          <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-raised">
-            <div className="h-full bg-brand transition-all" style={{ width: `${progresso}%` }} />
-          </div>
-        )}
-
-        <div className="mt-3.5 grid gap-2.5">
-          {grupos.map(({ area, fotos }) => (
-            <div key={area.id} className="border border-[#efdee6] bg-raised">
-              <div className="flex items-center justify-between border-b border-[#efdee6] px-3 py-2.5">
-                <div className="min-w-0">
-                  <b className="text-xs">{area.name}</b>
-                  <small className="ml-2 text-[10px] text-ink-dim">
-                    {fotos.length} {fotos.length === 1 ? 'foto' : 'fotos'}
-                  </small>
-                </div>
-                <Botao miudo onClick={() => escolherArquivos(area.id)} disabled={enviando}>
-                  ＋ Foto
-                </Botao>
-              </div>
-
-              {fotos.length === 0 ? (
-                <div className="grid min-h-[56px] w-full place-items-center text-[11px] text-ink-dim">
-                  Nenhuma imagem nesta área
-                </div>
-              ) : (
-                <div className="flex min-h-[76px] gap-2 overflow-x-auto p-[9px]">
-                  {fotos.map((foto) => {
-                    const aberta = foto.id === fotoAberta
-                    return (
-                      <button
-                        key={foto.id}
-                        type="button"
-                        onClick={() => {
-                          setElementos([])
-                          setElementoAberto(null)
-                          setCarregandoElementos(!aberta)
-                          setFotoAberta(aberta ? null : foto.id)
-                        }}
-                        aria-pressed={aberta}
-                        className={`flex w-[205px] shrink-0 items-center gap-[9px] rounded border bg-surface p-1.5 text-left transition ${
-                          aberta
-                            ? 'border-brand shadow-[inset_0_0_0_1px_var(--color-brand)]'
-                            : 'border-line hover:border-accent'
-                        }`}
-                      >
-                        <span className="size-[52px] w-16 shrink-0 overflow-hidden rounded-[3px] bg-raised">
-                          <PhotoThumb photo={foto} alt={foto.original_filename} />
-                        </span>
-                        <span className="min-w-0">
-                          <b className="block max-w-[115px] truncate text-[10px] text-ink-soft">
-                            {foto.original_filename}
-                          </b>
-                          <small
-                            className={`mt-1.5 block text-[9px] ${
-                              foto.calibrated ? 'text-accent-strong' : 'text-warn'
-                            }`}
-                          >
-                            {foto.calibrated ? 'medida salva' : 'falta calibrar'}
-                          </small>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {grupos.length === 0 && (
-          <div className="mt-3.5 border border-dashed border-line-accent bg-[linear-gradient(135deg,var(--color-surface)_0%,var(--color-accent-soft)_100%)] p-10 text-center">
-            <Rotulo>Nenhuma área criada</Rotulo>
-            <h2 className="mt-2 mb-2 text-[22px] font-medium">Comece pela fachada principal.</h2>
-            <p className="mx-auto max-w-md text-[13px] leading-[1.7] text-ink-dim">
-              A imagem real será usada para calibrar a escala e posicionar a nova
-              identidade visual.
-            </p>
-            <div className="mt-5 inline-block">
-              <Botao principal onClick={() => void novaArea()}>
-                Criar a primeira área
-              </Botao>
-            </div>
-          </div>
-        )}
-
-        {recado && <p className="mt-3 text-xs text-bad">{recado}</p>}
-      </Cartao>
-
-      {/* Assim que uma foto é escolhida, o trabalho dela aparece logo abaixo —
-          é onde o protótipo põe a etapa 02. */}
-      {fotoSelecionada && (
-        <BlocoFotoAberta
-          foto={fotoSelecionada}
-          onMudou={() => void carregar()}
-          onRemovida={(id) => {
-            setGrupos((atual) =>
-              atual.map((g) => ({ ...g, fotos: g.fotos.filter((f) => f.id !== id) })),
-            )
-            setFotoAberta(null)
-          }}
-        />
-      )}
-    </Moldura>
-  )
-}
 
 
 // The approved HTML/CSS is isolated from Tailwind. Only this React-owned DOM island
 // is imperative; authentication, routing, API client and existing tools stay intact.
 const VISUAL_HTML = `
 <header><a class="brand" href="./" aria-label="ENBY PRO"><img src="/enby-pro-logo.png" alt="ENBY PRO"></a><div class="project-name"><input id="projectName" aria-label="Nome do projeto" value="Estudo de identidade · Posto Horizonte"><small id="projectMeta">Projeto demonstrativo · local não informado</small></div><button id="openProjects" title="Abrir outro projeto">Projetos</button><button id="newProject">＋ Novo projeto</button><button id="download">Baixar estudo</button><button class="primary" id="present">Apresentar projeto ↗</button></header>
-<nav class="stages" aria-label="Etapas do projeto"><button class="active" data-tab="survey">01 <span>Levantamento</span></button><button data-tab="design">02 <span>Projeto visual</span></button><button data-tab="presentation">03 <span>Apresentação</span></button><button class="prototype" id="serverTools" title="Abrir funções existentes e dados persistidos">Ferramentas do projeto</button></nav>
+<nav class="stages" aria-label="Etapas do projeto"><button class="active" data-tab="survey">01 <span>Levantamento</span></button><button data-tab="design">02 <span>Projeto visual</span></button><button data-tab="presentation">03 <span>Apresentação</span></button></nav>
 <div id="loadStatus" role="status"></div><main><aside class="left"><div class="section-title">ESTRUTURA DO PROJETO</div><h2>Elementos da obra</h2><p class="muted">Selecione um elemento para definir suas dimensões e acabamento.</p><div id="elements"></div><button class="add-element" id="addElement">＋ Novo elemento</button><div class="side-note"><span>REFERÊNCIA DO LOCAL</span><button id="uploadSide">＋ Adicionar fotografia</button><p>A foto original permanece como referência do levantamento.</p></div><div class="side-bottom"><span>Unidade do projeto</span><b>Metros (m)</b><small>Vista frontal proporcional</small></div></aside>
 <section class="workspace"><div class="work-head"><div><span class="eyebrow" id="workEyebrow">LEVANTAMENTO</span><h1 id="workTitle">A base do projeto.</h1></div><div class="view-tools" hidden><div class="segmented" id="viewMode"><button class="active" data-view="elevation">Elevação</button><button data-view="photo">Sobre a foto</button></div><button id="dimensions" aria-pressed="true">Cotas visíveis</button><button id="resetView">Ajustar vista</button></div></div><div class="project-progress" id="projectProgress"><button class="active" data-go="survey"><span>01</span><div><b>Foto do local</b><small id="photoStatus">Adicionar fotografia</small></div></button><button data-go="survey"><span>02</span><div><b>Definir escala</b><small id="scaleStatus">Aguardando foto</small></div></button><button data-go="design"><span>03</span><div><b>Montar projeto</b><small id="elementStatus">4 elementos de exemplo</small></div></button><button data-go="presentation"><span>04</span><div><b>Apresentar</b><small id="presentationStatus">Pendente</small></div></button></div>
 <section id="survey"><div class="survey-project"><div><span class="step-kicker">PROJETO ATUAL</span><h2 id="surveyProjectTitle">Posto Horizonte</h2><p id="surveyProjectMeta">Cliente e endereço ainda não informados.</p></div><button id="editProject">Editar dados</button></div><div class="photo-library"><div class="library-head"><div><span class="step-kicker">ETAPA 01 · LEVANTAMENTO FOTOGRÁFICO</span><h2>Fotos organizadas por área</h2><p>Adicione todas as vistas necessárias e calibre cada imagem separadamente.</p></div><div class="library-actions"><button id="addArea">＋ Nova área</button><button class="primary" id="uploadMain">＋ Adicionar fotos</button></div></div><div class="area-select-row"><label>Área das próximas fotos<select id="uploadArea"><option>Fachada principal</option><option>Lateral</option><option>Totem e acesso</option></select></label><small>JPG, PNG ou WebP · até 15 MB por imagem</small></div><div id="photoAreas" class="photo-areas"></div></div><div class="upload-box" id="uploadBox"><span class="step-kicker">NENHUMA FOTO ADICIONADA</span><h2>Comece pela fachada principal.</h2><p>A imagem real será usada para calibrar a escala e posicionar a nova identidade visual.</p><button class="primary" id="uploadEmpty">Selecionar fotografias</button></div><div id="calibration" hidden><div class="calibration-title"><div><span class="step-kicker">ETAPA 02 · ESCALA DA FOTOGRAFIA</span><h2 id="activePhotoName">Fotografia selecionada</h2></div><span id="activePhotoArea" class="area-badge">Fachada principal</span></div><div class="calibration-layout"><div class="photo-stage calibration-stage" id="calibrationStage"><img id="surveyPhoto" alt="Fotografia enviada do local"><svg id="calibrationOverlay" aria-label="Pontos usados para calibrar a fotografia"></svg><div class="stage-hint" id="stageHint">Clique no primeiro ponto da medida conhecida</div></div><aside class="calibration-panel"><span class="section-title">CALIBRAÇÃO DA ESCALA</span><h2>Uma medida conhecida</h2><p>Marque na foto as duas extremidades de uma medida conferida no local.</p><div class="calibration-points"><span id="pointA">Ponto A · aguardando</span><span id="pointB">Ponto B · aguardando</span></div><label>Distância real <span>m</span><input id="referenceDistance" placeholder="Informe a medida real" type="number" min="0.1" step="0.01" value=""></label><button id="calibrate" class="primary wide" disabled>Calibrar fotografia</button><button id="clearCalibration" class="wide">Marcar novamente</button><div class="calibration-result" id="calibrationResult">A escala ainda não foi definida.</div><button id="saveMeasurement" class="wide" disabled>Salvar medida desta foto</button><button id="usePhoto" class="wide" disabled>Usar no projeto visual →</button></aside></div></div></section>
@@ -583,7 +161,7 @@ header:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
 @media(max-width:700px){.comparison{grid-template-columns:1fr}.presentation-intro{padding:18px}}
 @media print{.project-progress{display:none!important}.workspace{background:#fff!important;max-width:none!important}.comparison{grid-template-columns:1fr 1fr}.presentation-specs table{font-size:10pt}.presentation-specs th,.presentation-specs td{padding:7px}.table-scroll{overflow:visible}.presentation-intro,.presentation-photo,.presentation-specs{break-inside:avoid}#presentationDrawing svg{height:260px}.visual-body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 
-:host{display:block;line-height:normal;color-scheme:light;font-weight:400;text-align:left}.visual-body{min-height:100vh}#serverTools{border:0;padding:0;background:none;font-weight:400}#loadStatus:not(:empty){padding:12px 28px;background:#fff6eb;color:#76512e}#loadStatus button{margin-left:12px}`;
+:host{display:block;line-height:normal;color-scheme:light;font-weight:400;text-align:left}.visual-body{min-height:100vh}#loadStatus:not(:empty){padding:12px 28px;background:#fff6eb;color:#76512e}#loadStatus button{margin-left:12px}`;
 
 
 type VisualEvent = Event & { target: HTMLInputElement & { closest: Element['closest'] }; currentTarget: HTMLElement; clientX:number; clientY:number; key:string };
@@ -591,9 +169,9 @@ type VisualElement = { name: string; type: string; width: number; height: number
 type VisualPoint = { x: number; y: number };
 type VisualSurface = { id: string; name: string; points: VisualPoint[]; material: string; finish: string; color: string; colorName: string; opacity: number; preserveOpenings: boolean };
 type VisualPhoto = { id: string; name: string; area: string; url: string; width: number; height: number; points: VisualPoint[]; referenceDistance: number; pixelsPerMeter: number | null; origin: VisualPoint | null; saved: boolean; surfaces: VisualSurface[]; records?: SurveyElement[] };
-type PhotoAction = 'mascaras' | 'proposta' | 'versoes';
+type PhotoAction = 'mascaras' | 'proposta' | 'versoes' | 'elementos' | 'original' | 'remover';
 type Janela = 'catalogo' | 'pdf' | 'orcamento' | 'conta';
-type VisualBridge = { onJanela: (nome: Janela) => void; project: Project | null; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
+type VisualBridge = { onJanela: (nome: Janela) => void; project: Project | null; onTab: (tab: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
 type VisualController = { setTab: (tab: string) => void; reload: () => Promise<void>; destroy: () => void };
 
 /** Sem `projectId`, abre a mesa como o protótipo, com o exemplo e sem salvar nada. */
@@ -605,20 +183,32 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
   const { projeto, definir } = useProjetoAtual();
   const location = useLocation();
   const navigate = useNavigate();
-  const [tools, setTools] = useState(false);
   const [projetos, setProjetos] = useState(false);
   const [janela, setJanela] = useState<Janela | null>(null);
   const { state: auth, signOut } = useAuth();
   const ehOwner = auth.kind === 'authenticated' && auth.session.user.role === 'owner';
   const sair = useRef(signOut);
-  const [tool, setTool] = useState('levantamento');
   const [photoAction, setPhotoAction] = useState<{photo: Photo; action: PhotoAction} | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const toolsDialog = useRef<HTMLDialogElement>(null);
   const tab = location.pathname.endsWith('/entrega') ? 'presentation' : /\/(especificacao|proposta)$/.test(location.pathname) ? 'design' : 'survey';
   const nav = useRef(navigate);
 
   const tabRef = useRef(tab);
+
+  // A rota do original exige token e `window.open` não manda cabeçalho: os
+  // bytes vêm autenticados e viram uma aba com object URL.
+  async function abrirOriginal(id: string) {
+    try {
+      const url = URL.createObjectURL(await visualApi.fetchPhotoOriginalBlob(id));
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) { setActionError(visualApi.errorMessage(error, 'Não foi possível abrir o original.')); }
+  }
+  async function removerFoto(id: string) {
+    if (!window.confirm('Remover esta fotografia do levantamento? Isso não pode ser desfeito.')) return;
+    try { await visualApi.deletePhoto(id); await controller.current?.reload(); }
+    catch (error) { setActionError(visualApi.errorMessage(error, 'Não foi possível remover a fotografia.')); }
+  }
 
   const projectRef = useRef(projeto);
 
@@ -640,7 +230,8 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     body.innerHTML = VISUAL_HTML;
     const themeButton = window.document.createElement('button');
     themeButton.id = 'themeToggle';
-    themeButton.style.cssText = 'align-self:center;margin-left:14px;font-size:12px;padding:6px 10px';
+    // Sem o antigo link de ferramentas, o próprio botão de tema empurra os da direita.
+    themeButton.style.cssText = 'align-self:center;margin-left:auto;font-size:12px;padding:6px 10px';
     themeButton.onclick = () => themeAction.current();
     body.querySelector('.stages')!.append(themeButton);
     const accountButton = window.document.createElement('button');
@@ -675,9 +266,10 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
         const route = { survey: 'levantamento', design: 'especificacao', presentation: 'entrega' }[next];
         if (route) nav.current((projectId ? '/projeto/' + projectId : '/estudio') + '/' + route);
       },
-      onTools: (nextTool = 'levantamento') => { setTool(nextTool); setTools(true); },
       onPhotoAction: (id, action) => {
         setActionError(null);
+        if (action === 'original') { void abrirOriginal(id); return; }
+        if (action === 'remover') { void removerFoto(id); return; }
         void visualApi.api.get<Photo>('/photos/' + id)
           .then(({data})=>setPhotoAction({photo:data, action}))
           .catch(error=>setActionError(visualApi.errorMessage(error,'Não foi possível abrir a fotografia.')));
@@ -690,12 +282,6 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     return () => { observer.disconnect(); instance.destroy(); controller.current = null; shadow.replaceChildren(); };
   }, [projectId, projeto?.id]);
   useEffect(() => { controller.current?.setTab(tab); }, [tab]);
-  useEffect(() => { if (tools) toolsDialog.current?.showModal(); }, [tools]);
-  async function closeTools() {
-    toolsDialog.current?.close();
-    setTools(false);
-    await controller.current?.reload();
-  }
   return <>
     {actionError && <div role="alert" className="p-3 text-bad">{actionError}</div>}
     {janela === 'conta' && <JanelaPainel rotulo="Configurações" titulo="Minha conta" onClose={() => setJanela(null)}><MinhaConta /></JanelaPainel>}
@@ -703,16 +289,11 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     {janela === 'pdf' && projectId && <JanelaPainel rotulo="Apresentação" titulo="Apresentação aprovada e PDF" onClose={() => setJanela(null)}><PresentationPanel projectId={projectId} emJanela /></JanelaPainel>}
     {janela === 'orcamento' && projectId && <JanelaPainel rotulo="Apresentação" titulo="Quantitativo e orçamento" onClose={() => setJanela(null)}><TakeoffPanel projectId={projectId} emJanela /></JanelaPainel>}
     {projetos && <ProjetosDialog atual={projectId ?? ''} onClose={() => setProjetos(false)} onAbrir={(id) => { setProjetos(false); navigate('/projeto/' + id + '/levantamento'); }} />}
+    {photoAction?.action === 'elementos' && <ElementsDialog photo={photoAction.photo} onClose={()=>{ setPhotoAction(null); void controller.current?.reload(); }} />}
     {photoAction?.action === 'mascaras' && <MasksDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onSaved={()=>{ void controller.current?.reload(); }} />}
     {photoAction?.action === 'proposta' && <ProposalDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onGenerated={()=>{ void controller.current?.reload(); }} />}
     {photoAction?.action === 'versoes' && <VersionsDialog photo={photoAction.photo} onClose={()=>setPhotoAction(null)} onChanged={()=>{ void controller.current?.reload(); }} />}
     <div ref={host} data-theme={tema} data-artelux-visual="true" style={{ flex: 1, minWidth: 0 }} />
-    {tools && projectId && <dialog ref={toolsDialog} onCancel={() => { void closeTools(); }} className="fixed inset-0 m-auto h-[92vh] w-[96vw] max-w-none overflow-auto rounded-lg border border-line bg-app p-0 text-ink backdrop:bg-black/40">
-      <div className="flex items-center justify-between border-b border-line p-4"><h2 className="font-semibold">Ferramentas do projeto · dados salvos</h2><button type="button" onClick={() => void closeTools()} className="rounded border border-line-accent px-4 py-2">Voltar ao estudo visual</button></div>
-      <Cabecalho />
-      <div className="p-4"><label>Ferramentas <select aria-label="Ferramentas" value={tool} onChange={e=>setTool(e.target.value)} className="rounded border border-line bg-surface p-2"><option value="levantamento">Fotos, elementos, catálogo, máscaras, geração e versões</option><option value="entrega">Apresentação, PDF e orçamento</option></select></label></div>
-      <div className="flex min-h-[65vh] flex-col">{tool === 'levantamento' ? <LevantamentoPersistido projectId={projectId} /> : <div className="p-5"><PresentationPanel projectId={projectId} /><TakeoffPanel projectId={projectId} /></div>}</div>
-    </dialog>}
   </>;
 }
 
@@ -1678,7 +1259,7 @@ loadActivePhoto = (id: string) => {
   const photo = photos.find(p=>p.id === id)!;
   const imported = photo.pixelsPerMeter && photo.origin ? (photo.records ?? []).map(record=>elementFromRecord(record,photo)) : [];
   objects = localElements.get(id) ?? (imported.length ? imported : localElements.get('examples')!.map(o => ({ ...o, confirmed: false })));
-  if (!imported.length) $('#formMessage').textContent = 'Elementos ilustrativos do estudo. Cadastre as medidas conferidas nas Ferramentas do projeto.';
+  if (!imported.length) $('#formMessage').textContent = 'Elementos ilustrativos do estudo. Para o orçamento, cadastre as medidas conferidas em Projeto visual › Elementos e medidas.';
   localElements.set(id, objects);
   selected = Math.min(selected, objects.length - 1);
   selectPhotoOriginal(id);
@@ -1789,7 +1370,7 @@ $('#properties').onsubmit = async (event: Event) => {
     $('#formMessage').textContent='Dados do elemento salvos. Use Salvar estudo para guardar também a composição visual.';
   } catch(error) {
     object.record=record;
-    $('#formMessage').textContent=visualApi.errorMessage(error,'Não foi possível aplicar todas as alterações. Confira os dados salvos nas Ferramentas do projeto.');
+    $('#formMessage').textContent=visualApi.errorMessage(error,'Não foi possível aplicar todas as alterações. Confira em Projeto visual › Elementos e medidas.');
   } finally { applying=false; if(!disposed) $('#properties button[type=submit]').disabled=false; }
 };
 
@@ -1859,11 +1440,10 @@ async function reload() {
   }
 }
 
-$('#serverTools').onclick = () => { if (!pedirProjeto('As ferramentas usam os dados salvos do projeto.')) bridge.onTools(); };
 const proposalActions = window.document.createElement('div');
 proposalActions.className = 'surface-toolbar';
 proposalActions.setAttribute('aria-label','Proposta e aprovação');
-for (const [label,action] of [['Máscaras e proteção','mascaras'],['Gerar proposta com IA','proposta'],['Versões e aprovação','versoes']] as const) {
+for (const [label,action] of [['Elementos e medidas','elementos'],['Máscaras e proteção','mascaras'],['Gerar proposta com IA','proposta'],['Versões e aprovação','versoes'],['Foto original','original'],['Remover foto','remover']] as const) {
   const button = window.document.createElement('button');
   button.textContent = label;
   if (action==='proposta') button.className='primary';
@@ -2036,6 +1616,6 @@ const DARK_VISUAL_CSS = `
 .dark-ui .catalog-selected {background:linear-gradient(90deg,#2a0a1b,#06272a)}
 .dark-ui .drawing-board {color-scheme:light}
 .dark-ui .toast {color:#fff}
-@media(max-width:850px){.stages{height:auto;min-height:60px;flex-wrap:wrap;gap:0 18px}.stages>button{min-height:44px}#serverTools{display:block;margin-left:0}.stages #themeToggle{margin-left:auto!important}}
+@media(max-width:850px){.stages{height:auto;min-height:60px;flex-wrap:wrap;gap:0 18px}.stages>button{min-height:44px}.stages #themeToggle{margin-left:auto!important}}
 @media print {.dark-ui,.dark-ui .workspace,.dark-ui .presentation-intro,.dark-ui .presentation-photo,.dark-ui .presentation-specs table {background:white!important;color:#303438!important}}
 `;

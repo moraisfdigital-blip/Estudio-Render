@@ -4,13 +4,10 @@ import {
   Route,
   Routes,
   useLocation,
-  useNavigate,
 } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
-import Moldura from './components/layout/Moldura'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/context'
-import CatalogPage from './pages/CatalogPage'
 import Inicio from './pages/Inicio'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -37,22 +34,11 @@ import {
  * conhecer o roteador.
  */
 
-function MateriaisRoute() {
-  const { state } = useAuth()
-  const navigate = useNavigate()
-  const podeGerenciar = state.kind === 'authenticated' && state.session.user.role === 'owner'
-  return (
-    <Moldura>
-      <CatalogPage onBack={() => navigate('/')} canManage={podeGerenciar} />
-    </Moldura>
-  )
-}
 
 function Autenticado() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route path="/materiais" element={<MateriaisRoute />} />
         {/* Endereço da antiga tela de formulário; sem isto "novo" seria lido
             como o id de um projeto. */}
         <Route path="/projeto/novo" element={<Inicio />} />
