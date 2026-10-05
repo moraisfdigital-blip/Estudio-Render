@@ -4,7 +4,7 @@
 
 ## Onde está cada coisa
 
-- Código desta entrega: branch `codex/enbypro-release`, HEAD `095bb4a`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) aberto em rascunho, **sem merge** — o usuário ainda não autorizou aprovar.
+- Código desta entrega: branch `codex/enbypro-release`, release no ar `966e624`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) aberto em rascunho, **sem merge** — o usuário ainda não autorizou aprovar.
 - Checkout do orquestrador: `D:\SET UP NOVO\estudio-render` (branch `moraisfdigital-blip/ui-fase1-shell`, sincronizada com o remoto).
 - Produção: VPS **da Artelux** `srv1951666.hstgr.cloud` (179.199.141.95, Ubuntu 24.04), alias SSH `crmnovo` na máquina do usuário. Decisão do usuário em 04/10: usar esta VPS, sem upgrade de plano.
   - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para a release no ar.
@@ -40,9 +40,16 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 - **Opção B escolhida pelo usuário:** o link "Ferramentas do projeto" (telas antigas em modal: `LevantamentoPersistido`, `PresentationPanel`, `TakeoffPanel`) **continua** até ele mandar apagar. Não apagar sem ordem.
 - Não propor nem criar tela que não exista no protótipo sem mostrar a referência e perguntar. O usuário se irritou com painéis inventados.
 
+## Conta, senha e e-mail (04/10, noite)
+
+- **Regra do usuário: senha só se troca por link enviado ao e-mail.** Nunca pedir a senha antiga, nunca outro caminho. "Esqueci minha senha / quero trocar" na entrada → e-mail → `/redefinir-senha?token=` → senha nova. Em "Minha conta" (botão na barra do painel) o botão de senha manda o mesmo link.
+- Trocar o e-mail de login (para passar a conta ao cliente): "Minha conta" → e-mail novo → link vai **para o e-mail novo** → `/confirmar-email?token=` → só então o login muda. Nome muda na hora.
+- Links: uso único, 60 min, só o SHA-256 no banco (`password_resets`), pedido novo anula o anterior, URL sempre de `PUBLIC_BASE_URL`. Trocar senha/e-mail encerra as sessões abertas.
+- **Envio de e-mail ainda desligado em produção (`EMAIL_PROVIDER=none`)**: a tela avisa "o envio de e-mail ainda não está ligado". Para ligar: conta no Resend, verificar `enbypro.com` (registros DNS que o Resend mostra), pôr `EMAIL_PROVIDER=resend` e `RESEND_API_KEY` no `.env` do servidor e recriar o container.
+
 ## Pendências (em ordem)
 
-1. Tela **"Minha conta"** para trocar e-mail e senha dentro da ferramenta (pedido do usuário).
+1. **Ligar o envio de e-mail** (Resend) — sem isso, "esqueci minha senha" e "trocar e-mail" só avisam que não há envio.
 2. Decisão do usuário sobre a conta `teste@enbypro.com` (manter ou apagar).
 3. Apagar as telas antigas ("Ferramentas do projeto") quando autorizado.
 4. Aprovar/mergear o PR #18 quando o usuário disser "pode aprovar".
