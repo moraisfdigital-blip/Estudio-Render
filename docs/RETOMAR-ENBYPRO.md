@@ -5,7 +5,7 @@
 ## Onde está cada coisa
 
 - Código desta entrega: branch `codex/enbypro-release`, release no ar `64e1251`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) **aprovado pelo usuário e mergeado em `main` em 04/10/2026 (merge `fa0e771`)**. A `main` passou a ser igual à versão no ar; trabalho novo parte da `main`.
-- Checkout do orquestrador: `D:\SET UP NOVO\estudio-render` (branch `moraisfdigital-blip/ui-fase1-shell`, sincronizada com o remoto).
+- Checkout principal: `D:\SET UP NOVO\estudio-render`, na branch `main` (posto em 04/10 na versão oficial, que é igual à versão no ar). A worktree `enbypro-release` continua existindo com a mesma versão.
 - Produção: VPS **da Artelux** `srv1951666.hstgr.cloud` (179.199.141.95, Ubuntu 24.04), alias SSH `crmnovo` na máquina do usuário. Decisão do usuário em 04/10: usar esta VPS, sem upgrade de plano.
   - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para a release no ar.
   - Ambiente protegido em `/opt/enbypro/shared/.env` (600). Compose project `enbypro`. App escuta só em `172.18.0.1:8010` (gateway da rede do CRM); Mongo sem porta publicada.
