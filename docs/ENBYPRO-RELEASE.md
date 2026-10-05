@@ -6,7 +6,7 @@ Atualizado em 04/10/2026. **Publicado em https://enbypro.com e em uso.** O estad
 
 - Repositório: `moraisfdigital-blip/estudio-render`.
 - Branch: `codex/enbypro-release`, criada a partir de `bf15b4d`. Implementação inicial em `4873a70`; sessão de 04/10 adicionou `f5e7610` (olho na senha), `f2b6907` (entrada direta no painel, remoção das telas de lista/formulário), `b869bab` (painel abre sem projeto), `095bb4a` (catálogo, PDF e orçamento como janelas do painel), `966e624` (senha e e-mail só por link enviado ao e-mail; Minha conta). Release no ar: `966e624`; commits seguintes são só documentação.
-- [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18), em rascunho, sem merge.
+- [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) mergeado em `main` em 04/10/2026 (`fa0e771`), com autorização do usuário.
 - Worktree: `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`.
 - Sem ticket Linear vinculado; o histórico está no PR e nestes arquivos.
 

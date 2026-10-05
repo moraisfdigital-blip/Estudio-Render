@@ -4,7 +4,7 @@
 
 ## Onde está cada coisa
 
-- Código desta entrega: branch `codex/enbypro-release`, release no ar `966e624`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) aberto em rascunho, **sem merge** — o usuário ainda não autorizou aprovar.
+- Código desta entrega: branch `codex/enbypro-release`, release no ar `966e624`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) **aprovado pelo usuário e mergeado em `main` em 04/10/2026 (merge `fa0e771`)**. A `main` passou a ser igual à versão no ar; trabalho novo parte da `main`.
 - Checkout do orquestrador: `D:\SET UP NOVO\estudio-render` (branch `moraisfdigital-blip/ui-fase1-shell`, sincronizada com o remoto).
 - Produção: VPS **da Artelux** `srv1951666.hstgr.cloud` (179.199.141.95, Ubuntu 24.04), alias SSH `crmnovo` na máquina do usuário. Decisão do usuário em 04/10: usar esta VPS, sem upgrade de plano.
   - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para a release no ar.
@@ -49,12 +49,10 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 
 ## Pendências (em ordem)
 
-1. Usuário conferir o e-mail de teste (na primeira vez pode cair no spam) e testar a troca de senha pelo link.
-3. Apagar as telas antigas ("Ferramentas do projeto") quando autorizado.
-4. Aprovar/mergear o PR #18 quando o usuário disser "pode aprovar".
-5. Confirmar que o limite de gasto da chave OpenRouter foi salvo (US$ 10/semana estava sendo configurado); trocar a chave antes de 03/11/2026.
-6. `frontend/testes/calibracao-geometria.mjs` está quebrado desde a troca de tela da sessão anterior (procura botões que não existem mais); precisa ser reescrito para o painel do protótipo.
-7. Cópia de backup fora da VPS além da da Hostinger (ex.: Drive) — opcional.
+1. Apagar as telas antigas ("Ferramentas do projeto") quando autorizado.
+2. Confirmar que o limite de gasto da chave OpenRouter foi salvo (US$ 10/semana estava sendo configurado); **trocar a chave antes de 03/11/2026**.
+3. `frontend/testes/calibracao-geometria.mjs` está quebrado desde a troca de tela da sessão anterior (procura botões que não existem mais); precisa ser reescrito para o painel do protótipo.
+4. Cópia de backup fora da VPS além da da Hostinger (ex.: Drive) — opcional.
 
 ## Como foi testado nesta sessão
 
