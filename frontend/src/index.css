@@ -1,1 +1,155 @@
 @import "tailwindcss";
+
+/**
+ * Tokens da interface, em dois modos.
+ *
+ * ## Claro é o padrão
+ *
+ * O trabalho acontece em cima de fotografia de fachada e de cor de ACM. Fundo
+ * claro é o que não mente sobre a cor que o cliente vai ver na obra — e é o
+ * que o protótipo aprovado usa. O modo escuro existe porque foi pedido, não
+ * porque é o padrão: quem quiser troca no botão do topo, e a escolha fica
+ * guardada no navegador.
+ *
+ * A preferência do sistema operacional **não** é seguida de propósito. Claro é
+ * uma decisão do produto, não do sistema de quem abre.
+ *
+ * ## As cores vêm do protótipo, não do logo
+ *
+ * Elas estão declaradas em `front-visual/front/calibration.css` — que apesar
+ * do nome é a camada de tema do protótipo. Turquesa `#00bdb5` é a AÇÃO
+ * (botão principal, aba ativa); rosa `#f20a76` é o DESTAQUE (item
+ * selecionado, passo concluído); laranja `#f28a2e` é pendência.
+ *
+ * Essa separação é o que faz a tela ser lida de relance: se o rosa também
+ * fosse botão, "onde eu clico" e "o que está selecionado" se confundiriam.
+ *
+ * Ressalva registrada: branco sobre o turquesa dá 2,35:1, abaixo dos 4,5:1
+ * que texto normal exige. É o valor do protótipo e foi mantido de propósito
+ * — trocar por `#008f89` (3,97:1) resolveria quase tudo, mas muda a cor da
+ * ferramenta e essa é uma decisão de produto, não de código.
+ *
+ * ## Como isto funciona
+ *
+ * O `@theme` define o modo claro. O bloco `[data-theme="dark"]` redefine as
+ * MESMAS variáveis — as utilidades do Tailwind leem `var(--color-…)`, então
+ * trocar o atributo no `<html>` troca a interface inteira, sem recarregar e
+ * sem nenhuma classe condicional espalhada pelos componentes.
+ *
+ * Nenhum componente escreve cor literal. Quando escreve, o modo claro quebra
+ * naquele pedaço — e quebra em silêncio, porque continua bonito no escuro.
+ */
+@theme {
+  /* Fundo da área de trabalho e superfícies empilhadas sobre ele. */
+  --color-app: #fff9fc;
+  --color-surface: #ffffff;
+  --color-raised: #fafbfb;
+  --color-line: #dce8e7;
+  --color-line-soft: #eceeef;
+  /* Os botões comuns do protótipo têm a borda levemente rosada — é o que
+     amarra a interface à marca sem pintar tudo. */
+  --color-line-accent: #efbfd5;
+
+  /* Texto. */
+  --color-ink: #2d3438;
+  --color-ink-soft: #4b5155;
+  --color-ink-dim: #727d80;
+
+  /* Turquesa: a AÇÃO. Botão principal, aba ativa, foto selecionada. */
+  --color-brand: #00bdb5;
+  --color-brand-hover: #008f89;
+  --color-brand-soft: #eefaf9;
+  --color-brand-ink: #ffffff;
+
+  /* Rosa: o DESTAQUE. Elemento selecionado, passo concluído, o bloco do
+     projeto atual, a borda pontilhada do "novo elemento". Nunca é o botão
+     de ação — essa separação é o que faz a tela ser legível de relance. */
+  --color-accent: #f20a76;
+  --color-accent-strong: #cf075f;
+  --color-accent-soft: #fff1f7;
+
+  /* Laranja: pendência. Foto que ainda não foi calibrada. */
+  --color-warn: #f28a2e;
+  --color-warn-soft: #fff6eb;
+
+  /* Semânticas que o protótipo não tem, e que a ferramenta precisa. */
+  --color-good: #2f7d52;
+  --color-good-soft: #eef7f1;
+  --color-bad: #c0392b;
+  --color-bad-soft: #fdecea;
+
+  /* Véu atrás dos diálogos. */
+  --color-overlay: rgb(45 52 56 / 0.45);
+
+  /* As cores puras do logo. Só para a marca em si. */
+  --color-logo-magenta: #fc027a;
+  --color-logo-ciano: #02dfd8;
+}
+
+:root[data-theme="dark"] {
+  --color-app: #0f1416;
+  --color-surface: #151b1e;
+  --color-raised: #1b2225;
+  --color-line: #26322f;
+  --color-line-soft: #1e2729;
+  --color-line-accent: #4a1f33;
+
+  --color-ink: #e7ecee;
+  --color-ink-soft: #b3bec1;
+  --color-ink-dim: #889397;
+
+  --color-brand: #00bdb5;
+  --color-brand-hover: #19d6ce;
+  --color-brand-soft: #06272a;
+  --color-brand-ink: #ffffff;
+
+  --color-accent: #f20a76;
+  --color-accent-strong: #ff3a93;
+  --color-accent-soft: #2a0a1b;
+
+  --color-warn: #f28a2e;
+  --color-warn-soft: #2a2011;
+
+  --color-good: #3fb984;
+  --color-good-soft: #10281f;
+  --color-bad: #ef6b63;
+  --color-bad-soft: #2d1817;
+
+  --color-overlay: rgb(3 6 10 / 0.78);
+}
+
+/* O app ocupa a janela inteira: a área de trabalho rola por dentro, não a página. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-app);
+  color: var(--color-ink);
+}
+
+/* Diz ao navegador em que modo estamos, para as barras de rolagem e os
+   controles nativos (data, cor, range) não virem do modo errado. */
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Foco visível em tudo que recebe teclado. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

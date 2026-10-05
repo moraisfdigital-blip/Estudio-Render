@@ -129,4 +129,7 @@ def get_image_gen_adapter() -> ImageGenAdapter:
     provider = get_settings().image_gen_provider
     if provider == "mock":
         return MockImageGenAdapter()
+    if provider == "openrouter":
+        from app.adapters.openrouter import OpenRouterImageGenAdapter
+        return OpenRouterImageGenAdapter()
     raise ValueError(f"IMAGE_GEN_PROVIDER desconhecido: {provider!r}")

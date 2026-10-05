@@ -1,36 +1,114 @@
 import { useState } from 'react'
-import AppShell from './components/AppShell'
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
+import AppLayout from './components/layout/AppLayout'
+import Moldura from './components/layout/Moldura'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/context'
+import CatalogPage from './pages/CatalogPage'
+import Inicio from './pages/Inicio'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import { ConfirmarEmailPage, EsqueciSenhaPage, RedefinirSenhaPage } from './pages/SenhaPorEmail'
+import {
+  EstudioSemProjeto,
+  ProjectIndexRedirect,
+  ProjectWorkspace,
+  StepEntrega,
+  StepEspecificacao,
+  StepLevantamento,
+  StepProposta,
+} from './pages/ProjectWorkspace'
 
-function Routes() {
+/**
+ * Rotas da aplicação.
+ *
+ * Antes a navegação era uma variável de estado: não havia URL, então não dava
+ * para mandar "abre esse projeto" para ninguém nem usar o botão voltar do
+ * navegador. Agora cada tela tem endereço.
+ *
+ * As páginas existentes recebem os mesmos `props` de antes — os invólucros
+ * abaixo traduzem parâmetro de rota em callback, para nenhuma delas precisar
+ * conhecer o roteador.
+ */
+
+function MateriaisRoute() {
   const { state } = useAuth()
-  const [screen, setScreen] = useState<'login' | 'register'>('login')
+  const navigate = useNavigate()
+  const podeGerenciar = state.kind === 'authenticated' && state.session.user.role === 'owner'
+  return (
+    <Moldura>
+      <CatalogPage onBack={() => navigate('/')} canManage={podeGerenciar} />
+    </Moldura>
+  )
+}
 
-  // Sessão sendo conferida a partir do token guardado.
+function Autenticado() {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route path="/materiais" element={<MateriaisRoute />} />
+        {/* Endereço da antiga tela de formulário; sem isto "novo" seria lido
+            como o id de um projeto. */}
+        <Route path="/projeto/novo" element={<Inicio />} />
+        <Route path="/estudio/*" element={<EstudioSemProjeto />} />
+
+        <Route path="/projeto/:projectId" element={<ProjectWorkspace />}>
+          <Route index element={<ProjectIndexRedirect />} />
+          <Route path="levantamento" element={<StepLevantamento />} />
+          <Route path="especificacao" element={<StepEspecificacao />} />
+          <Route path="proposta" element={<StepProposta />} />
+          <Route path="entrega" element={<StepEntrega />} />
+        </Route>
+
+        {/* Qualquer outro endereço (inclusive os antigos /projetos e
+            /projeto/novo) cai na entrada, que abre a mesa de trabalho. */}
+        <Route path="*" element={<Inicio />} />
+      </Route>
+    </Routes>
+  )
+}
+
+function Anonimo() {
+  const [tela, setTela] = useState<'login' | 'registro' | 'esqueci'>('login')
+  if (tela === 'esqueci') return <EsqueciSenhaPage onBack={() => setTela('login')} />
+  return tela === 'login' ? (
+    <LoginPage onGoToRegister={() => setTela('registro')} onForgotPassword={() => setTela('esqueci')} />
+  ) : (
+    <RegisterPage onGoToLogin={() => setTela('login')} />
+  )
+}
+
+function Raiz() {
+  const { state } = useAuth()
+  const { pathname } = useLocation()
+
+  // Os links que chegam por e-mail abrem com ou sem sessão neste navegador.
+  if (pathname === '/redefinir-senha') return <RedefinirSenhaPage />
+  if (pathname === '/confirmar-email') return <ConfirmarEmailPage />
+
   if (state.kind === 'hydrating') {
     return (
-      <main className="min-h-dvh bg-neutral-950 text-neutral-100 flex items-center justify-center">
-        <p className="text-sm text-neutral-400">Carregando sessão…</p>
+      <main className="grid h-full place-items-center bg-app text-ink">
+        <p className="text-sm text-ink-dim">Carregando sessão…</p>
       </main>
     )
   }
 
-  if (state.kind === 'authenticated') return <AppShell />
-
-  return screen === 'login' ? (
-    <LoginPage onGoToRegister={() => setScreen('register')} />
-  ) : (
-    <RegisterPage onGoToLogin={() => setScreen('login')} />
-  )
+  return state.kind === 'authenticated' ? <Autenticado /> : <Anonimo />
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <Raiz />
+      </AuthProvider>
+    </BrowserRouter>
   )
 }

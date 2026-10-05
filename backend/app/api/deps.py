@@ -59,6 +59,12 @@ async def get_current_user(
     user = await get_db()[user_model.COLLECTION].find_one({"_id": oid, "tenant_id": tenant_id})
     if user is None:
         raise UNAUTHORIZED
+    # Trocar senha ou e-mail encerra as sessões emitidas antes da troca.
+    valido_desde = user.get("tokens_valid_after_ms")
+    emitido_ms = int(payload.get("iat_ms") or int(payload.get("iat", 0)) * 1000)
+    if valido_desde is not None and emitido_ms <= int(valido_desde):
+        audit.log(audit.TOKEN_REVOGADO, tenant_id=tenant_id, user_id=str(user_id))
+        raise UNAUTHORIZED
     return user
 
 

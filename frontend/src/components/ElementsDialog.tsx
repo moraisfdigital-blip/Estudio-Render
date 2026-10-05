@@ -103,16 +103,16 @@ function MeasurementLine({ label, measurement, unit }: {
   const estimated = measurement.source === 'estimated'
   return (
     <div className="flex items-center justify-between gap-3 text-xs">
-      <span className="text-neutral-500">{label}</span>
+      <span className="text-ink-dim">{label}</span>
       <span className="flex items-center gap-2">
-        <span className="font-mono text-neutral-200">
+        <span className="font-mono text-ink">
           {numberFormat.format(measurement.value)} {unit}
         </span>
         <span
           className={`rounded-full border px-2 py-0.5 text-[10px] ${
             estimated
-              ? 'border-amber-700/70 bg-amber-950/40 text-amber-200'
-              : 'border-neutral-700 text-neutral-400'
+              ? 'border-warn bg-warn-soft text-warn'
+              : 'border-line text-ink-soft'
           }`}
         >
           {measurement.source_label}
@@ -128,8 +128,8 @@ function ConferenceBadge({ status }: { status: SurveyElement['conference']['stat
     <span
       className={`rounded-full border px-2 py-0.5 text-[10px] ${
         confirmed
-          ? 'border-neutral-500 text-neutral-200'
-          : 'border-dashed border-neutral-700 text-neutral-500'
+          ? 'border-ink-dim text-ink'
+          : 'border-dashed border-line text-ink-dim'
       }`}
     >
       {confirmed ? 'Conferido' : 'Pendente'}
@@ -235,7 +235,7 @@ function Overlay({
   const ghost = live ?? pending
 
   return (
-    <div className="relative select-none overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+    <div className="relative select-none overflow-hidden rounded-lg border border-line bg-app">
       <img
         ref={imageRef}
         src={url}
@@ -382,11 +382,11 @@ function NewElementForm({
         event.preventDefault()
         if (!saving) onSubmit({ name, kind, notes })
       }}
-      className="flex flex-col gap-4 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4"
+      className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-4"
     >
       <div>
-        <p className="text-sm font-medium text-neutral-100">Novo elemento</p>
-        <p className="mt-1 font-mono text-xs text-neutral-500">
+        <p className="text-sm font-medium text-ink">Novo elemento</p>
+        <p className="mt-1 font-mono text-xs text-ink-dim">
           {Math.round(box.width)} × {Math.round(box.height)} px em{' '}
           {Math.round(box.x)}, {Math.round(box.y)}
         </p>
@@ -442,7 +442,7 @@ function NewElementForm({
         </Button>
       </div>
 
-      <p className="text-xs text-neutral-600">
+      <p className="text-xs text-ink-dim">
         Medidas entram no passo seguinte. Elemento nasce sem medida — ninguém mediu ainda.
       </p>
     </form>
@@ -557,11 +557,11 @@ function ElementDetail({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
+      <div className="rounded-md border border-line bg-surface p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-neutral-100">{element.name}</p>
-            <p className="font-mono text-[10px] text-neutral-600">
+            <p className="truncate text-sm font-medium text-ink">{element.name}</p>
+            <p className="font-mono text-[10px] text-ink-dim">
               {Math.round(element.box.width)} × {Math.round(element.box.height)} px
             </p>
           </div>
@@ -569,7 +569,7 @@ function ElementDetail({
         </div>
 
         <div className="mt-3">
-          <label htmlFor="detail-kind" className="text-xs text-neutral-500">
+          <label htmlFor="detail-kind" className="text-xs text-ink-dim">
             Tipo
           </label>
           <select
@@ -586,9 +586,9 @@ function ElementDetail({
           </select>
         </div>
 
-        {element.notes && <p className="mt-3 text-xs text-neutral-400">{element.notes}</p>}
+        {element.notes && <p className="mt-3 text-xs text-ink-soft">{element.notes}</p>}
 
-        <div className="mt-3 border-t border-neutral-800 pt-3">
+        <div className="mt-3 border-t border-line pt-3">
           {hasSaved ? (
             <div className="flex flex-col gap-1.5">
               {DIMENSIONS.map(({ key, label }) => {
@@ -603,27 +603,27 @@ function ElementDetail({
                 ) : null
               })}
               {measured.measured_at && (
-                <p className="mt-1 text-[10px] text-neutral-600">
+                <p className="mt-1 text-[10px] text-ink-dim">
                   Medidas salvas em {dateTimeFormat.format(new Date(measured.measured_at))}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-ink-dim">
               Sem medida. O elemento está marcado na foto, mas ninguém mediu ainda.
             </p>
           )}
         </div>
       </div>
 
-      <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
-        <p className="mb-3 text-sm text-neutral-300">Especificação</p>
+      <div className="rounded-md border border-line bg-surface p-3">
+        <p className="mb-3 text-sm text-ink-soft">Especificação</p>
         <SpecPicker element={element} onChanged={onChanged} />
       </div>
 
       <form onSubmit={submitMeasurements} className="flex flex-col gap-4">
         <div className="flex items-end justify-between gap-3">
-          <p className="text-sm text-neutral-300">Medidas</p>
+          <p className="text-sm text-ink-soft">Medidas</p>
           <select
             aria-label="Unidade das medidas"
             className={`${inputClass} w-32`}
@@ -642,7 +642,7 @@ function ElementDetail({
 
         {DIMENSIONS.map(({ key, label }) => (
           <div key={key} className="flex flex-col gap-1.5">
-            <label htmlFor={`measure-${key}`} className="text-xs text-neutral-400">
+            <label htmlFor={`measure-${key}`} className="text-xs text-ink-soft">
               {label}
             </label>
             <div className="flex gap-2">
@@ -659,7 +659,7 @@ function ElementDetail({
               <select
                 aria-label={`Origem da medida de ${label.toLowerCase()}`}
                 className={`${inputClass} w-44 ${
-                  draft[key].source === 'estimated' ? 'border-amber-800 text-amber-200' : ''
+                  draft[key].source === 'estimated' ? 'border-warn text-warn' : ''
                 }`}
                 value={draft[key].source}
                 onChange={(event) =>
@@ -676,9 +676,9 @@ function ElementDetail({
           </div>
         ))}
 
-        {anyInvalid && <p className="text-xs text-red-300">Informe números maiores que zero.</p>}
+        {anyInvalid && <p className="text-xs text-bad">Informe números maiores que zero.</p>}
         {!anyTyped && (
-          <p className="text-xs text-neutral-600">
+          <p className="text-xs text-ink-dim">
             Deixe em branco o que não foi medido — campo vazio não vira zero.
           </p>
         )}
@@ -686,12 +686,12 @@ function ElementDetail({
         {/* A sugestão pela escala só existe se a foto estiver calibrada, e entra
             no formulário sempre como estimativa. */}
         {estimate ? (
-          <div className="rounded-md border border-amber-900/50 bg-amber-950/20 p-3">
-            <p className="text-xs text-amber-200">
+          <div className="rounded-md border border-warn bg-warn-soft p-3">
+            <p className="text-xs text-warn">
               Estimativa pela escala: {numberFormat.format(estimate.width)} ×{' '}
               {numberFormat.format(estimate.height)} {estimate.unit}
             </p>
-            <p className="mt-1 text-[10px] text-amber-200/70">
+            <p className="mt-1 text-[10px] text-warn">
               Derivada do retângulo e da calibração da foto. É aproximação: salva assim, fica
               marcada como estimativa.
             </p>
@@ -706,7 +706,7 @@ function ElementDetail({
             </Button>
           </div>
         ) : (
-          <p className="text-xs text-neutral-600">
+          <p className="text-xs text-ink-dim">
             Foto sem calibração de escala: não há de onde estimar. Calibre a foto ou digite a
             medida de campo.
           </p>
@@ -732,7 +732,7 @@ function ElementDetail({
           </Button>
         </div>
 
-        <p className="text-xs text-neutral-600">
+        <p className="text-xs text-ink-dim">
           Salvar medida devolve a conferência para pendente — o selo vale para os números que
           foram conferidos.
         </p>
@@ -741,7 +741,7 @@ function ElementDetail({
           type="button"
           onClick={() => void remove()}
           disabled={busy !== null}
-          className="w-fit text-xs text-neutral-500 transition hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-fit text-xs text-ink-dim transition hover:text-bad disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy === 'remove' ? 'Removendo…' : 'Remover elemento'}
         </button>
@@ -851,16 +851,16 @@ export default function ElementsDialog({
       role="dialog"
       aria-modal="true"
       aria-label={`Elementos de ${photo.original_filename}`}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-4 sm:p-8"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-5xl rounded-xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl">
+      <div className="w-full max-w-5xl rounded-xl border border-line bg-app p-5 shadow-2xl">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-neutral-100">Elementos e medidas</h2>
-            <p className="truncate text-sm text-neutral-500" title={photo.original_filename}>
+            <h2 className="text-lg font-semibold text-ink">Elementos e medidas</h2>
+            <p className="truncate text-sm text-ink-dim" title={photo.original_filename}>
               {photo.original_filename}
             </p>
           </div>
@@ -908,14 +908,14 @@ export default function ElementsDialog({
                 >
                   {drawing ? 'Sair do modo marcação' : 'Marcar elemento'}
                 </Button>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-ink-dim">
                   {drawing
                     ? 'Arraste sobre a peça — ou clique num canto e depois no outro.'
                     : 'Clique num retângulo para abrir o elemento.'}
                 </p>
               </div>
 
-              <p className="text-xs text-neutral-600">
+              <p className="text-xs text-ink-dim">
                 A foto original não é alterada: os retângulos são um overlay e ficam salvos como
                 registros à parte.
               </p>
@@ -938,7 +938,7 @@ export default function ElementsDialog({
                   <button
                     type="button"
                     onClick={() => setSelectedId(null)}
-                    className="w-fit text-xs text-neutral-400 underline-offset-2 transition hover:text-neutral-100 hover:underline"
+                    className="w-fit text-xs text-ink-soft underline-offset-2 transition hover:text-ink hover:underline"
                   >
                     ← Todos os elementos
                   </button>
@@ -961,18 +961,18 @@ export default function ElementsDialog({
                       <button
                         type="button"
                         onClick={() => setSelectedId(element.id)}
-                        className="w-full rounded-md border border-neutral-800 px-3 py-2.5 text-left transition hover:border-neutral-600"
+                        className="w-full rounded-md border border-line px-3 py-2.5 text-left transition hover:border-ink-dim"
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <span className="truncate text-sm text-neutral-100">
+                          <span className="truncate text-sm text-ink">
                             {index + 1}. {element.name}
                           </span>
                           <ConferenceBadge status={element.conference.status} />
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-dim">
                           <span>{element.kind_label}</span>
                           {element.measurements.width || element.measurements.height ? (
-                            <span className="font-mono text-neutral-300">
+                            <span className="font-mono text-ink-soft">
                               {element.measurements.width
                                 ? numberFormat.format(element.measurements.width.value)
                                 : '—'}{' '}
@@ -988,7 +988,7 @@ export default function ElementsDialog({
                           {/* Estimativa rotulada já na lista: ninguém lê o número
                               achando que é medida de campo. */}
                           {element.measurements.has_estimate && (
-                            <span className="rounded-full border border-amber-700/70 bg-amber-950/40 px-2 py-0.5 text-[10px] text-amber-200">
+                            <span className="rounded-full border border-warn bg-warn-soft px-2 py-0.5 text-[10px] text-warn">
                               Estimativa
                             </span>
                           )}

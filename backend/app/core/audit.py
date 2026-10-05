@@ -37,9 +37,18 @@ REGISTRO_FECHADO = "registro_fechado"
 # distingue erro honesto de alguém varrendo endereços.
 REGISTRO_DUPLICADO = "registro_duplicado"
 REGISTRO_BLOQUEADO = "registro_bloqueado"
-TOKEN_INVALIDO = "token_invalido"
-TOKEN_REVOGADO = "token_revogado"
+# Audit event labels, never credentials or authentication token values.
+TOKEN_INVALIDO = "token_invalido"  # nosec B105
+TOKEN_REVOGADO = "token_revogado"  # nosec B105
 LOGOUT = "logout"
+CONTA_ATUALIZADA = "conta_atualizada"
+SENHA_LINK_PEDIDO = "senha_link_pedido"
+SENHA_LINK_BLOQUEADO = "senha_link_bloqueado"
+SENHA_REDEFINIDA = "senha_redefinida"
+EMAIL_LINK_PEDIDO = "email_link_pedido"
+EMAIL_ALTERADO = "email_alterado"
+LINK_INVALIDO = "link_invalido"
+EMAIL_FALHOU = "email_falhou"
 PAPEL_NEGADO = "papel_negado"
 
 

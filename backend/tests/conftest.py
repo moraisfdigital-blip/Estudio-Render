@@ -45,6 +45,14 @@ MEDIA_RAIZ = Path(tempfile.mkdtemp(prefix="render-artelux-testes-"))
 SENHA = "senha-de-teste-123"
 EMAIL_OWNER = "owner@exemplo-teste.com"
 
+# A suíte roda como produção, e diz isso explicitamente em vez de torcer para
+# o padrão do `Settings` valer. Sem esta linha o `.env` de quem está
+# desenvolvendo entra no lugar — foi o que aconteceu: um `ENVIRONMENT=
+# development` local derrubou os testes que checam que a documentação da API
+# fica fechada em produção. Teste que depende do arquivo de configuração da
+# máquina não prova nada.
+os.environ["ENVIRONMENT"] = "production"
+
 os.environ["MONGO_URL"] = os.environ.get(
     "TEST_MONGO_URL", os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 )
@@ -62,6 +70,10 @@ os.environ["ALLOW_SELF_REGISTER"] = "true"
 os.environ["AUTH_RATE_LIMIT_ATTEMPTS"] = "10"
 os.environ["AUTH_RATE_LIMIT_WINDOW_MINUTES"] = "15"
 os.environ["MAX_UPLOAD_MB"] = "25"
+# E-mail sai pelo mock (caixa de saída em memória) e os links usam este
+# endereço — nunca o `Host` do pedido.
+os.environ["EMAIL_PROVIDER"] = "mock"
+os.environ["PUBLIC_BASE_URL"] = "https://enbypro.teste"
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402

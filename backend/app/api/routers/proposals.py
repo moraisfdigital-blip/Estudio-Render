@@ -71,6 +71,19 @@ IMAGE_NOT_FOUND = "Imagem gerada não encontrada neste workspace."
 FILE_GONE = "O arquivo desta imagem gerada não está acessível no storage."
 
 
+@router.get("/generation/config")
+async def generation_config(scope: CurrentScope) -> dict[str, Any]:
+    settings = get_settings()
+    provider = settings.image_gen_provider
+    return {
+        "provider": provider,
+        "ready": provider == "mock" or (
+            provider == "openrouter" and bool(settings.openrouter_api_key.get_secret_value())
+        ),
+        "simulation": provider == "mock",
+    }
+
+
 def _generated_out(doc: dict[str, Any]) -> GeneratedImageOut:
     image_id = str(doc["_id"])
     return GeneratedImageOut(
@@ -206,6 +219,9 @@ async def create_proposal(
     )
 
     adapter = get_image_gen_adapter()
+    if adapter.name == "openrouter":
+        from app.core.generation_budget import reserve
+        await reserve(scope.tenant_id)
     proposal_doc = scope.stamp(
         proposal_model.new_proposal_doc(
             photo_id=photo_id,
@@ -237,7 +253,7 @@ async def create_proposal(
         )
     except ImageGenError as erro:
         await proposals.update_one(
-            {"_id": proposal_id}, {"$set": proposal_model.failed_fields(error=str(erro))}
+            scope.filter(_id=proposal_id), {"$set": proposal_model.failed_fields(error=str(erro))}
         )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -283,7 +299,7 @@ async def create_proposal(
     ).inserted_id
 
     doc = await proposals.find_one_and_update(
-        {"_id": proposal_id},
+        scope.filter(_id=proposal_id),
         {"$set": proposal_model.concluded_fields(generated_image_id=str(imagem_id))},
         return_document=ReturnDocument.AFTER,
     )

@@ -28,6 +28,7 @@ from app.models import version as version_model
 from app.models import takeoff as takeoff_model
 from app.models import tenant as tenant_model
 from app.models import user as user_model
+from app.models import email_link as email_link_model
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,12 @@ async def ensure_indexes() -> None:
     await db[revocation.COLLECTION].create_index("jti", unique=True, name="uniq_jti")
     await db[revocation.COLLECTION].create_index(
         "expires_at", expireAfterSeconds=0, name="ttl_revoked_tokens"
+    )
+    # Links por e-mail (senha/confirmação): busca pelo hash do código e TTL que
+    # apaga o registro quando o link vence.
+    await db[email_link_model.COLLECTION].create_index("token_hash", unique=True, name="uniq_link_hash")
+    await db[email_link_model.COLLECTION].create_index(
+        "expires_at", expireAfterSeconds=0, name="ttl_email_links"
     )
     # Fase 3: nome único por tenant evita dois cadastros idênticos no mesmo select.
     await db[client_model.COLLECTION].create_index(
@@ -213,6 +220,7 @@ async def ensure_seed_owner(tenant_id: str) -> None:
 
 async def run_seed() -> str:
     await ensure_indexes()
+    await get_db()["generation_usage"].create_index("expires_at", expireAfterSeconds=0)
     tenant_id = await ensure_default_tenant()
     await ensure_seed_owner(tenant_id)
     return tenant_id

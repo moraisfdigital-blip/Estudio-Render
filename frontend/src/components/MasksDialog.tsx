@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../auth/context'
 import { Button, ErrorNotice, Loading } from '../components/ui'
 import { useResource } from '../hooks/useResource'
+import { useFotoGeometria } from '../hooks/useFotoGeometria'
 
 /**
  * Máscaras de intervenção e proteção — o Architecture Lock desenhado.
@@ -102,37 +103,19 @@ function Overlay({
   disabled: boolean
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null)
-  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null)
-  const [scale, setScale] = useState(1)
-
-  const medir = useCallback(() => {
-    const image = imageRef.current
-    if (!image || !image.naturalWidth) return
-    setNatural({ width: image.naturalWidth, height: image.naturalHeight })
-    const rect = image.getBoundingClientRect()
-    if (rect.width > 0) setScale(image.naturalWidth / rect.width)
-  }, [])
-
-  useEffect(() => {
-    window.addEventListener('resize', medir)
-    return () => window.removeEventListener('resize', medir)
-  }, [medir])
+  // Mesma conta do diálogo de calibração, no mesmo lugar: o clique só vira
+  // pixel certo se descontar a tarja do encaixe da foto na caixa.
+  const { natural, scale, medir, paraOriginal } = useFotoGeometria(imageRef)
 
   function coordenadaDo(event: React.PointerEvent<SVGSVGElement>): MaskPoint | null {
-    const image = imageRef.current
-    if (!image || !natural) return null
-    const rect = image.getBoundingClientRect()
-    if (!rect.width || !rect.height) return null
-    const x = ((event.clientX - rect.left) / rect.width) * natural.width
-    const y = ((event.clientY - rect.top) / rect.height) * natural.height
     // Clique fora da imagem não vira vértice: o servidor recusaria, e recusar
     // aqui evita o usuário desenhar algo que não pode ser salvo.
-    if (x < 0 || y < 0 || x > natural.width || y > natural.height) return null
-    return { x: Math.round(x), y: Math.round(y) }
+    const ponto = paraOriginal(event.clientX, event.clientY)
+    return ponto && { x: Math.round(ponto.x), y: Math.round(ponto.y) }
   }
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
+    <div className="relative overflow-hidden rounded-lg border border-line bg-surface">
       <img
         ref={imageRef}
         src={url}
@@ -359,16 +342,16 @@ export default function MasksDialog({
       role="dialog"
       aria-modal="true"
       aria-label={`Máscaras de ${photo.original_filename}`}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-4 sm:p-8"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-5xl rounded-xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl">
+      <div className="w-full max-w-5xl rounded-xl border border-line bg-app p-5 shadow-2xl">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-neutral-100">Máscaras e Architecture Lock</h2>
-            <p className="truncate text-sm text-neutral-500" title={photo.original_filename}>
+            <h2 className="text-lg font-semibold text-ink">Máscaras e Architecture Lock</h2>
+            <p className="truncate text-sm text-ink-dim" title={photo.original_filename}>
               {photo.original_filename}
             </p>
           </div>
@@ -400,7 +383,7 @@ export default function MasksDialog({
                   disabled={saving}
                 />
               )}
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-ink-dim">
                 A foto original não é alterada: as máscaras são um overlay e ficam salvas como um
                 registro à parte.
               </p>
@@ -412,23 +395,23 @@ export default function MasksDialog({
                 <div
                   className={`rounded-md border p-3 ${
                     estado.generation_ready
-                      ? 'border-emerald-900 bg-emerald-950/40'
-                      : 'border-amber-900 bg-amber-950/30'
+                      ? 'border-good bg-good-soft'
+                      : 'border-warn bg-warn-soft'
                   }`}
                 >
-                  <p className="text-xs tracking-wide text-neutral-400 uppercase">
+                  <p className="text-xs tracking-wide text-ink-soft uppercase">
                     {estado.generation_ready ? 'Pronta para gerar' : 'Geração bloqueada'}
                   </p>
                   {estado.blocked_reason ? (
-                    <p className="mt-1 text-xs text-neutral-300">{estado.blocked_reason}</p>
+                    <p className="mt-1 text-xs text-ink-soft">{estado.blocked_reason}</p>
                   ) : (
-                    <p className="mt-1 text-xs text-neutral-300">
+                    <p className="mt-1 text-xs text-ink-soft">
                       Há recorte de intervenção e o lock está ligado. A geração da próxima fase vai
                       alterar só o que está dentro dessas áreas.
                     </p>
                   )}
                   {estado.updated_at && (
-                    <p className="mt-1 text-xs text-neutral-600">
+                    <p className="mt-1 text-xs text-ink-dim">
                       Máscaras salvas em {dateTimeFormat.format(new Date(estado.updated_at))}
                     </p>
                   )}
@@ -437,11 +420,11 @@ export default function MasksDialog({
 
               {/* Architecture Lock: estado + quem pode mexer. */}
               {estado && (
-                <div className="rounded-md border border-neutral-800 bg-neutral-900/60 p-3">
+                <div className="rounded-md border border-line bg-surface p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm text-neutral-100">Architecture Lock</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-sm text-ink">Architecture Lock</p>
+                      <p className="text-xs text-ink-dim">
                         {estado.architecture_lock
                           ? 'Ligado: a arquitetura original é preservada.'
                           : 'Desligado: a geração está recusada até religar.'}
@@ -457,7 +440,7 @@ export default function MasksDialog({
                     </Button>
                   </div>
                   {!podeMexerNoLock && (
-                    <p className="mt-2 text-[11px] text-neutral-600">
+                    <p className="mt-2 text-[11px] text-ink-dim">
                       Só o owner do workspace liga ou desliga o lock.
                     </p>
                   )}
@@ -471,7 +454,7 @@ export default function MasksDialog({
 
               {/* Ferramenta de desenho. */}
               <div className="flex flex-col gap-2">
-                <p className="text-xs tracking-wide text-neutral-500 uppercase">Desenhar</p>
+                <p className="text-xs tracking-wide text-ink-dim uppercase">Desenhar</p>
                 <div className="grid grid-cols-2 gap-2">
                   {(['intervention', 'protect'] as MaskKind[]).map((valor) => (
                     <button
@@ -481,14 +464,14 @@ export default function MasksDialog({
                       className={`rounded-md border px-2 py-1.5 text-xs ${
                         tipo === valor
                           ? KIND_STYLES[valor].chip
-                          : 'border-neutral-800 text-neutral-400'
+                          : 'border-line text-ink-soft'
                       }`}
                     >
                       {KIND_STYLES[valor].nome}
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-neutral-600">
+                <p className="text-[11px] text-ink-dim">
                   {tipo === 'intervention'
                     ? 'Onde a peça pode mudar na proposta.'
                     : 'O que não pode ser tocado: janela, telhado, prédio vizinho.'}
@@ -508,7 +491,7 @@ export default function MasksDialog({
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-neutral-600">
+                  <p className="text-[11px] text-ink-dim">
                     Clique na foto para marcar os vértices. Três pontos fecham uma área (Enter
                     fecha, Esc cancela).
                   </p>
@@ -517,14 +500,14 @@ export default function MasksDialog({
 
               {/* Lista de camadas — o "vazio" desta fatia. */}
               <div className="flex flex-col gap-2">
-                <p className="text-xs tracking-wide text-neutral-500 uppercase">
+                <p className="text-xs tracking-wide text-ink-dim uppercase">
                   Camadas ({intervencoes} intervenção · {protecoes} proteção)
                 </p>
 
                 {camadas.length === 0 ? (
-                  <div className="rounded-md border border-dashed border-neutral-800 p-3">
-                    <p className="text-sm text-neutral-300">Nenhuma área marcada</p>
-                    <p className="mt-1 text-xs text-neutral-500">
+                  <div className="rounded-md border border-dashed border-line p-3">
+                    <p className="text-sm text-ink-soft">Nenhuma área marcada</p>
+                    <p className="mt-1 text-xs text-ink-dim">
                       Sem recorte de intervenção não há onde gerar — e gerar por fora alteraria a
                       arquitetura do cliente.
                     </p>
@@ -535,7 +518,7 @@ export default function MasksDialog({
                       <li
                         key={indice}
                         className={`rounded-md border p-2 ${
-                          indice === selecionada ? 'border-neutral-600' : 'border-neutral-800'
+                          indice === selecionada ? 'border-ink-dim' : 'border-line'
                         }`}
                         onPointerEnter={() => setSelecionada(indice)}
                       >
@@ -549,7 +532,7 @@ export default function MasksDialog({
                           </span>
                           <button
                             type="button"
-                            className="text-[11px] text-neutral-500 hover:text-neutral-300"
+                            className="text-[11px] text-ink-dim hover:text-ink-soft"
                             onClick={() => removerCamada(indice)}
                           >
                             Remover
@@ -559,9 +542,9 @@ export default function MasksDialog({
                           value={camada.label}
                           placeholder={KIND_STYLES[camada.kind].nome}
                           onChange={(event) => renomear(indice, event.target.value)}
-                          className="mt-1.5 w-full rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-200"
+                          className="mt-1.5 w-full rounded border border-line bg-app px-2 py-1 text-xs text-ink"
                         />
-                        <p className="mt-1 text-[10px] text-neutral-600">
+                        <p className="mt-1 text-[10px] text-ink-dim">
                           {camada.points.length} vértices ·{' '}
                           {numberFormat.format(areaDe(camada.points))} px²
                         </p>
@@ -578,7 +561,7 @@ export default function MasksDialog({
                   {saving ? 'Salvando…' : 'Salvar máscaras'}
                 </Button>
                 {sujo && !saving && (
-                  <span className="text-[11px] text-amber-500">alterações não salvas</span>
+                  <span className="text-[11px] text-warn">alterações não salvas</span>
                 )}
               </div>
             </div>

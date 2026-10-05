@@ -1,8 +1,9 @@
 services:
   app:
     build: .
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8000}:8000"
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       MONGO_URL: mongodb://mongo:27017
@@ -11,7 +12,17 @@ services:
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-720}
       IMAGE_GEN_PROVIDER: ${IMAGE_GEN_PROVIDER:-mock}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_IMAGE_MODEL: ${OPENROUTER_IMAGE_MODEL:-google/gemini-2.5-flash-image}
+      OPENROUTER_TIMEOUT_SECONDS: ${OPENROUTER_TIMEOUT_SECONDS:-180}
+      OPENROUTER_MAX_RESPONSE_MB: ${OPENROUTER_MAX_RESPONSE_MB:-32}
+      GENERATION_LIMIT_PER_HOUR: ${GENERATION_LIMIT_PER_HOUR:-20}
       PDF_PROVIDER: ${PDF_PROVIDER:-mock}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-none}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      EMAIL_LINK_MINUTES: ${EMAIL_LINK_MINUTES:-60}
       DEFAULT_TENANT_SLUG: ${DEFAULT_TENANT_SLUG:-artelux}
       DEFAULT_TENANT_NAME: ${DEFAULT_TENANT_NAME:-ARTELUX}
       SEED_OWNER_EMAIL: ${SEED_OWNER_EMAIL:-}
@@ -78,6 +89,7 @@ services:
 
   mongo:
     image: mongo:7
+    restart: unless-stopped
     # Sem `ports:` de propósito: o banco só é alcançável pela rede interna do
     # compose. Publicá-lo no host exporia um Mongo sem autenticação.
     cap_drop:

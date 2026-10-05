@@ -6,6 +6,11 @@ frontend/dist
 **/__pycache__
 .env
 .env.*
+**/.env
+**/.env.*
+var
+backend/var
+**/*.log
 !.env.example
 docs
 *.md

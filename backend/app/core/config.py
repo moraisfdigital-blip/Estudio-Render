@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import ClassVar
 
-from pydantic import field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # .../backend/app/core/config.py -> raiz do repositório
@@ -70,7 +70,28 @@ class Settings(BaseSettings):
         return value
 
     image_gen_provider: str = "mock"
+    openrouter_api_key: SecretStr = SecretStr("")
+    openrouter_image_model: str = "google/gemini-2.5-flash-image"
+    openrouter_timeout_seconds: int = Field(default=180, ge=10, le=300)
+    openrouter_max_response_mb: int = Field(default=32, ge=1, le=64)
+    generation_limit_per_hour: int = Field(default=20, ge=1, le=200)
     pdf_provider: str = "mock"
+
+    # E-mail transacional (link de redefinição de senha e de confirmação de
+    # e-mail). `none` (padrão) = envio desligado: as rotas avisam que não há
+    # envio em vez de fingir que mandaram. `mock` guarda em memória (testes e
+    # desenvolvimento). `resend` envia de verdade.
+    email_provider: str = "none"
+    resend_api_key: SecretStr = SecretStr("")
+    # Remetente, ex.: "ENBY PRO <nao-responda@enbypro.com>". Precisa ser de um
+    # domínio verificado no provedor.
+    email_from: str = ""
+    # Endereço público do app, usado nos links dos e-mails. Vem SEMPRE daqui e
+    # nunca do `Host` do pedido: quem controla o Host faria o link de
+    # redefinição apontar para o site dele e receberia o código.
+    public_base_url: str = ""
+    # Validade do link de redefinição/confirmação.
+    email_link_minutes: int = Field(default=60, ge=5, le=24 * 60)
 
     default_tenant_slug: str = "artelux"
     default_tenant_name: str = "ARTELUX"
@@ -115,6 +136,10 @@ class Settings(BaseSettings):
     # derrubar o serviço custa um arquivo minúsculo.
     # 50 Mpx é folgado para foto de celular (um iPhone faz 12 Mpx).
     max_image_megapixels: int = 50
+
+    @property
+    def public_base(self) -> str:
+        return self.public_base_url.strip().rstrip("/")
 
     @property
     def max_image_pixels(self) -> int:

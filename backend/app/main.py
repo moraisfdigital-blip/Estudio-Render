@@ -26,6 +26,7 @@ from app.api.routers.proposals import router as proposals_router
 from app.api.routers.takeoff import router as takeoff_router
 from app.api.routers.tenants import router as tenants_router
 from app.api.routers.versions import router as versions_router
+from app.api.routers.studies import router as studies_router
 from app.core.config import get_settings
 from app.core.db import close_client
 from app.core.seed import run_seed
@@ -130,6 +131,7 @@ app.include_router(proposals_router, prefix="/api", tags=["proposals"])
 app.include_router(versions_router, prefix="/api", tags=["versions"])
 app.include_router(presentations_router, prefix="/api", tags=["presentations"])
 app.include_router(takeoff_router, prefix="/api", tags=["takeoff"])
+app.include_router(studies_router, prefix="/api", tags=["studies"])
 
 
 def _json_safe_float(value: float) -> float | str:

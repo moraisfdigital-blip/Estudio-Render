@@ -3,6 +3,33 @@ import axios from 'axios'
 // Mesma origem: em produção o FastAPI serve o build e a API sob /api.
 export const api = axios.create({ baseURL: '/api' })
 
+export async function getGenerationConfig(): Promise<{provider: string; ready: boolean; simulation: boolean}> {
+  return (await api.get('/generation/config')).data
+}
+
+export type StudyElement = {
+  name: string; type: string; width: number; height: number; x: number; y: number;
+  color: string; material: string; finish: string; label: string; confirmed: boolean;
+  estimated: boolean; record_id: string | null;
+}
+export type StudySurface = {
+  id: string; name: string; points: { x: number; y: number }[];
+  material: string; finish: string; color: string; colorName: string;
+  opacity: number; preserveOpenings: boolean;
+}
+export type VisualStudy = {
+  revision: number; objects: StudyElement[];
+  photos: { photo_id: string; objects: StudyElement[]; surfaces: StudySurface[] }[];
+  light_mode: 'day' | 'night'; overlay_opacity: number; active_photo_id: string | null;
+  updated_at?: string | null;
+}
+export async function getVisualStudy(projectId: string): Promise<VisualStudy> {
+  return (await api.get<VisualStudy>(`/projects/${projectId}/study`)).data
+}
+export async function saveVisualStudy(projectId: string, study: VisualStudy): Promise<VisualStudy> {
+  return (await api.put<VisualStudy>(`/projects/${projectId}/study`, study)).data
+}
+
 // ---- token ------------------------------------------------------------
 
 const TOKEN_KEY = 'render-artelux.token'
@@ -70,6 +97,40 @@ export async function register(
 export async function getMe(): Promise<User> {
   const { data } = await api.get<User>('/auth/me')
   return data
+}
+
+// ---- conta: senha e e-mail só mudam por link enviado ao e-mail ---------
+
+type Mensagem = { detail: string }
+
+/** Pede o link de troca de senha. A resposta é a mesma exista ou não a conta. */
+export async function requestPasswordReset(email: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/password-reset/request', { email })
+  return data.detail
+}
+
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/password-reset/confirm', {
+    token,
+    new_password: newPassword,
+  })
+  return data.detail
+}
+
+export async function updateMe(name: string): Promise<User> {
+  const { data } = await api.patch<User>('/auth/me', { name })
+  return data
+}
+
+/** O e-mail só muda quando o dono do endereço novo clicar no link. */
+export async function requestEmailChange(newEmail: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/email-change/request', { new_email: newEmail })
+  return data.detail
+}
+
+export async function confirmEmailChange(token: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/email-change/confirm', { token })
+  return data.detail
 }
 
 export async function getCurrentTenant(): Promise<Tenant> {
@@ -203,6 +264,27 @@ export async function getProject(id: string): Promise<Project> {
 export async function updateProject(id: string, input: Partial<ProjectInput>): Promise<Project> {
   const { data } = await api.patch<Project>(`/projects/${id}`, input)
   return data
+}
+
+/**
+ * Cria (ou atualiza) um projeto a partir dos nomes digitados, como na janela
+ * do protótipo. Cliente e local com o mesmo nome (sem diferenciar maiúsculas)
+ * são reaproveitados; os que não existem são criados.
+ */
+export async function salvarProjetoPorNomes(
+  input: { name: string; clientName: string; locationName: string },
+  projectId?: string,
+): Promise<Project> {
+  const [clients, locations] = await Promise.all([listClients(), listLocations()])
+  const igual = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+  const client =
+    clients.find((c) => igual(c.name, input.clientName)) ??
+    (await createClient({ name: input.clientName }))
+  const location =
+    locations.find((l) => igual(l.name, input.locationName)) ??
+    (await createLocation({ name: input.locationName, client_id: client.id }))
+  const payload = { name: input.name, client_id: client.id, location_id: location.id }
+  return projectId ? updateProject(projectId, payload) : createProject(payload)
 }
 
 // ---- Fase 4: áreas e fotos -------------------------------------------

@@ -3,8 +3,22 @@
 Propostas visuais realistas a partir de levantamento fotográfico, preservando a
 arquitetura original (**Architecture Lock**) e usando materiais reais da ARTELUX.
 
+**No ar em https://enbypro.com** (marca ENBY PRO). Estado atual, como publicar
+e pendências: [`docs/RETOMAR-ENBYPRO.md`](docs/RETOMAR-ENBYPRO.md).
+
 Plano por fatias verticais: [`docs/PLANO.md`](docs/PLANO.md).
 Protocolo de execução: [`AGENTS.md`](AGENTS.md).
+
+## Interface
+
+Depois do login abre direto o **painel oficial**, que é a tela do protótipo
+(https://render-artelux.fmorais.chatgpt.site): abas 01 Levantamento · 02
+Projeto visual · 03 Apresentação, "Elementos da obra" à esquerda e
+"Propriedades" à direita. Não há tela de lista nem formulário à parte; sem
+projeto, o painel abre com o exemplo do protótipo. Funções sem lugar no
+protótipo (máscaras, geração, versões, catálogo, PDF, orçamento, Minha conta)
+abrem como janelas por cima do painel. Não crie telas fora do protótipo sem
+combinar com o dono do produto.
 
 ## Arquitetura
 
@@ -19,9 +33,9 @@ backend/app/core/media.py storage dos originais em disco (imutável)
 backend/app/core/imagesize.py dimensões do original lidas do cabeçalho (só leitura)
 backend/app/models/      documentos do Mongo — todos com tenant_id
 backend/app/schemas/     contratos Pydantic de entrada/saída
-backend/app/adapters/    ganchos de integração (image_gen, pdf) — mock
-frontend/src/pages/      telas (login, registro, dashboard, projeto, levantamento)
-frontend/src/components/ shell, primitivas de UI e seletores de cliente/local
+backend/app/adapters/    integrações por adapter (image_gen, pdf, email) — mock ou real por env
+frontend/src/pages/      entrada, login, links do e-mail (senha/e-mail) e o painel (Levantamento.tsx)
+frontend/src/components/ janelas do painel, primitivas de UI e peças do protótipo
 frontend/src/hooks/      useResource (loading / erro / pronto)
 ```
 
@@ -76,8 +90,15 @@ docker compose up --build
 | `JWT_SECRET` | Assinatura do token. **Obrigatória**, mínimo 32 caracteres — sem ela o app não sobe |
 | `JWT_ALGORITHM` | Algoritmo do JWT (`HS256`) |
 | `JWT_EXPIRE_MINUTES` | Validade do token em minutos |
-| `IMAGE_GEN_PROVIDER` | Adaptador de geração de imagem (`mock`) |
+| `IMAGE_GEN_PROVIDER` | Adaptador de geração de imagem (`mock` ou `openrouter`) |
+| `OPENROUTER_API_KEY` | Chave do OpenRouter (só no servidor) |
+| `GENERATION_LIMIT_PER_HOUR` | Teto de gerações por tenant/hora (20) |
 | `PDF_PROVIDER` | Adaptador de PDF (`mock`) |
+| `EMAIL_PROVIDER` | Envio de e-mail: `none` (padrão; a tela avisa que não há envio), `mock` ou `resend` |
+| `RESEND_API_KEY` | Chave do Resend (só no servidor) |
+| `EMAIL_FROM` | Remetente, de domínio verificado no provedor |
+| `PUBLIC_BASE_URL` | Endereço público usado nos links dos e-mails (nunca o `Host` do pedido) |
+| `EMAIL_LINK_MINUTES` | Validade dos links de senha/e-mail (60) |
 | `DEFAULT_TENANT_SLUG` | Tenant fixo desta instalação (`artelux`) |
 | `DEFAULT_TENANT_NAME` | Nome exibido do tenant (`ARTELUX`) |
 | `SEED_OWNER_EMAIL` | E-mail do owner criado pelo seed (vazio = não cria) |
@@ -100,10 +121,32 @@ credencial padrão no código. Quem se registra pela tela entra como `editor`.
 | POST | `/api/auth/register` | Registro interno (cria `editor`) |
 | POST | `/api/auth/login` | Entrar |
 | GET | `/api/auth/me` | Hidratar a sessão |
+| PATCH | `/api/auth/me` | Minha conta: trocar o nome |
+| POST | `/api/auth/password-reset/request` | Pedir link de troca de senha (só o e-mail) |
+| POST | `/api/auth/password-reset/confirm` | Senha nova pelo link |
+| POST | `/api/auth/email-change/request` | Pedir troca do e-mail de login (link vai ao e-mail novo) |
+| POST | `/api/auth/email-change/confirm` | Confirmar o e-mail novo pelo link |
 | GET | `/api/tenants/current` | Badge do workspace |
 
 O token vai no header `Authorization: Bearer <token>` e carrega o `tenant_id`.
 Rota autenticada sem token responde `401`.
+
+### Senha e e-mail só mudam por link no e-mail
+
+Regra do produto: **não existe troca de senha pedindo a senha antiga, nem
+outro caminho.** "Esqueci minha senha / quero trocar" (na entrada) ou o botão
+de senha em "Minha conta" mandam um link; quem abre o link define a senha
+nova. Trocar o e-mail de login manda o link para o **e-mail novo**, e o login
+só muda depois do clique — é assim que a conta é entregue a outra pessoa.
+
+- Link de uso único, com validade (`EMAIL_LINK_MINUTES`); pedido novo anula
+  o anterior; o banco guarda só o SHA-256 do código (`password_resets`).
+- Pedir link responde igual exista ou não a conta, e tem limite por IP.
+- O link é montado com `PUBLIC_BASE_URL`, nunca com o `Host` do pedido.
+- Trocar senha ou e-mail encerra as sessões abertas (`tokens_valid_after_ms`
+  no usuário × `iat_ms` no token).
+- Sem envio configurado (`EMAIL_PROVIDER=none`), as rotas respondem `503`
+  com aviso em vez de dizer que enviaram.
 
 **Padrão para as próximas fases:** o handler declara `scope: CurrentScope`
 (`backend/app/api/deps.py`) e monta o filtro com `scope.filter(...)` /

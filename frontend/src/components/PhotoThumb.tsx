@@ -36,16 +36,16 @@ export default function PhotoThumb({ photo, alt }: { photo: Photo; alt: string }
 
   if (state === 'loading') {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-neutral-900">
-        <span className="text-xs text-neutral-600">Carregando…</span>
+      <div className="flex h-full w-full items-center justify-center bg-surface">
+        <span className="text-xs text-ink-dim">Carregando…</span>
       </div>
     )
   }
 
   if (state === 'error' || !url) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-neutral-900 px-3 text-center">
-        <span className="text-xs text-red-300">Não foi possível carregar esta foto.</span>
+      <div className="flex h-full w-full items-center justify-center bg-surface px-3 text-center">
+        <span className="text-xs text-bad">Não foi possível carregar esta foto.</span>
       </div>
     )
   }
