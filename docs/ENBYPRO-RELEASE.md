@@ -5,7 +5,7 @@ Atualizado em 04/10/2026. **Publicado em https://enbypro.com e em uso.** O estad
 ## Código e escopo
 
 - Repositório: `moraisfdigital-blip/estudio-render`.
-- Branch: `codex/enbypro-release`, criada a partir de `bf15b4d`. Implementação inicial em `4873a70`; sessão de 04/10 adicionou `f5e7610` (olho na senha), `f2b6907` (entrada direta no painel, remoção das telas de lista/formulário), `b869bab` (painel abre sem projeto), `095bb4a` (catálogo, PDF e orçamento como janelas do painel).
+- Branch: `codex/enbypro-release`, criada a partir de `bf15b4d`. Implementação inicial em `4873a70`; sessão de 04/10 adicionou `f5e7610` (olho na senha), `f2b6907` (entrada direta no painel, remoção das telas de lista/formulário), `b869bab` (painel abre sem projeto), `095bb4a` (catálogo, PDF e orçamento como janelas do painel), `966e624` (senha e e-mail só por link enviado ao e-mail; Minha conta). Release no ar: `966e624`; commits seguintes são só documentação.
 - [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18), em rascunho, sem merge.
 - Worktree: `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`.
 - Sem ticket Linear vinculado; o histórico está no PR e nestes arquivos.
@@ -18,6 +18,7 @@ Atualizado em 04/10/2026. **Publicado em https://enbypro.com e em uso.** O estad
 - Registro público fechado por padrão; PyJWT 2.15.0.
 - Compose com porta só em interface interna, Mongo sem porta pública, volumes persistentes, processo não root, `read_only`, `cap_drop`, `mem_limit`.
 - Interface (04/10): login abre direto o painel do protótipo; sem projeto, abre com o exemplo; janelas de catálogo, PDF e orçamento dentro do painel; botão de mostrar senha no login. Detalhes e regras em RETOMAR-ENBYPRO.md.
+- Conta (04/10): "Esqueci minha senha / quero trocar" e "Minha conta" (nome, e-mail com confirmação, link de senha). Senha nunca muda pedindo a antiga; só por link de uso único enviado ao e-mail. E-mail transacional pelo Resend (`EMAIL_PROVIDER=resend`, domínio `enbypro.com` verificado).
 
 ## Verificação
 
@@ -25,7 +26,7 @@ Antes da publicação (ambiente Windows, Mongo local, banco exclusivo por execu�
 
 | Verificação | Resultado |
 | --- | --- |
-| Suíte backend completa | 304 testes passaram |
+| Suíte backend completa | 304 testes passaram (322 depois da parte de conta/e-mail) |
 | `npm run build` / `npm run lint` | passaram |
 | `npm audit`, `pip-audit`, `bandit` | sem achados |
 
@@ -36,6 +37,7 @@ Na publicação e depois dela (04/10):
 - Externo: HTTPS Let's Encrypt (válido até 02/01/2027), HTTP→HTTPS 308, `www`→apex 301, HSTS/CSP/X-Frame-Options/nosniff presentes, `/api/projects` sem token → 401, `/api/auth/register` → 403, `/docs` e `/openapi.json` servem a SPA, `/.env` e `/.git/config` não expõem conteúdo, portas 8010 e 27017 inacessíveis de fora.
 - Backup: `deploy/backup.sh` executado na VPS, SHA256 conferidos; agendado diariamente.
 - Frontend: auditoria Playwright clicando em todos os botões das três abas (com e sem projeto) sem erro de JavaScript; testes de fluxo da entrada e das janelas novas.
+- Conta/e-mail: 18 testes de backend (link de uso único, vencimento, e-mail inexistente, limite por IP, `Host` ignorado, sessões encerradas, troca de e-mail confirmada); fluxo completo clicando numa cópia local; em produção, e-mail real entregue (`delivered`) e senha trocada pelo próprio usuário pelo link.
 - CRM da Artelux na mesma VPS: nenhum container reiniciado; as linhas originais do `Caddyfile` conferem com o backup byte a byte; `crm.arteluxpostos.com.br` respondendo.
 
 Limites: não houve teste em aparelho móvel físico; `frontend/testes/calibracao-geometria.mjs` precisa ser reescrito para a tela atual.
