@@ -45,11 +45,11 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 - **Regra do usuário: senha só se troca por link enviado ao e-mail.** Nunca pedir a senha antiga, nunca outro caminho. "Esqueci minha senha / quero trocar" na entrada → e-mail → `/redefinir-senha?token=` → senha nova. Em "Minha conta" (botão na barra do painel) o botão de senha manda o mesmo link.
 - Trocar o e-mail de login (para passar a conta ao cliente): "Minha conta" → e-mail novo → link vai **para o e-mail novo** → `/confirmar-email?token=` → só então o login muda. Nome muda na hora.
 - Links: uso único, 60 min, só o SHA-256 no banco (`password_resets`), pedido novo anula o anterior, URL sempre de `PUBLIC_BASE_URL`. Trocar senha/e-mail encerra as sessões abertas.
-- **Envio de e-mail ainda desligado em produção (`EMAIL_PROVIDER=none`)**: a tela avisa "o envio de e-mail ainda não está ligado". Para ligar: conta no Resend, verificar `enbypro.com` (registros DNS que o Resend mostra), pôr `EMAIL_PROVIDER=resend` e `RESEND_API_KEY` no `.env` do servidor e recriar o container.
+- **Envio de e-mail ligado (04/10, 22h30):** `EMAIL_PROVIDER=resend`, remetente `ENBY PRO <nao-responda@enbypro.com>`, domínio verificado no Resend (região sa-east-1). DNS: TXT `resend._domainkey` (DKIM), CNAME `rsend` → `rsend-sae1.forge.rmta.net`, CNAME `send` → `send.forge.rmta.net`, TXT `_dmarc` = `v=DMARC1; p=none;`. Chave do Resend só no `.env` do servidor (cópia local do usuário em `Downloads/N8N/CLAUDE/projetos/apy resend enby pro.txt`). Teste real: link de senha entregue no Gmail do usuário (status `delivered`). Sem envio configurado (`EMAIL_PROVIDER=none`), a tela avisa em vez de fingir que enviou.
 
 ## Pendências (em ordem)
 
-1. **Ligar o envio de e-mail** (Resend) — sem isso, "esqueci minha senha" e "trocar e-mail" só avisam que não há envio.
+1. Usuário conferir o e-mail de teste (na primeira vez pode cair no spam) e testar a troca de senha pelo link.
 2. Decisão do usuário sobre a conta `teste@enbypro.com` (manter ou apagar).
 3. Apagar as telas antigas ("Ferramentas do projeto") quando autorizado.
 4. Aprovar/mergear o PR #18 quando o usuário disser "pode aprovar".
