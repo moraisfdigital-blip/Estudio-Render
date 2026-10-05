@@ -4,7 +4,7 @@
 
 ## Onde está cada coisa
 
-- Código desta entrega: branch `codex/enbypro-release`, release no ar `966e624`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) **aprovado pelo usuário e mergeado em `main` em 04/10/2026 (merge `fa0e771`)**. A `main` passou a ser igual à versão no ar; trabalho novo parte da `main`.
+- Código desta entrega: branch `codex/enbypro-release`, release no ar `64e1251`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) **aprovado pelo usuário e mergeado em `main` em 04/10/2026 (merge `fa0e771`)**. A `main` passou a ser igual à versão no ar; trabalho novo parte da `main`.
 - Checkout do orquestrador: `D:\SET UP NOVO\estudio-render` (branch `moraisfdigital-blip/ui-fase1-shell`, sincronizada com o remoto).
 - Produção: VPS **da Artelux** `srv1951666.hstgr.cloud` (179.199.141.95, Ubuntu 24.04), alias SSH `crmnovo` na máquina do usuário. Decisão do usuário em 04/10: usar esta VPS, sem upgrade de plano.
   - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para a release no ar.
@@ -37,7 +37,7 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 - **O painel oficial é a tela do protótipo** https://render-artelux.fmorais.chatgpt.site (topo com logo + nome do projeto + "＋ Novo projeto / Baixar estudo / Apresentar projeto"; abas 01 Levantamento · 02 Projeto visual · 03 Apresentação; "Elementos da obra" à esquerda; "Propriedades" à direita). Depois do login abre **direto esse painel, inteiro**, sem lista de projetos nem formulário à parte. Sem projeto, abre com o exemplo do Posto Horizonte (nada salvo); o que precisa persistir abre a janela "Novo projeto" do próprio protótipo.
 - Rotas: `/` decide (último projeto usado → `/projeto/:id/levantamento`; nenhum → `/estudio/levantamento`). Rotas antigas (`/projetos`, `/projeto/novo`, `/projeto/:id/editar`) caem na entrada. Telas `DashboardPage`, `ProjectFormPage`, `ProjectDetailPage`, `SurveyPanel`, `AppShell`, `StepNav`, `TrilhaEtapas`, `pickers` foram removidas.
 - Funções sem lugar no protótipo viraram **janelas por cima do painel** (`JanelaPainel`): Catálogo de materiais (botão no painel Propriedades), Apresentação aprovada e PDF, Quantitativo e orçamento (aba 03) — além das já existentes Máscaras, Gerar proposta com IA, Versões.
-- **Opção B escolhida pelo usuário:** o link "Ferramentas do projeto" (telas antigas em modal: `LevantamentoPersistido`, `PresentationPanel`, `TakeoffPanel`) **continua** até ele mandar apagar. Não apagar sem ordem.
+- **Telas antigas apagadas (04/10, PR #19, autorizado pelo usuário):** não existe mais "Ferramentas do projeto", a página `/materiais` nem o cabeçalho antigo. O que só existia nelas foi para a barra da aba 02: **Elementos e medidas** (cadastro com medida conferida, que alimenta o orçamento), **Foto original** e **Remover foto**.
 - Não propor nem criar tela que não exista no protótipo sem mostrar a referência e perguntar. O usuário se irritou com painéis inventados.
 
 ## Conta, senha e e-mail (04/10, noite)
@@ -49,10 +49,9 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 
 ## Pendências (em ordem)
 
-1. Apagar as telas antigas ("Ferramentas do projeto") quando autorizado.
-2. Confirmar que o limite de gasto da chave OpenRouter foi salvo (US$ 10/semana estava sendo configurado); **trocar a chave antes de 03/11/2026**.
-3. `frontend/testes/calibracao-geometria.mjs` está quebrado desde a troca de tela da sessão anterior (procura botões que não existem mais); precisa ser reescrito para o painel do protótipo.
-4. Cópia de backup fora da VPS além da da Hostinger (ex.: Drive) — opcional.
+1. Confirmar que o limite de gasto da chave OpenRouter foi salvo (US$ 10/semana estava sendo configurado); **trocar a chave antes de 03/11/2026**.
+2. `frontend/testes/calibracao-geometria.mjs` está quebrado desde a troca de tela da sessão anterior (procura botões que não existem mais); precisa ser reescrito para o painel do protótipo.
+3. Cópia de backup fora da VPS além da da Hostinger (ex.: Drive) — opcional.
 
 ## Como foi testado nesta sessão
 
