@@ -13,7 +13,7 @@
   - Backup diário do Render: `/etc/cron.d/enbypro-backup` às 06:30 UTC → `/opt/enbypro/bin/backup-diario.sh` (dump do Mongo + mídia, 14 dias, em `/opt/enbypro/backups/`). A Hostinger também faz backup diário da VPS (confirmado pelo usuário).
 - DNS `enbypro.com` (conta Hostinger do usuário): `A @ → 179.199.141.95`, `www` CNAME → `enbypro.com`. Sem MX/TXT.
 - IA real ligada: `IMAGE_GEN_PROVIDER=openrouter`, modelo `google/gemini-2.5-flash-image`, limite de 20 gerações/hora por tenant. **A chave do OpenRouter vence em 03/11/2026** — criar outra antes (de preferência sem validade) e trocar no `.env` do servidor. Teste real feito: geração em ~10 s, 0 pixels alterados fora da máscara, original intacto.
-- Contas no workspace ENBY PRO: `moraisfdigital@gmail.com` (owner, usuário) e `teste@enbypro.com` (owner, criada para o cliente testar — o usuário ainda vai decidir se mantém). Senhas em `Documents\ENBYPRO-acesso-admin.txt` e `Documents\ENBYPRO-acesso-cliente-teste.txt` na máquina do usuário; nunca no repositório ou no chat.
+- Contas no workspace ENBY PRO: só `moraisfdigital@gmail.com` (owner). A conta de teste `teste@enbypro.com` foi apagada a pedido do usuário. Para entregar ao cliente: "Minha conta" → trocar o e-mail para o do cliente (ele confirma pelo link). Nenhuma senha fica em arquivo.
 
 ## Como publicar uma versão nova (procedimento usado)
 
@@ -50,7 +50,6 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 ## Pendências (em ordem)
 
 1. Usuário conferir o e-mail de teste (na primeira vez pode cair no spam) e testar a troca de senha pelo link.
-2. Decisão do usuário sobre a conta `teste@enbypro.com` (manter ou apagar).
 3. Apagar as telas antigas ("Ferramentas do projeto") quando autorizado.
 4. Aprovar/mergear o PR #18 quando o usuário disser "pode aprovar".
 5. Confirmar que o limite de gasto da chave OpenRouter foi salvo (US$ 10/semana estava sendo configurado); trocar a chave antes de 03/11/2026.
