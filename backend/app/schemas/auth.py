@@ -51,6 +51,18 @@ def _senha_obvia(valor: str) -> bool:
     return False
 
 
+def validar_senha_nova(value: str) -> str:
+    """Mesma regra no cadastro e na redefinição: cabe no bcrypt e não é óbvia."""
+    if len(value.encode("utf-8")) > MAX_PASSWORD_BYTES:
+        raise ValueError(f"Senha longa demais (máximo {MAX_PASSWORD_BYTES} bytes).")
+    if _senha_obvia(value):
+        raise ValueError(
+            "Esta senha é previsível demais (sequência, repetição ou senha "
+            "conhecida). Use algo que só você saberia."
+        )
+    return value
+
+
 class RegisterRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -61,14 +73,7 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_fits_bcrypt(cls, value: str) -> str:
-        if len(value.encode("utf-8")) > MAX_PASSWORD_BYTES:
-            raise ValueError(f"Senha longa demais (máximo {MAX_PASSWORD_BYTES} bytes).")
-        if _senha_obvia(value):
-            raise ValueError(
-                "Esta senha é previsível demais (sequência, repetição ou senha "
-                "conhecida). Use algo que só você saberia."
-            )
-        return value
+        return validar_senha_nova(value)
 
     @field_validator("name")
     @classmethod
@@ -76,6 +81,54 @@ class RegisterRequest(BaseModel):
         if not value.strip():
             raise ValueError("Nome não pode ser vazio.")
         return value
+
+
+class PasswordResetRequest(BaseModel):
+    """Pedir o link. Só o e-mail: senha nenhuma se troca fora do e-mail."""
+
+    model_config = ConfigDict(extra="forbid")
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=20, max_length=200)
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH)
+
+    @field_validator("new_password")
+    @classmethod
+    def nova_senha_forte(cls, value: str) -> str:
+        return validar_senha_nova(value)
+
+
+class EmailChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    new_email: EmailStr
+
+
+class EmailChangeConfirm(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(min_length=20, max_length=200)
+
+
+class AccountUpdateRequest(BaseModel):
+    """Minha conta: só o nome. Senha e e-mail mudam pelos links no e-mail, e
+    `extra="forbid"` recusa `role`, `password` ou `email` aqui."""
+
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=120)
+
+    @field_validator("name")
+    @classmethod
+    def nome_nao_vazio(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Nome não pode ser vazio.")
+        return value.strip()
+
+
+class MessageResponse(BaseModel):
+    detail: str
 
 
 class LoginRequest(BaseModel):

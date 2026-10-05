@@ -99,6 +99,40 @@ export async function getMe(): Promise<User> {
   return data
 }
 
+// ---- conta: senha e e-mail só mudam por link enviado ao e-mail ---------
+
+type Mensagem = { detail: string }
+
+/** Pede o link de troca de senha. A resposta é a mesma exista ou não a conta. */
+export async function requestPasswordReset(email: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/password-reset/request', { email })
+  return data.detail
+}
+
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/password-reset/confirm', {
+    token,
+    new_password: newPassword,
+  })
+  return data.detail
+}
+
+export async function updateMe(name: string): Promise<User> {
+  const { data } = await api.patch<User>('/auth/me', { name })
+  return data
+}
+
+/** O e-mail só muda quando o dono do endereço novo clicar no link. */
+export async function requestEmailChange(newEmail: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/email-change/request', { new_email: newEmail })
+  return data.detail
+}
+
+export async function confirmEmailChange(token: string): Promise<string> {
+  const { data } = await api.post<Mensagem>('/auth/email-change/confirm', { token })
+  return data.detail
+}
+
 export async function getCurrentTenant(): Promise<Tenant> {
   const { data } = await api.get<Tenant>('/tenants/current')
   return data

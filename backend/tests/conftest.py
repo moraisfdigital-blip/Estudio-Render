@@ -70,6 +70,10 @@ os.environ["ALLOW_SELF_REGISTER"] = "true"
 os.environ["AUTH_RATE_LIMIT_ATTEMPTS"] = "10"
 os.environ["AUTH_RATE_LIMIT_WINDOW_MINUTES"] = "15"
 os.environ["MAX_UPLOAD_MB"] = "25"
+# E-mail sai pelo mock (caixa de saída em memória) e os links usam este
+# endereço — nunca o `Host` do pedido.
+os.environ["EMAIL_PROVIDER"] = "mock"
+os.environ["PUBLIC_BASE_URL"] = "https://enbypro.teste"
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402

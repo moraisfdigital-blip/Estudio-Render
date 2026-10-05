@@ -13,6 +13,8 @@ export type AuthValue = {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => Promise<void>
+  /** Recarrega usuário e tenant (ex.: depois de trocar o nome). */
+  refresh: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthValue | null>(null)

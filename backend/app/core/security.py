@@ -54,6 +54,9 @@ def create_access_token(*, user_id: str, tenant_id: str, role: str) -> str:
         # o segredo, que derrubaria o workspace inteiro.
         "jti": uuid.uuid4().hex,
         "iat": now,
+        # `iat` do JWT é em segundos; trocar a senha precisa separar tokens do
+        # mesmo segundo (o de antes e o do login logo depois).
+        "iat_ms": int(now.timestamp() * 1000),
         "exp": now + timedelta(minutes=settings.jwt_expire_minutes),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

@@ -3,6 +3,7 @@ import {
   BrowserRouter,
   Route,
   Routes,
+  useLocation,
   useNavigate,
 } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
@@ -13,6 +14,7 @@ import CatalogPage from './pages/CatalogPage'
 import Inicio from './pages/Inicio'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import { ConfirmarEmailPage, EsqueciSenhaPage, RedefinirSenhaPage } from './pages/SenhaPorEmail'
 import {
   EstudioSemProjeto,
   ProjectIndexRedirect,
@@ -73,9 +75,10 @@ function Autenticado() {
 }
 
 function Anonimo() {
-  const [tela, setTela] = useState<'login' | 'registro'>('login')
+  const [tela, setTela] = useState<'login' | 'registro' | 'esqueci'>('login')
+  if (tela === 'esqueci') return <EsqueciSenhaPage onBack={() => setTela('login')} />
   return tela === 'login' ? (
-    <LoginPage onGoToRegister={() => setTela('registro')} />
+    <LoginPage onGoToRegister={() => setTela('registro')} onForgotPassword={() => setTela('esqueci')} />
   ) : (
     <RegisterPage onGoToLogin={() => setTela('login')} />
   )
@@ -83,6 +86,11 @@ function Anonimo() {
 
 function Raiz() {
   const { state } = useAuth()
+  const { pathname } = useLocation()
+
+  // Os links que chegam por e-mail abrem com ou sem sessão neste navegador.
+  if (pathname === '/redefinir-senha') return <RedefinirSenhaPage />
+  if (pathname === '/confirmar-email') return <ConfirmarEmailPage />
 
   if (state.kind === 'hydrating') {
     return (

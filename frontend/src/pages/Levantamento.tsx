@@ -11,6 +11,7 @@ import Cabecalho from '../components/layout/Cabecalho'
 import ProjetosDialog from '../components/ProjetosDialog'
 import JanelaPainel from '../components/JanelaPainel'
 import CatalogPage from './CatalogPage'
+import MinhaConta from '../components/MinhaConta'
 import { useAuth } from '../auth/context'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -591,7 +592,7 @@ type VisualPoint = { x: number; y: number };
 type VisualSurface = { id: string; name: string; points: VisualPoint[]; material: string; finish: string; color: string; colorName: string; opacity: number; preserveOpenings: boolean };
 type VisualPhoto = { id: string; name: string; area: string; url: string; width: number; height: number; points: VisualPoint[]; referenceDistance: number; pixelsPerMeter: number | null; origin: VisualPoint | null; saved: boolean; surfaces: VisualSurface[]; records?: SurveyElement[] };
 type PhotoAction = 'mascaras' | 'proposta' | 'versoes';
-type Janela = 'catalogo' | 'pdf' | 'orcamento';
+type Janela = 'catalogo' | 'pdf' | 'orcamento' | 'conta';
 type VisualBridge = { onJanela: (nome: Janela) => void; project: Project | null; onTab: (tab: string) => void; onTools: (tool?: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
 type VisualController = { setTab: (tab: string) => void; reload: () => Promise<void>; destroy: () => void };
 
@@ -642,6 +643,13 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     themeButton.style.cssText = 'align-self:center;margin-left:14px;font-size:12px;padding:6px 10px';
     themeButton.onclick = () => themeAction.current();
     body.querySelector('.stages')!.append(themeButton);
+    const accountButton = window.document.createElement('button');
+    accountButton.id = 'myAccount';
+    accountButton.textContent = 'Minha conta';
+    accountButton.title = 'Nome, e-mail e senha';
+    accountButton.style.cssText = 'align-self:center;margin-left:8px;font-size:12px;padding:6px 10px';
+    accountButton.onclick = () => setJanela('conta');
+    body.querySelector('.stages')!.append(accountButton);
     const signOutButton = window.document.createElement('button');
     signOutButton.id = 'signOut';
     signOutButton.textContent = 'Sair';
@@ -690,6 +698,7 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
   }
   return <>
     {actionError && <div role="alert" className="p-3 text-bad">{actionError}</div>}
+    {janela === 'conta' && <JanelaPainel rotulo="Configurações" titulo="Minha conta" onClose={() => setJanela(null)}><MinhaConta /></JanelaPainel>}
     {janela === 'catalogo' && <JanelaPainel rotulo="Material e acabamento" titulo="Catálogo de materiais" onClose={() => { setJanela(null); void controller.current?.reload(); }}><CatalogPage canManage={ehOwner} /></JanelaPainel>}
     {janela === 'pdf' && projectId && <JanelaPainel rotulo="Apresentação" titulo="Apresentação aprovada e PDF" onClose={() => setJanela(null)}><PresentationPanel projectId={projectId} emJanela /></JanelaPainel>}
     {janela === 'orcamento' && projectId && <JanelaPainel rotulo="Apresentação" titulo="Quantitativo e orçamento" onClose={() => setJanela(null)}><TakeoffPanel projectId={projectId} emJanela /></JanelaPainel>}

@@ -4,7 +4,13 @@ import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/context'
 import { AuthCard, Field, LinkButton, SubmitButton } from '../components/AuthForm'
 
-export default function LoginPage({ onGoToRegister }: { onGoToRegister: () => void }) {
+export default function LoginPage({
+  onGoToRegister,
+  onForgotPassword,
+}: {
+  onGoToRegister: () => void
+  onForgotPassword: () => void
+}) {
   const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -60,6 +66,9 @@ export default function LoginPage({ onGoToRegister }: { onGoToRegister: () => vo
         disabled={pending}
       />
       <SubmitButton pending={pending}>Entrar</SubmitButton>
+      <p className="text-center text-sm">
+        <LinkButton onClick={onForgotPassword}>Esqueci minha senha / quero trocar</LinkButton>
+      </p>
     </AuthCard>
   )
 }
