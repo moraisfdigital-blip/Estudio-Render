@@ -749,6 +749,13 @@ O que a suíte isola sozinha:
 Nenhuma variável do seu `.env` é usada: a suíte define o ambiente dela antes
 de carregar a app.
 
+> **Pendente — teste da calibração (frontend):** `frontend/testes/calibracao-geometria.mjs`
+> está desatualizado desde 04/10/2026 (clica numa tela de calibração que não
+> existe mais) e **não roda**. A calibração funciona no painel, mas nada
+> automático protege contra o defeito do "clique no pixel errado" voltar.
+> Tarefa detalhada, com critério de pronto, em
+> [`docs/RETOMAR-ENBYPRO.md`](docs/RETOMAR-ENBYPRO.md) → "Tarefa: reescrever o teste da calibração".
+
 ### O que está coberto
 
 | Arquivo | Fase | O que protege |

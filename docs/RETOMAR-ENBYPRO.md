@@ -50,8 +50,26 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 ## Pendências (em ordem)
 
 1. Confirmar que o limite de gasto da chave OpenRouter foi salvo (US$ 10/semana estava sendo configurado); **trocar a chave antes de 03/11/2026**.
-2. `frontend/testes/calibracao-geometria.mjs` está quebrado desde a troca de tela da sessão anterior (procura botões que não existem mais); precisa ser reescrito para o painel do protótipo.
+2. **Reescrever o teste automático da calibração** — ver a seção "Tarefa: reescrever o teste da calibração" logo abaixo. Não é urgente (a calibração funciona), mas hoje nada protege contra o defeito voltar.
 3. Cópia de backup fora da VPS além da da Hostinger (ex.: Drive) — opcional.
+
+## Tarefa: reescrever o teste da calibração
+
+**Situação (04/10/2026):** `frontend/testes/calibracao-geometria.mjs` não roda mais. Ele foi escrito para o antigo diálogo de calibração (`CalibrationDialog`), apagado quando o painel do protótipo virou a tela oficial. A calibração continua funcionando no painel; o que falta é a proteção automática.
+
+**Por que importa:** é a calibração que dá a escala da foto, e dela saem as medidas do projeto e do orçamento. Já houve um defeito real: em janela baixa, o clique era gravado no pixel errado (até 353 px de desvio numa foto de 1600 px, ~22%), porque a conta ignorava as tarjas do encaixe da foto. O teste existia para esse defeito não voltar sem ninguém perceber.
+
+**Onde a calibração mora hoje:** `frontend/src/pages/Levantamento.tsx`, aba 01, dentro do shadow DOM do painel (`[data-artelux-visual]`, modo `open`). Elementos: `#calibrationStage` (área clicável), `#surveyPhoto` (a foto), `#pointA`/`#pointB`, `#referenceDistance`, `#calibrate`, `#saveMeasurement`. A conversão clique → pixel da foto é a função `imagePoint` (encaixe tipo `object-fit: contain`, com tarjas). O que fica gravado é lido em `GET /api/photos/{id}/calibration` (`point_a`, `point_b`, em pixels da foto original).
+
+**Como fazer (Playwright; os seletores CSS atravessam o shadow DOM aberto):**
+1. Montar o próprio cenário, sem depender de id fixo: entrar, criar projeto pela janela "＋ Novo projeto" e subir uma foto de tamanho conhecido (ex.: 1600×1200) por `#photoInput`.
+2. Para cada janela — 1500×1000, 1500×760 e 1500×560 (a mais baixa força as tarjas):
+   - selecionar a foto, ler o retângulo de `#calibrationStage` e calcular onde dois pontos conhecidos da foto (ex.: (200, 300) e (1400, 900)) aparecem na tela, com a mesma regra de encaixe;
+   - clicar nesses dois lugares, informar uma distância, clicar em `#calibrate` e `#saveMeasurement`;
+   - buscar `GET /api/photos/{id}/calibration` e comparar `point_a`/`point_b` com os pontos mirados.
+3. Rodar contra o app local (backend + build do front, banco de teste descartável) e apagar o banco no fim.
+
+**Pronto quando:** nas três alturas de janela, os dois pontos gravados ficam a **no máximo 6 px** dos pontos mirados; sem erro de JavaScript; o teste sai com código ≠ 0 se falhar; o arquivo antigo é substituído (ou apagado) e o README, na seção "Testes", explica como rodar.
 
 ## Como foi testado nesta sessão
 

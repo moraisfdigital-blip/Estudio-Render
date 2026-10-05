@@ -1,4 +1,15 @@
 /**
+ * ⚠ DESATUALIZADO — NÃO RODA MAIS (04/10/2026). PRECISA SER REESCRITO.
+ *
+ * Este teste clica no antigo "diálogo de calibração" (CalibrationDialog), que
+ * foi apagado quando o painel oficial do protótipo entrou. A calibração hoje
+ * mora no painel (`frontend/src/pages/Levantamento.tsx`, aba 01), e nenhum
+ * teste automático protege mais contra o defeito descrito abaixo.
+ * A tarefa, com o passo a passo e o critério de pronto, está em
+ * `docs/RETOMAR-ENBYPRO.md` → "Tarefa: reescrever o teste da calibração".
+ *
+ * ---------------------------------------------------------------------------
+ *
  * Prova que o diálogo de calibração grava o pixel certo em qualquer janela.
  *
  * O defeito que este teste tranca: a foto é encaixada na caixa com
