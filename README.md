@@ -16,8 +16,8 @@ Depois do login abre direto o **painel oficial**, que é a tela do protótipo
 Projeto visual · 03 Apresentação, "Elementos da obra" à esquerda e
 "Propriedades" à direita. Não há tela de lista nem formulário à parte; sem
 projeto, o painel abre com o exemplo do protótipo. Funções sem lugar no
-protótipo (máscaras, geração, versões, catálogo, PDF, orçamento, Minha conta)
-abrem como janelas por cima do painel. Não crie telas fora do protótipo sem
+protótipo (elementos e medidas, máscaras, geração, versões, catálogo, PDF,
+orçamento, Minha conta) abrem como janelas por cima do painel. Não crie telas fora do protótipo sem
 combinar com o dono do produto.
 
 ## Arquitetura
