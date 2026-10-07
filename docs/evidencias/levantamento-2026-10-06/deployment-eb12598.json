@@ -1,0 +1,22 @@
+{
+  "project": "Estudio Render / ENBY PRO",
+  "url": "https://enbypro.com",
+  "commit": "eb1259842f2473bb3c77244e1d330d3f89c127e0",
+  "pr": "https://github.com/moraisfdigital-blip/Estudio-Render/pull/20",
+  "pr_merged": false,
+  "worktree": "D:/SET UP NOVO/orca/workspaces/estudio-render/levantamento-layout",
+  "deployed_at": "2026-10-06T22:39:42-03:00",
+  "release": "/opt/enbypro/releases/eb12598",
+  "previous_release": "/opt/enbypro/releases/64e1251",
+  "backup": "/opt/enbypro/backups/deploy-eb12598/enbypro-20261007T013712Z",
+  "rollback_image": "enbypro-app:before-eb12598",
+  "deployment_log": "/opt/enbypro/backups/deploy-eb12598/publish.log",
+  "archive_sha256": "30f2a6d375ad9d6c01485423c30598eb878e8ab62c41f4df8617d927df95dfb0",
+  "health": {"status":"ok","database":"ok"},
+  "public_home_status": 200,
+  "unauthenticated_projects_status": 401,
+  "mongo_and_crm_unchanged": true,
+  "runtime_scope": "Only frontend/src/pages/Levantamento.tsx; backend and configuration verified identical.",
+  "authenticated_browser": "Existing Chrome session reloaded; horizontal properties and element selector verified; no console errors; no project edits saved.",
+  "screenshot": "enbypro-publicado.jpg"
+}

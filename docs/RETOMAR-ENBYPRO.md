@@ -1,40 +1,53 @@
 # ENBY PRO — estado atual e como retomar
 
-**Atualizado em 04/10/2026, ~17:10 (America/Sao_Paulo). Publicado e em uso em https://enbypro.com.** Leia este arquivo antes de qualquer mudança; o histórico técnico da entrega está em [ENBYPRO-RELEASE.md](ENBYPRO-RELEASE.md).
+**Atualizado em 06/10/2026 (America/Sao_Paulo). Release `eb12598` publicada às 22:39 em https://enbypro.com e aprovada visualmente pelo usuário após a publicação.** Leia este arquivo antes de qualquer mudança; o histórico técnico da entrega está em [ENBYPRO-RELEASE.md](ENBYPRO-RELEASE.md).
 
 ## Onde está cada coisa
 
-- Código desta entrega: branch `codex/enbypro-release`, release no ar `64e1251`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`. [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) **aprovado pelo usuário e mergeado em `main` em 04/10/2026 (merge `fa0e771`)**. A `main` passou a ser igual à versão no ar; trabalho novo parte da `main`.
-- Checkout principal: `D:\SET UP NOVO\estudio-render`, na branch `main` (posto em 04/10 na versão oficial, que é igual à versão no ar). A worktree `enbypro-release` continua existindo com a mesma versão.
+- Código publicado: commit `eb1259842f2473bb3c77244e1d330d3f89c127e0`, branch `codex/levantamento-layout`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\levantamento-layout`. [PR #20](https://github.com/moraisfdigital-blip/Estudio-Render/pull/20) aberto em rascunho, **sem merge**. Commits posteriores apenas de documentação não alteram o commit publicado.
+- Checkout principal: `D:\SET UP NOVO\estudio-render`, branch `main`, base `d862fdd`. **A main ainda não contém o layout publicado.** Continuar esta entrega na worktree acima; não sobrescrever a produção com a main antiga. O `debug.log` preexistente foi preservado.
+- Entrega anterior: `64e1251`, worktree `enbypro-release`. PRs #18/#19 são históricos e já estavam integrados. O usuário autorizou continuar sem Orca nesta sessão.
 - Produção: VPS **da Artelux** `srv1951666.hstgr.cloud` (179.199.141.95, Ubuntu 24.04), alias SSH `crmnovo` na máquina do usuário. Decisão do usuário em 04/10: usar esta VPS, sem upgrade de plano.
-  - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para a release no ar.
+  - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para `/opt/enbypro/releases/eb12598`. A release anterior `64e1251` e a imagem `enbypro-app:before-eb12598` foram preservadas.
   - Ambiente protegido em `/opt/enbypro/shared/.env` (600). Compose project `enbypro`. App escuta só em `172.18.0.1:8010` (gateway da rede do CRM); Mongo sem porta publicada.
   - Proxy: o **Caddy do DeskcommCRM** (`/opt/deskcommcrm/Caddyfile`). O bloco do `enbypro.com` foi **anexado ao fim** desse arquivo; cópia do original em `/opt/enbypro/backups/Caddyfile.crm.*.bak` e o bloco em `/opt/enbypro/proxy/enbypro.caddy`. HTTPS Let's Encrypt emitido e renovando sozinho.
   - Backup diário do Render: `/etc/cron.d/enbypro-backup` às 06:30 UTC → `/opt/enbypro/bin/backup-diario.sh` (dump do Mongo + mídia, 14 dias, em `/opt/enbypro/backups/`). A Hostinger também faz backup diário da VPS (confirmado pelo usuário).
-- DNS `enbypro.com` (conta Hostinger do usuário): `A @ → 179.199.141.95`, `www` CNAME → `enbypro.com`. Sem MX/TXT.
+- DNS `enbypro.com` (conta Hostinger do usuário): `A @ → 179.199.141.95`, `www` CNAME → `enbypro.com`. Registros de e-mail adicionados em 04/10 estão descritos abaixo; nenhum DNS foi alterado nesta publicação.
 - IA real ligada: `IMAGE_GEN_PROVIDER=openrouter`, modelo `google/gemini-2.5-flash-image`, limite de 20 gerações/hora por tenant. **A chave do OpenRouter vence em 03/11/2026** — criar outra antes (de preferência sem validade) e trocar no `.env` do servidor. Teste real feito: geração em ~10 s, 0 pixels alterados fora da máscara, original intacto.
 - Contas no workspace ENBY PRO: só `moraisfdigital@gmail.com` (owner). A conta de teste `teste@enbypro.com` foi apagada a pedido do usuário. Para entregar ao cliente: "Minha conta" → trocar o e-mail para o do cliente (ele confirma pelo link). Nenhuma senha fica em arquivo.
 
-## Como publicar uma versão nova (procedimento usado)
+## Publicação de 06/10 e retomada segura
+
+- Apenas `frontend/src/pages/Levantamento.tsx` mudou no código executado. Backend, dependências declaradas, Dockerfile e Compose foram comparados na VPS e permaneceram iguais. CRLF/LF foi normalizado na comparação.
+- Backup de banco e mídia: `/opt/enbypro/backups/deploy-eb12598/enbypro-20261007T013712Z/`, com `SHA256SUMS` verificado.
+- Script e log usados: `/opt/enbypro/backups/deploy-eb12598/publish.sh` e `publish.log`. São evidências desta execução; não reexecutar como script genérico.
+- Foi usado `docker compose --env-file /opt/enbypro/shared/.env -p enbypro build app` e depois `up -d --no-deps --no-build --wait --wait-timeout 90 app`. Só o container app foi recriado. Mongo e serviços do CRM mantiveram IDs e horários de início.
+- Na próxima publicação autorizada: confirmar commit/release, criar backup e preservar a imagem anterior, gerar `git archive`, verificar hash, extrair em uma nova pasta e comparar o escopo. Só atualizar `current` após saúde OK; conferir HTTPS e sessão autenticada.
+- Nunca apagar a release apontada por `current` nem usar `docker compose down -v`.
+
+### Retorno à versão anterior
+
+Somente se solicitado ou necessário em uma publicação autorizada, confirmar a existência destes caminhos e da imagem preservada e executar:
 
 ```sh
-# na máquina do usuário, a partir da worktree
-SHA=$(git rev-parse --short HEAD)
-git archive --format=tar.gz -o enbypro-$SHA.tar.gz HEAD
-ssh crmnovo "mkdir -p /opt/enbypro/releases/$SHA" && scp enbypro-$SHA.tar.gz crmnovo:/opt/enbypro/releases/
-ssh crmnovo "cd /opt/enbypro/releases/$SHA && tar xzf ../enbypro-$SHA.tar.gz && rm ../enbypro-$SHA.tar.gz \
-  && nice -n 15 docker compose --env-file /opt/enbypro/shared/.env -p enbypro build -q \
-  && docker compose --env-file /opt/enbypro/shared/.env -p enbypro up -d \
-  && ln -sfn /opt/enbypro/releases/$SHA /opt/enbypro/current"
+docker tag enbypro-app:before-eb12598 enbypro-app:latest
+cd /opt/enbypro/releases/64e1251
+docker compose --env-file /opt/enbypro/shared/.env -p enbypro up -d --no-deps --no-build --wait --wait-timeout 90 app
+ln -sfn /opt/enbypro/releases/64e1251 /opt/enbypro/current
+curl -fsS https://enbypro.com/api/health
 ```
 
-Depois: `curl https://enbypro.com/api/health` e login real pela tela. Ao apagar releases antigas, **nunca apagar a que `current` aponta** (aconteceu em 04/10 por ordem alfabética; foi restaurada).
+Isso reverte a aplicação sem restaurar/apagar banco ou fotos. Não foi necessário nesta publicação.
 
 Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atualizar (`hostgator-setup-kit/update.sh` faz `git checkout <tag>` + recria o Caddy), conferir se o bloco do `enbypro.com` continua no `Caddyfile`; se sumir, reanexar `/opt/enbypro/proxy/enbypro.caddy` e `caddy reload`.
 
-## Decisões de interface (04/10) — ler antes de tocar no frontend
+## Decisões de interface — aprovação vigente de 06/10
 
-- **O painel oficial é a tela do protótipo** https://render-artelux.fmorais.chatgpt.site (topo com logo + nome do projeto + "＋ Novo projeto / Baixar estudo / Apresentar projeto"; abas 01 Levantamento · 02 Projeto visual · 03 Apresentação; "Elementos da obra" à esquerda; "Propriedades" à direita). Depois do login abre **direto esse painel, inteiro**, sem lista de projetos nem formulário à parte. Sem projeto, abre com o exemplo do Posto Horizonte (nada salvo); o que precisa persistir abre a janela "Novo projeto" do próprio protótipo.
+- **O painel oficial é a tela do protótipo** https://render-artelux.fmorais.chatgpt.site (topo com logo + nome do projeto + "＋ Novo projeto / Baixar estudo / Apresentar projeto"; abas 01 Levantamento · 02 Projeto visual · 03 Apresentação; nas abas preservadas, "Elementos da obra" à esquerda e "Propriedades" à direita). **Exceção aprovada: Levantamento usa o layout horizontal abaixo.** Depois do login abre **direto esse painel, inteiro**, sem lista de projetos nem formulário à parte. Sem projeto, abre com o exemplo do Posto Horizonte (nada salvo); o que precisa persistir abre a janela "Novo projeto" do próprio protótipo.
+- **Levantamento aprovado em 06/10:** conteúdo em largura total abaixo da barra de abas, sem as colunas laterais apenas nesta aba. Propriedades entre a biblioteca e as fotos por área, em quatro grupos: Dimensões e posição, Material e acabamento, Cor de referência/Catálogo e Identidade visual.
+- O seletor **Elemento da obra** substitui a lista lateral, com **Novo elemento** ao lado. Aplicar ao projeto, Duplicar e Excluir continuam disponíveis. Upload, agrupamento por área e calibração seguem conectados.
+- Cabeçalho, logo, nome do projeto, ações superiores, abas, tema, Minha conta e Sair preservados. Projeto visual e Apresentação mantêm o layout anterior. Em telas menores, propriedades em duas ou uma coluna.
+- Foram movidos os mesmos controles, preservando handlers e contratos de API. Aprovação do usuário após o deploy: **“certinho”**. [Captura publicada](evidencias/levantamento-2026-10-06/enbypro-publicado.jpg).
 - Rotas: `/` decide (último projeto usado → `/projeto/:id/levantamento`; nenhum → `/estudio/levantamento`). Rotas antigas (`/projetos`, `/projeto/novo`, `/projeto/:id/editar`) caem na entrada. Telas `DashboardPage`, `ProjectFormPage`, `ProjectDetailPage`, `SurveyPanel`, `AppShell`, `StepNav`, `TrilhaEtapas`, `pickers` foram removidas.
 - Funções sem lugar no protótipo viraram **janelas por cima do painel** (`JanelaPainel`): Catálogo de materiais (botão no painel Propriedades), Apresentação aprovada e PDF, Quantitativo e orçamento (aba 03) — além das já existentes Máscaras, Gerar proposta com IA, Versões.
 - **Telas antigas apagadas (04/10, PR #19, autorizado pelo usuário):** não existe mais "Ferramentas do projeto", a página `/materiais` nem o cabeçalho antigo. O que só existia nelas foi para a barra da aba 02: **Elementos e medidas** (cadastro com medida conferida, que alimenta o orçamento), **Foto original** e **Remover foto**.
@@ -71,7 +84,17 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 
 **Pronto quando:** nas três alturas de janela, os dois pontos gravados ficam a **no máximo 6 px** dos pontos mirados; sem erro de JavaScript; o teste sai com código ≠ 0 se falhar; o arquivo antigo é substituído (ou apagado) e o README, na seção "Testes", explica como rodar.
 
-## Como foi testado nesta sessão
+## Verificação desta entrega — 06/10/2026
+
+- `npm.cmd run build`, `npm.cmd run lint` e `git diff --check` passaram.
+- Playwright local com API simulada: seleção, aplicar dimensões/texto, criar, duplicar, excluir, catálogo, seletor de arquivos e salvar/recarregar com foto ativa; payload do salvamento conferido.
+- Cabeçalho/navegação e abas Projeto visual/Apresentação com capturas idênticas à base em 1600px. Claro/escuro e larguras 1600, 1024, 768 e 390px conferidos, sem transbordamento do conteúdo do Levantamento.
+- Produção: HTTPS 200; saúde app/banco OK; `/api/projects` sem login → 401; container saudável. Chrome autenticado recarregado, layout e seletor conferidos, sem erro no console. Nenhuma edição foi salva nos projetos durante a conferência.
+- Backend, IA real e teste completo de calibração não foram reexecutados nesta entrega visual; as pendências anteriores continuam registradas.
+- [Validação local](evidencias/levantamento-2026-10-06/validation.json) · [Publicação](evidencias/levantamento-2026-10-06/deployment-eb12598.json).
+- Pacote local: `D:\SET UP NOVO\estudio-render\var\salvamentos\enbypro-levantamento-2026-10-06.zip`. Contém código publicado, documentação, capturas e registros, sem `.env`, chaves, banco ou mídia de produção.
+
+## Verificação histórica — 04/10/2026
 
 - Backend: suíte de 304 testes já passava antes (ver ENBYPRO-RELEASE.md); não houve mudança de backend nesta sessão.
 - Frontend: `tsc`, `oxlint` e `vite build` limpos a cada commit; auditoria com Playwright clicando em **todos os botões** das três abas, com e sem projeto, sem erro de JavaScript; testes de fluxo (entrada, trocar projeto, Sair, rotas antigas, três janelas novas); conferência no site publicado com login real.

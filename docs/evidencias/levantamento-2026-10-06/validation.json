@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "Cabeçalho e navegação idênticos pixel a pixel à versão anterior (1600px).",
+    "Aba design: captura idêntica à versão anterior.",
+    "Aba presentation: captura idêntica à versão anterior.",
+    "Selecionar, aplicar dimensões/texto, criar, duplicar, excluir e salvar/recarregar: contratos existentes preservados com API simulada.",
+    "Catálogo abre pelo botão reposicionado; Adicionar fotos mantém o seletor de arquivos.",
+    "Tema claro/escuro e larguras de 1600, 1024, 768 e 390px verificadas.",
+    "Sem exceções JavaScript nem chamadas de API inesperadas."
+  ],
+  "errors": [],
+  "unexpected": []
+}
