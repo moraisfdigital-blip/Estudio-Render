@@ -36,7 +36,7 @@ const VISUAL_HTML = `
 <div id="design" hidden><div id="elevationView"><div class="drawing-board"><div class="board-label">ELEVAÇÃO FRONTAL <span>Estudo dimensional</span></div><svg id="drawing" role="img" aria-label="Elevação frontal do projeto com dimensões proporcionais"></svg><div class="board-bottom"><span id="extent"></span><span>Dimensões do exemplo, editáveis</span></div></div></div><div id="photoView" hidden><div class="surface-toolbar" id="surfaceToolbar"><div class="tool-group"><button id="markSurface" class="active-tool">⌖ Marcar área</button><button id="finishSurface" disabled>Concluir contorno</button><button id="undoSurface" disabled>Desfazer ponto</button><button id="clearSurface" disabled>Excluir área</button></div><div class="surface-status"><span></span><b id="surfaceStatus">Clique nos cantos da área que receberá ACM</b></div></div><div class="photo-stage composition-stage" id="compositionStage"><img id="compositionPhoto" alt="Fotografia de referência do projeto"><svg id="compositionOverlay" aria-label="Áreas de acabamento e projeto proporcional aplicados sobre a fotografia"></svg><div class="empty-photo" id="emptyPhoto"><b>Adicione e calibre uma fotografia</b><span>Depois você poderá marcar as áreas que receberão ACM.</span><button id="addPhotoFromDesign">Ir para levantamento</button></div></div></div><div class="under-board"><div><b id="selectionSummary">Testeira principal</b><span id="measureSummary"></span></div><label class="opacity-control" id="opacityControl" hidden>Opacidade <input type="range" min="20" max="100" value="82" id="overlayOpacity"><output id="opacityValue">82%</output></label><label class="zoom">Zoom <input type="range" min="70" max="150" value="100" id="zoom"><output id="zoomValue">100%</output></label></div></div>
 <section id="presentation" hidden><div class="presentation-intro"><span class="step-kicker">ESTUDO DE COMUNICAÇÃO VISUAL</span><h2 id="presentationName"></h2><p id="presentationClient"></p><p>Simulação visual para avaliação de cores, materiais e composição.</p></div><div id="presentationPhotos"></div><h2>Elevação e dimensões</h2><div id="presentationDrawing" class="drawing-board"></div><div class="presentation-specs"><h2>Materiais e medidas</h2><div class="table-scroll"><table><thead><tr><th>Elemento / área</th><th>Material e acabamento</th><th>Cor</th><th>Dimensões</th><th>Conferência</th></tr></thead><tbody id="presentationMaterials"></tbody></table></div></div><div class="presentation-actions"><button id="exportSvg" class="primary">Baixar elevação SVG</button><button id="print">Imprimir estudo / PDF</button></div><p class="muted">Estudo visual — não constitui detalhamento de fabricação ou montagem.</p></section>
 <footer><span>Estudo visual · salve a composição antes de sair</span><span id="stateNote">Sem medidas verificadas</span></footer></section>
-<aside class="right"><div class="section-title">PROPRIEDADES</div><div id="elementProperties"><div class="object-heading"><h2 id="objectTitle"></h2><span id="objectType">Revestimento</span></div><form id="properties"><fieldset><legend>Dimensões e posição</legend><div class="fields"><label>Largura <span>m</span><input id="width" type="number" min="0.1" max="30" step="0.05" required></label><label>Altura <span>m</span><input id="height" type="number" min="0.1" max="15" step="0.05" required></label><label>Posição horizontal <span>m</span><input id="x" type="number" min="0" max="30" step="0.05" required></label><label>Altura da base <span>m</span><input id="y" type="number" min="0" max="15" step="0.05" required></label></div><label class="check"><input id="confirmed" type="checkbox"> Medidas conferidas no local</label></fieldset><fieldset><legend>Material e acabamento</legend><label>Material<select id="material"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Inox</option><option>PVC</option></select></label><label>Acabamento<select id="finish"><option>Fosco</option><option>Brilhante</option><option>Escovado</option></select></label><label>Cor de referência</label><div class="swatches" id="swatches"></div><div class="color-row"><input id="color" type="color" aria-label="Cor personalizada"><span id="colorName"></span></div><p class="hint">Paleta ilustrativa. Confira os materiais cadastrados e o catálogo físico.</p></fieldset><fieldset><legend>Identidade visual</legend><label>Texto aplicado<input id="label" maxlength="35" placeholder="Nome ou identificação"></label></fieldset><button class="primary wide" type="submit">Aplicar ao projeto</button><div class="object-actions"><button id="duplicateElement" type="button">Duplicar</button><button id="deleteElement" type="button">Excluir</button></div><p id="formMessage" role="status"></p></form></div><section id="surfaceProperties" hidden><div class="object-heading"><h2 id="surfaceTitle">Nova área de ACM</h2><span>Revestimento sobre a fotografia</span></div><fieldset><legend>Material</legend><label>Revestimento<select id="surfaceMaterial"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Adesivo</option></select></label><label>Acabamento<select id="surfaceFinish"><option>Brilhante</option><option>Fosco</option><option>Escovado</option></select></label></fieldset><fieldset><legend>Cores ACM</legend><p class="hint">Cores ilustrativas para estudo; conferir com o catálogo físico.</p><div class="catalog-grid" id="catalogColors"></div><div class="catalog-selected"><span id="catalogColorDot"></span><div><small>Cor selecionada</small><b id="catalogColorName">Branco</b></div></div></fieldset><fieldset><legend>Visualização</legend><div class="segmented surface-light" id="lightMode"><button class="active" data-light="day">Dia</button><button data-light="night">Noite</button></div><label class="surface-opacity">Intensidade do material<input type="range" min="25" max="95" value="74" id="surfaceOpacity"><output id="surfaceOpacityValue">74%</output></label><label class="check"><input id="preserveOpenings" type="checkbox" checked> Contorno respeita portas e janelas</label><p class="hint">Marque apenas o revestimento, sem incluir aberturas. Use Máscaras e proteção para preservar portas e janelas na geração.</p></fieldset><div class="surface-metrics"><span>Área marcada</span><b id="surfaceArea">Aguardando contorno</b><small>Estimativa pela escala da foto; confira no local.</small></div><button class="primary wide" id="applySurface" disabled>Aplicar acabamento</button><button class="wide" id="newSurface">＋ Marcar outra superfície</button><p id="surfaceMessage" role="status"></p></section></aside></main>
+<aside class="right"><div class="section-title">PROPRIEDADES</div><div id="elementProperties"><div class="object-heading"><h2 id="objectTitle"></h2><div class="survey-element-picker"><select id="surveyElement" aria-label="Elemento da obra"></select></div><span id="objectType">Revestimento</span></div><form id="properties"><fieldset><legend>Dimensões e posição</legend><div class="fields"><label>Largura <span>m</span><input id="width" type="number" min="0.1" max="30" step="0.05" required></label><label>Altura <span>m</span><input id="height" type="number" min="0.1" max="15" step="0.05" required></label><label>Posição horizontal <span>m</span><input id="x" type="number" min="0" max="30" step="0.05" required></label><label>Altura da base <span>m</span><input id="y" type="number" min="0" max="15" step="0.05" required></label></div><label class="check"><input id="confirmed" type="checkbox"> Medidas conferidas no local</label></fieldset><fieldset><legend>Material e acabamento</legend><label>Material<select id="material"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Inox</option><option>PVC</option></select></label><label>Acabamento<select id="finish"><option>Fosco</option><option>Brilhante</option><option>Escovado</option></select></label><div id="referenceColor"><label>Cor de referência</label><div class="swatches" id="swatches"></div><div class="color-row"><input id="color" type="color" aria-label="Cor personalizada"><span id="colorName"></span></div><p class="hint">Paleta ilustrativa. Confira os materiais cadastrados e o catálogo físico.</p></div></fieldset><fieldset><legend>Identidade visual</legend><label>Texto aplicado<input id="label" maxlength="35" placeholder="Nome ou identificação"></label></fieldset><button class="primary wide" type="submit">Aplicar ao projeto</button><div class="object-actions"><button id="duplicateElement" type="button">Duplicar</button><button id="deleteElement" type="button">Excluir</button></div><p id="formMessage" role="status"></p></form></div><section id="surfaceProperties" hidden><div class="object-heading"><h2 id="surfaceTitle">Nova área de ACM</h2><span>Revestimento sobre a fotografia</span></div><fieldset><legend>Material</legend><label>Revestimento<select id="surfaceMaterial"><option>ACM</option><option>Acrílico</option><option>Chapa pintada</option><option>Adesivo</option></select></label><label>Acabamento<select id="surfaceFinish"><option>Brilhante</option><option>Fosco</option><option>Escovado</option></select></label></fieldset><fieldset><legend>Cores ACM</legend><p class="hint">Cores ilustrativas para estudo; conferir com o catálogo físico.</p><div class="catalog-grid" id="catalogColors"></div><div class="catalog-selected"><span id="catalogColorDot"></span><div><small>Cor selecionada</small><b id="catalogColorName">Branco</b></div></div></fieldset><fieldset><legend>Visualização</legend><div class="segmented surface-light" id="lightMode"><button class="active" data-light="day">Dia</button><button data-light="night">Noite</button></div><label class="surface-opacity">Intensidade do material<input type="range" min="25" max="95" value="74" id="surfaceOpacity"><output id="surfaceOpacityValue">74%</output></label><label class="check"><input id="preserveOpenings" type="checkbox" checked> Contorno respeita portas e janelas</label><p class="hint">Marque apenas o revestimento, sem incluir aberturas. Use Máscaras e proteção para preservar portas e janelas na geração.</p></fieldset><div class="surface-metrics"><span>Área marcada</span><b id="surfaceArea">Aguardando contorno</b><small>Estimativa pela escala da foto; confira no local.</small></div><button class="primary wide" id="applySurface" disabled>Aplicar acabamento</button><button class="wide" id="newSurface">＋ Marcar outra superfície</button><p id="surfaceMessage" role="status"></p></section></aside></main>
 <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp" multiple hidden><dialog id="projectDialog"><form method="dialog" id="projectForm"><div class="dialog-head"><div><span class="step-kicker">DADOS DO LEVANTAMENTO</span><h2>Novo projeto</h2></div><button type="button" id="closeProject" aria-label="Fechar">×</button></div><label>Nome do projeto<input id="dialogProjectName" required placeholder="Ex.: Identidade visual · Posto Horizonte"></label><label>Cliente<input id="clientName" required placeholder="Nome do cliente ou empresa"></label><label>Local da obra<input id="siteLocation" required placeholder="Cidade, endereço ou unidade"></label><div class="dialog-actions"><button type="button" id="cancelProject">Cancelar</button><button class="primary" type="submit">Salvar projeto</button></div></form></dialog><div class="toast" id="toast" role="status"></div>`;
 const VISUAL_CSS = `:host{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#303337;background:#fff;font-size:14px;--line:#e5e6e8;--muted:#81858a}*{box-sizing:border-box}.visual-body{margin:0}button,input,select{font:inherit}button{cursor:pointer;border:1px solid #dddfe2;background:white;color:#45494d;border-radius:6px;padding:10px 15px;font-weight:500}button:hover{background:#f2f3f4}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #547488;outline-offset:3px}button:disabled{cursor:not-allowed;opacity:.48}.primary{background:#303438;border-color:#303438;color:white}.primary:hover{background:#484d52}header{display:flex;align-items:center;gap:14px;height:88px;padding:0 28px;border-bottom:1px solid var(--line)}.brand{color:#282c30;text-decoration:none;font-size:23px;letter-spacing:2px;font-weight:800;min-width:210px}.brand span{display:block;font-size:9px;letter-spacing:2px;font-weight:500;margin-top:3px}.project-name{flex:1;border-left:1px solid var(--line);padding-left:24px}.project-name input{border:0;padding:0;font-weight:600;width:100%;background:transparent}.project-name small{display:block;font-size:12px;color:var(--muted);margin-top:7px}.stages{height:60px;display:flex;align-items:stretch;gap:32px;padding:0 28px;border-bottom:1px solid var(--line)}.stages button{border:0;border-radius:0;color:#92959a;font-size:12px;padding:0 2px;background:none}.stages button span{margin-left:8px;font-size:14px}.stages button.active{color:#303438;border-bottom:2px solid #303438}.prototype{margin-left:auto;align-self:center;color:#83878b;font-size:12px}main{display:grid;grid-template-columns:234px minmax(350px,1fr) 294px;min-height:calc(100vh - 148px)}aside{padding:27px 20px}.left{border-right:1px solid var(--line);display:flex;flex-direction:column}.right{border-left:1px solid var(--line)}.section-title,.eyebrow{font-size:10px;letter-spacing:1.5px;font-weight:600;color:#8a8e93}h2{font-size:17px;font-weight:600;letter-spacing:-.4px;margin:16px 0 9px}.muted{color:#80858a;line-height:1.65;font-size:13px}.element{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid transparent;padding:13px 10px;margin:5px 0}.element.active{background:#f0f2f3;border-color:#e0e3e6}.element .square{width:13px;height:13px;border:1px solid #a0a6ad;border-radius:2px}.element span:last-child{margin-left:auto;color:#949a9e;font-size:11px}.side-note{border-top:1px solid var(--line);margin-top:28px;padding-top:24px}.side-note>span{font-size:10px;letter-spacing:1px;color:#8a8e93}.side-note button{margin-top:13px;width:100%;font-size:12px}.side-note p,.side-bottom small{font-size:12px;color:#95999d;line-height:1.6}.side-bottom{margin-top:auto;padding-top:50px;display:grid;gap:7px}.side-bottom span{font-size:12px;color:#95999d}.side-bottom b{font-size:13px;font-weight:500}.workspace{background:#f7f8f9;padding:30px 28px 18px;min-width:0}.work-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:30px}h1{font-size:27px;font-weight:500;letter-spacing:-1px;margin:7px 0 0}.view-tools{display:flex;gap:7px}.view-tools button{font-size:12px;padding:8px 10px;background:transparent}.drawing-board{position:relative;background:#fff;border:1px solid #e2e5e7;border-radius:3px;min-height:410px;overflow:hidden;box-shadow:0 6px 22px #1b253003}.board-label{position:absolute;top:22px;left:22px;font-size:10px;letter-spacing:1.3px;color:#60676d}.board-label span{display:block;letter-spacing:0;color:#a0a5aa;margin-top:7px}#drawing{width:100%;height:480px;display:block}.board-bottom{display:flex;justify-content:space-between;font-size:10px;color:#969ca1;padding:0 22px 20px}.under-board{display:flex;justify-content:space-between;align-items:center;padding:19px 0;gap:12px}.under-board b{display:block;font-size:13px;font-weight:600}.under-board span{font-size:12px;color:#8a8e93;display:block;margin-top:4px}.zoom{display:flex;align-items:center;gap:9px;font-size:11px;color:#858b90}.zoom input{width:70px;accent-color:#686f74}.object-heading{padding-bottom:20px;border-bottom:1px solid var(--line)}.object-heading span{color:#8b9095;font-size:12px}.object-heading h2{margin-bottom:5px}fieldset{border:0;border-bottom:1px solid var(--line);margin:22px 0;padding:0 0 20px}legend{font-weight:600;font-size:13px;margin-bottom:16px}label{display:block;font-size:12px;color:#777e84;margin-bottom:12px}input:not([type=checkbox]):not([type=range]):not([type=color]),select{width:100%;display:block;margin-top:6px;padding:9px;border:1px solid #e0e3e6;border-radius:5px;color:#383e44;background:#fff;min-width:0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.fields label span{float:right;font-size:10px;color:#a8acb0}.check{display:flex;align-items:center;font-size:11px;gap:5px;margin:5px 0 0}.check input{accent-color:#545e64}.swatches{display:flex;gap:10px}.swatches button{height:24px;width:24px;padding:0;border:1px solid #ccc;border-radius:50%}.swatches button.selected{outline:1px solid #555;outline-offset:3px}.color-row{display:flex;align-items:center;gap:9px;font-size:12px;margin-top:15px}.color-row input{width:26px;height:24px;padding:0;border:0;background:none}.hint{font-size:11px;line-height:1.5;color:#95999d}.wide{width:100%}#formMessage{font-size:12px;color:#657581}footer{display:flex;justify-content:space-between;border-top:1px solid #e1e4e7;padding-top:18px;margin-top:25px;font-size:11px;color:#94999e;gap:15px}.upload-box{background:#fff;border:1px dashed #ccd2d7;padding:40px;text-align:center}.upload-box p{color:#828a91;line-height:1.7}.upload-box small{display:block;margin-top:15px;color:#94999e}.survey-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:22px 0}.survey-grid h3{font-size:14px}.survey-grid p{font-size:13px;line-height:1.6;color:#858b90}#surveyPhoto{width:100%;max-height:420px;object-fit:contain}.presentation-intro p{color:#858b90;line-height:1.7;max-width:520px}.presentation-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}#presentationDrawing svg{width:100%;height:430px}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:15px 20px;background:#303438;color:white;border-radius:7px;display:none;z-index:20}.toast.visible{display:block}[hidden]{display:none!important}.visual-body.presenting .left,.visual-body.presenting .right{display:none}.visual-body.presenting main{grid-template-columns:1fr}.visual-body.presenting .workspace{max-width:1300px;width:100%;margin:auto}svg [data-object]{cursor:pointer}svg [data-object]:hover{opacity:.8}@media(min-width:1600px){#drawing{height:580px}.workspace{padding:35px 40px}}@media(max-width:1150px){main{grid-template-columns:180px minmax(280px,1fr) 250px}aside{padding:22px 14px}.workspace{padding:24px 17px}.work-head{align-items:start;flex-direction:column}header{padding:0 18px}.brand{min-width:150px}header>button{font-size:12px}.project-name{padding-left:14px}}@media(max-width:850px){header{height:auto;min-height:85px;flex-wrap:wrap;padding:16px}.brand{min-width:130px}.project-name{min-width:160px}main{grid-template-columns:1fr}.left{border:0;padding-bottom:12px}.left>.muted,.side-note,.side-bottom{display:none}#elements{display:flex;flex-wrap:wrap}.element{width:auto}.workspace{order:2}.right{order:3;display:block}.right form{max-width:500px}.stages{padding:0 16px;gap:18px}.prototype{display:none}.stages button span{font-size:12px}.work-head{flex-direction:row}.view-tools{flex-direction:column}.under-board{flex-wrap:wrap}.survey-grid{grid-template-columns:1fr}#drawing{height:360px}.drawing-board{min-height:360px}}@media print{header,.stages,aside,.presentation-actions,footer,.work-head{display:none!important}main{display:block}.workspace{padding:0}#presentation{display:block!important}#design,#survey{display:none!important}.drawing-board{border:0}.visual-body{background:white}}
 
@@ -257,7 +257,7 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     refreshTheme();
     const observer = new MutationObserver(refreshTheme);
     observer.observe(window.document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
-    style.textContent += DARK_VISUAL_CSS;
+    style.textContent += DARK_VISUAL_CSS + SURVEY_LAYOUT_CSS;
     shadow.replaceChildren(style, body);
     const instance = mountVisual(body, tabRef.current, {
       project: projectId ? projectRef.current : null,
@@ -540,6 +540,10 @@ let updateForm = function() {
   if (!objects[selected]) return;
   const object = objects[selected];
   $('#objectTitle').textContent = object.name;
+  $('#surveyElement').innerHTML = objects.map((item, index) =>
+    '<option value="' + index + '">' + escapeHtml(item.name) + '</option>'
+  ).join('');
+  $('#surveyElement').value = String(selected);
   $('#objectType').textContent = object.type;
   (['width', 'height', 'x', 'y', 'material', 'finish', 'label', 'color'] as const).forEach((key) => {
     $('#' + key).value = object[key];
@@ -761,7 +765,40 @@ function setView(view: string) {
   });
 }
 
+// Move the original controls, retaining their handlers, form and API bindings.
+// Restore their original positions outside Levantamento.
+const propertiesPanel = $('.right') as HTMLElement;
+const photoLibrary = $('.photo-library') as HTMLElement;
+const photoAreas = $('#photoAreas') as HTMLElement;
+const addElementButton = $('#addElement') as HTMLButtonElement;
+const referenceColor = $('#referenceColor') as HTMLElement;
+const materialFieldset = referenceColor.closest('fieldset')!;
+const surveyColorFieldset = window.document.createElement('fieldset');
+surveyColorFieldset.className = 'survey-color-fieldset';
+const colorLegend = window.document.createElement('legend');
+colorLegend.textContent = 'Cor de referência';
+surveyColorFieldset.append(colorLegend);
+
+function arrangeSurveyLayout(survey: boolean) {
+  if (body.classList.contains('survey-layout') === survey) return;
+  body.classList.toggle('survey-layout', survey);
+  if (survey) {
+    photoLibrary.after(propertiesPanel);
+    propertiesPanel.after(photoAreas);
+    $('.survey-element-picker').append(addElementButton);
+    materialFieldset.after(surveyColorFieldset);
+    surveyColorFieldset.append(referenceColor);
+  } else {
+    $('main').append(propertiesPanel);
+    photoLibrary.append(photoAreas);
+    $('.side-note').before(addElementButton);
+    materialFieldset.append(referenceColor);
+    surveyColorFieldset.remove();
+  }
+}
+
 function setTab(tabName: string) {
+  arrangeSurveyLayout(tabName === 'survey');
   currentTab = tabName;
   bridge.onTab(tabName);
   ['design', 'survey', 'presentation'].forEach((id) => $('#' + id).hidden = id !== tabName);
@@ -869,6 +906,10 @@ $('#properties').onsubmit = (event: VisualEvent) => {
 };
 
 $('#addElement').onclick = () => createElement();
+$('#surveyElement').onchange = (event: VisualEvent) => {
+  const index = Number(event.target.value);
+  if (Number.isInteger(index) && index >= 0 && index < objects.length) selectObject(index);
+};
 $('#duplicateElement').onclick = () => createElement(objects[selected]);
 $('#deleteElement').onclick = deleteSelectedElement;
 
@@ -1467,7 +1508,7 @@ catalogButton.className = 'wide';
 catalogButton.textContent = 'Catálogo de materiais';
 catalogButton.style.marginTop = '10px';
 catalogButton.onclick = () => bridge.onJanela('catalogo');
-$('#colorName').closest('fieldset').append(catalogButton);
+$('#referenceColor').append(catalogButton);
 $('.presentation-actions').prepend(deliveryButton);
 deliveryButton.after(budgetButton);
 $('.brand').href = '/';
@@ -1618,4 +1659,80 @@ const DARK_VISUAL_CSS = `
 .dark-ui .toast {color:#fff}
 @media(max-width:850px){.stages{height:auto;min-height:60px;flex-wrap:wrap;gap:0 18px}.stages>button{min-height:44px}.stages #themeToggle{margin-left:auto!important}}
 @media print {.dark-ui,.dark-ui .workspace,.dark-ui .presentation-intro,.dark-ui .presentation-photo,.dark-ui .presentation-specs table {background:white!important;color:#303438!important}}
+`;
+
+
+// Only the Levantamento content changes; the header and other tabs keep their layout.
+const SURVEY_LAYOUT_CSS = `
+.survey-element-picker{display:none}
+.survey-layout main{grid-template-columns:minmax(0,1fr)}
+.survey-layout main>.left{display:none}
+.survey-layout .workspace{width:100%;max-width:none;padding:24px 40px 20px}
+.survey-layout .work-head{margin-bottom:16px}
+.survey-layout .work-head h1{font-size:24px;letter-spacing:-.6px}
+.survey-layout .project-progress{margin-bottom:16px;gap:8px}
+.survey-layout .project-progress button{padding:12px}
+.survey-layout .survey-project{padding:14px 20px;margin-bottom:12px}
+.survey-layout .survey-project h2{margin:8px 0 4px}
+.survey-layout .photo-library{padding:14px 18px;margin-bottom:14px}
+.survey-layout .library-head{margin-bottom:10px}
+.survey-layout .library-head h2{margin:8px 0 4px}
+.survey-layout .library-head p{margin:0}
+.survey-layout .area-select-row{margin-top:12px;padding:0;border:0}
+.survey-layout .area-select-row label{margin-bottom:0}
+.survey-layout .area-select-row select{margin-top:4px}
+.survey-layout #survey>.right{padding:14px 18px 12px;margin-bottom:8px;border:1px solid var(--line);border-radius:4px;background:#fff;min-width:0}
+.survey-layout.dark-ui #survey>.right{background:#151b1e;border-color:#334044}
+.survey-layout .right .section-title{font-size:9px}
+.survey-layout .right .object-heading{padding-bottom:8px;margin-bottom:10px}
+.survey-layout #objectTitle{display:none}
+.survey-layout .survey-element-picker{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
+.survey-layout #surveyElement{width:min(320px,100%);margin:0;padding:5px 10px;font-size:14px;font-weight:600}
+.survey-layout .survey-element-picker .add-element{width:auto;margin:0;white-space:nowrap;padding:8px 12px}
+.survey-layout #objectType{font-size:11px}
+.survey-layout #properties{display:grid;grid-template-columns:1.15fr .85fr 1.05fr .95fr;gap:12px 0;max-width:none;align-items:start}
+.survey-layout #properties>fieldset{margin:0;min-width:0;border:0;padding:0 22px;border-right:1px solid var(--line);align-self:stretch}
+.survey-layout #properties>fieldset:first-child{padding-left:0}
+.survey-layout #properties>fieldset:last-of-type{padding-right:0;border-right:0}
+.survey-layout #properties legend{padding:0;margin-bottom:8px;font-size:12px}
+.survey-layout #properties label{font-size:11px;margin-bottom:5px}
+.survey-layout #properties input:not([type=checkbox]):not([type=color]),.survey-layout #properties select{padding:4px 8px;margin-top:3px}
+.survey-layout #properties .fields{gap:0 16px}
+.survey-layout #properties .check{margin-top:5px;font-size:10px}
+.survey-layout #referenceColor>label{display:none}
+.survey-layout #referenceColor .swatches{gap:10px;padding:2px 3px}
+.survey-layout #referenceColor .swatches button{width:22px;height:22px;flex-shrink:0}
+.survey-layout #referenceColor .color-row{margin-top:8px}
+.survey-layout #referenceColor .hint{font-size:10px;line-height:1.4;margin:6px 0}
+.survey-layout #referenceColor>button{font-size:11px;padding:7px 10px;margin-top:3px!important}
+.survey-layout #properties>button[type=submit]{grid-column:1;width:auto;justify-self:start;padding:8px 14px;font-size:12px}
+.survey-layout #properties>.object-actions{grid-column:2 / -1;display:flex;justify-content:flex-end;gap:8px;margin:0}
+.survey-layout .object-actions button{padding:8px 14px}
+.survey-layout #formMessage{grid-column:1 / -1;margin:0;font-size:11px}
+.survey-layout #formMessage:empty{display:none}
+.survey-layout #survey>.photo-areas{margin:0 0 14px;gap:8px}
+.survey-layout #survey>.photo-areas:empty{display:none}
+.survey-layout .area-group{min-width:0}
+.survey-layout .area-group-head{padding:9px 12px}
+.survey-layout .photo-strip{padding:8px;min-height:74px}
+@media(max-width:1150px){
+  .survey-layout .workspace{padding:22px 24px}
+  .survey-layout #properties{grid-template-columns:1fr 1fr;gap:16px 0}
+  .survey-layout #properties>fieldset{padding:0 18px}
+  .survey-layout #properties>fieldset:nth-of-type(odd){padding-left:0}
+  .survey-layout #properties>fieldset:nth-of-type(even){border-right:0;padding-right:0}
+}
+@media(max-width:600px){
+  .survey-layout .workspace{padding:18px 14px}
+  .survey-layout .project-progress{grid-template-columns:1fr 1fr}
+  .survey-layout .survey-project,.survey-layout .photo-library{padding:14px}
+  .survey-layout .area-select-row{align-items:stretch;gap:10px;flex-direction:column}
+  .survey-layout .area-select-row label{width:100%}
+  .survey-layout .area-select-row small{white-space:normal}
+  .survey-layout .survey-element-picker{flex-wrap:wrap}
+  .survey-layout #surveyElement{width:100%}
+  .survey-layout #properties{grid-template-columns:minmax(0,1fr)}
+  .survey-layout #properties>fieldset{padding:0 0 14px!important;border:0;border-bottom:1px solid var(--line)}
+  .survey-layout #properties>.object-actions{grid-column:1;justify-content:flex-start}
+}
 `;
