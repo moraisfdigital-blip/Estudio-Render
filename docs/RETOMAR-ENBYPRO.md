@@ -1,5 +1,7 @@
 # ENBY PRO — estado atual e como retomar
 
+**Atualizado em 09/10/2026. Release no ar: `0fb12ce` (branch `codex/levantamento-layout`, PR #20 ainda sem merge — a `main` NÃO tem este layout).** Mudanças de 09/10, pedidas e aprovadas pelo usuário: nas abas **02 Projeto visual** e **03 Apresentação** sai só a parte visual da coluna "Estrutura do projeto" e das Propriedades (na 02 até o Catálogo; na 03 o Catálogo fica). É só CSS (`DESIGN_LAYOUT_CSS`, `PRESENTATION_LAYOUT_CSS`); as funções continuam na aba 01. Backup pré-publicação: `/opt/enbypro/backups/enbypro-20261009T044358Z`; imagem de retorno `enbypro-app:before-0fb12ce`; release anterior `eb12598` preservada.
+
 **Atualizado em 06/10/2026 (America/Sao_Paulo). Release `eb12598` publicada às 22:39 em https://enbypro.com e aprovada visualmente pelo usuário após a publicação.** Leia este arquivo antes de qualquer mudança; o histórico técnico da entrega está em [ENBYPRO-RELEASE.md](ENBYPRO-RELEASE.md).
 
 ## Onde está cada coisa
@@ -8,7 +10,7 @@
 - Checkout principal: `D:\SET UP NOVO\estudio-render`, branch `main`, base `d862fdd`. **A main ainda não contém o layout publicado.** Continuar esta entrega na worktree acima; não sobrescrever a produção com a main antiga. O `debug.log` preexistente foi preservado.
 - Entrega anterior: `64e1251`, worktree `enbypro-release`. PRs #18/#19 são históricos e já estavam integrados. O usuário autorizou continuar sem Orca nesta sessão.
 - Produção: VPS **da Artelux** `srv1951666.hstgr.cloud` (179.199.141.95, Ubuntu 24.04), alias SSH `crmnovo` na máquina do usuário. Decisão do usuário em 04/10: usar esta VPS, sem upgrade de plano.
-  - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para `/opt/enbypro/releases/eb12598`. A release anterior `64e1251` e a imagem `enbypro-app:before-eb12598` foram preservadas.
+  - Código em `/opt/enbypro/releases/<sha>`; `/opt/enbypro/current` aponta para `/opt/enbypro/releases/0fb12ce` (antes: `eb12598`). A release anterior `64e1251` e a imagem `enbypro-app:before-eb12598` foram preservadas.
   - Ambiente protegido em `/opt/enbypro/shared/.env` (600). Compose project `enbypro`. App escuta só em `172.18.0.1:8010` (gateway da rede do CRM); Mongo sem porta publicada.
   - Proxy: o **Caddy do DeskcommCRM** (`/opt/deskcommcrm/Caddyfile`). O bloco do `enbypro.com` foi **anexado ao fim** desse arquivo; cópia do original em `/opt/enbypro/backups/Caddyfile.crm.*.bak` e o bloco em `/opt/enbypro/proxy/enbypro.caddy`. HTTPS Let's Encrypt emitido e renovando sozinho.
   - Backup diário do Render: `/etc/cron.d/enbypro-backup` às 06:30 UTC → `/opt/enbypro/bin/backup-diario.sh` (dump do Mongo + mídia, 14 dias, em `/opt/enbypro/backups/`). A Hostinger também faz backup diário da VPS (confirmado pelo usuário).
