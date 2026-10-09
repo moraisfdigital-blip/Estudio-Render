@@ -257,7 +257,7 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     refreshTheme();
     const observer = new MutationObserver(refreshTheme);
     observer.observe(window.document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
-    style.textContent += DARK_VISUAL_CSS + SURVEY_LAYOUT_CSS;
+    style.textContent += DARK_VISUAL_CSS + SURVEY_LAYOUT_CSS + DESIGN_LAYOUT_CSS;
     shadow.replaceChildren(style, body);
     const instance = mountVisual(body, tabRef.current, {
       project: projectId ? projectRef.current : null,
@@ -799,6 +799,9 @@ function arrangeSurveyLayout(survey: boolean) {
 
 function setTab(tabName: string) {
   arrangeSurveyLayout(tabName === 'survey');
+  // Projeto visual: só a parte visual da estrutura e das propriedades sai da
+  // tela (ver DESIGN_LAYOUT_CSS); os controles continuam vivos nas outras abas.
+  body.classList.toggle('design-layout', tabName === 'design');
   currentTab = tabName;
   bridge.onTab(tabName);
   ['design', 'survey', 'presentation'].forEach((id) => $('#' + id).hidden = id !== tabName);
@@ -1735,4 +1738,21 @@ const SURVEY_LAYOUT_CSS = `
   .survey-layout #properties>fieldset{padding:0 0 14px!important;border:0;border-bottom:1px solid var(--line)}
   .survey-layout #properties>.object-actions{grid-column:1;justify-content:flex-start}
 }
+`;
+
+
+// Aba 02 Projeto visual (pedido do usuário em 09/10/2026): some só a parte
+// visual da coluna "Estrutura do projeto" e do bloco de Propriedades até o
+// "Catálogo de materiais". Ficam "Identidade visual", "Aplicar ao projeto",
+// "Duplicar", "Excluir" e o painel de superfície (Sobre a foto). Nada é
+// removido do DOM: as mesmas peças seguem funcionando nas abas 01 e 03.
+const DESIGN_LAYOUT_CSS = `
+.design-layout main{grid-template-columns:minmax(0,1fr) 294px}
+.design-layout main>.left{display:none}
+.design-layout .right>.section-title:has(+ #elementProperties:not([hidden])){display:none}
+.design-layout #elementProperties>.object-heading{display:none}
+.design-layout #properties>fieldset:nth-of-type(1),.design-layout #properties>fieldset:nth-of-type(2){display:none}
+.design-layout #properties>fieldset:nth-of-type(3){margin-top:0}
+@media(max-width:1150px){.design-layout main{grid-template-columns:minmax(0,1fr) 250px}}
+@media(max-width:850px){.design-layout main{grid-template-columns:1fr}}
 `;
