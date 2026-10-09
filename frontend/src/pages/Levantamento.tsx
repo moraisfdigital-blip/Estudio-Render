@@ -257,7 +257,7 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     refreshTheme();
     const observer = new MutationObserver(refreshTheme);
     observer.observe(window.document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
-    style.textContent += DARK_VISUAL_CSS + SURVEY_LAYOUT_CSS + DESIGN_LAYOUT_CSS;
+    style.textContent += DARK_VISUAL_CSS + SURVEY_LAYOUT_CSS + DESIGN_LAYOUT_CSS + PRESENTATION_LAYOUT_CSS;
     shadow.replaceChildren(style, body);
     const instance = mountVisual(body, tabRef.current, {
       project: projectId ? projectRef.current : null,
@@ -802,6 +802,8 @@ function setTab(tabName: string) {
   // Projeto visual: só a parte visual da estrutura e das propriedades sai da
   // tela (ver DESIGN_LAYOUT_CSS); os controles continuam vivos nas outras abas.
   body.classList.toggle('design-layout', tabName === 'design');
+  // Apresentação: igual, mas o botão "Catálogo de materiais" fica visível.
+  body.classList.toggle('presentation-layout', tabName === 'presentation');
   currentTab = tabName;
   bridge.onTab(tabName);
   ['design', 'survey', 'presentation'].forEach((id) => $('#' + id).hidden = id !== tabName);
@@ -1755,4 +1757,22 @@ const DESIGN_LAYOUT_CSS = `
 .design-layout #properties>fieldset:nth-of-type(3){margin-top:0}
 @media(max-width:1150px){.design-layout main{grid-template-columns:minmax(0,1fr) 250px}}
 @media(max-width:850px){.design-layout main{grid-template-columns:1fr}}
+`;
+
+// Aba 03 Apresentação (pedido do usuário em 09/10/2026): mesma ideia da aba
+// 02, mas só o que estava dentro do quadro marcado: a coluna da esquerda e as
+// Propriedades até a dica da paleta. O botão "Catálogo de materiais" e tudo
+// abaixo dele (Identidade visual, Aplicar, Duplicar, Excluir) ficam.
+const PRESENTATION_LAYOUT_CSS = `
+.presentation-layout main{grid-template-columns:minmax(0,1fr) 294px}
+.presentation-layout main>.left{display:none}
+.presentation-layout .right>.section-title:has(+ #elementProperties:not([hidden])){display:none}
+.presentation-layout #elementProperties>.object-heading{display:none}
+.presentation-layout #properties>fieldset:nth-of-type(1){display:none}
+.presentation-layout #properties>fieldset:nth-of-type(2){margin-top:0}
+.presentation-layout #properties>fieldset:nth-of-type(2)>:not(#referenceColor){display:none}
+.presentation-layout #referenceColor>:not(button){display:none}
+.presentation-layout #referenceColor>button{margin-top:0!important}
+@media(max-width:1150px){.presentation-layout main{grid-template-columns:minmax(0,1fr) 250px}}
+@media(max-width:850px){.presentation-layout main{grid-template-columns:1fr}}
 `;
