@@ -1,11 +1,21 @@
 # ENBY PRO — entrega e publicação
 
-Atualizado em 04/10/2026. **Publicado em https://enbypro.com e em uso.** O estado atual, o procedimento de deploy e as pendências estão em [RETOMAR-ENBYPRO.md](RETOMAR-ENBYPRO.md); este arquivo guarda o histórico da entrega.
+Atualizado em 06/10/2026. **Publicado em https://enbypro.com e em uso.** O estado atual, o procedimento de deploy e as pendências estão em [RETOMAR-ENBYPRO.md](RETOMAR-ENBYPRO.md); este arquivo guarda o histórico da entrega.
 
-## Código e escopo
+## Entrega atual — layout do Levantamento, 06/10/2026
+
+- Release `eb12598`, commit `eb1259842f2473bb3c77244e1d330d3f89c127e0`, publicada às 22:39 (America/Sao_Paulo). Usuário autorizou publicar e aprovou o resultado no site.
+- Branch `codex/levantamento-layout`, worktree `D:\SET UP NOVO\orca\workspaces\estudio-render\levantamento-layout`. [PR #20](https://github.com/moraisfdigital-blip/Estudio-Render/pull/20) aberto, sem merge. A main (`d862fdd`) ainda não contém o layout publicado.
+- Levantamento em largura total; Propriedades horizontal com seletor/Novo elemento, quatro grupos de campos e fotos por área abaixo. Aplicar, Duplicar e Excluir preservados. Cabeçalho e demais abas intactos.
+- Build/lint/diff passaram; controles e responsividade conferidos localmente com API simulada. Produção: HTTPS 200, saúde app/banco OK, seletor funcionando na sessão autenticada, sem erro no console.
+- Backup: `/opt/enbypro/backups/deploy-eb12598/enbypro-20261007T013712Z`. Imagem de retorno `enbypro-app:before-eb12598` e release anterior `64e1251` preservadas. Apenas app recriado; Mongo e CRM não reiniciados.
+- [Captura publicada](evidencias/levantamento-2026-10-06/enbypro-publicado.jpg) · [Prévia aprovada](evidencias/levantamento-2026-10-06/levantamento-conteudo.png) · [Validação](evidencias/levantamento-2026-10-06/validation.json) · [Publicação](evidencias/levantamento-2026-10-06/deployment-eb12598.json).
+- Retomada e rollback em [RETOMAR-ENBYPRO.md](RETOMAR-ENBYPRO.md). Sem nova geração externa ou alteração de projetos nesta verificação.
+
+## Histórico de 04/10 — código e escopo
 
 - Repositório: `moraisfdigital-blip/estudio-render`.
-- Branch: `codex/enbypro-release`, criada a partir de `bf15b4d`. Implementação inicial em `4873a70`; sessão de 04/10 adicionou `f5e7610` (olho na senha), `f2b6907` (entrada direta no painel, remoção das telas de lista/formulário), `b869bab` (painel abre sem projeto), `095bb4a` (catálogo, PDF e orçamento como janelas do painel), `966e624` (senha e e-mail só por link enviado ao e-mail; Minha conta), `64e1251` (telas antigas removidas; Elementos e medidas, Foto original e Remover foto na aba 02). Release no ar: `64e1251`. PRs #18 e #19 mergeados em `main` com autorização do usuário; `main` = versão no ar.
+- Branch: `codex/enbypro-release`, criada a partir de `bf15b4d`. Implementação inicial em `4873a70`; sessão de 04/10 adicionou `f5e7610` (olho na senha), `f2b6907` (entrada direta no painel, remoção das telas de lista/formulário), `b869bab` (painel abre sem projeto), `095bb4a` (catálogo, PDF e orçamento como janelas do painel), `966e624` (senha e e-mail só por link enviado ao e-mail; Minha conta), `64e1251` (telas antigas removidas; Elementos e medidas, Foto original e Remover foto na aba 02). Release daquela entrega: `64e1251` (substituída por `eb12598` em 06/10). PRs #18 e #19 mergeados em `main` com autorização do usuário; `main` correspondia à versão publicada naquela data.
 - [PR #18](https://github.com/moraisfdigital-blip/Estudio-Render/pull/18) mergeado em `main` em 04/10/2026 (`fa0e771`), com autorização do usuário.
 - Worktree: `D:\SET UP NOVO\orca\workspaces\estudio-render\enbypro-release`.
 - Sem ticket Linear vinculado; o histórico está no PR e nestes arquivos.
@@ -20,7 +30,7 @@ Atualizado em 04/10/2026. **Publicado em https://enbypro.com e em uso.** O estad
 - Interface (04/10): login abre direto o painel do protótipo; sem projeto, abre com o exemplo; janelas de catálogo, PDF e orçamento dentro do painel; botão de mostrar senha no login. Detalhes e regras em RETOMAR-ENBYPRO.md.
 - Conta (04/10): "Esqueci minha senha / quero trocar" e "Minha conta" (nome, e-mail com confirmação, link de senha). Senha nunca muda pedindo a antiga; só por link de uso único enviado ao e-mail. E-mail transacional pelo Resend (`EMAIL_PROVIDER=resend`, domínio `enbypro.com` verificado).
 
-## Verificação
+## Verificação histórica de 04/10
 
 Antes da publicação (ambiente Windows, Mongo local, banco exclusivo por execução):
 

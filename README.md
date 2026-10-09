@@ -13,12 +13,21 @@ Protocolo de execução: [`AGENTS.md`](AGENTS.md).
 
 Depois do login abre direto o **painel oficial**, que é a tela do protótipo
 (https://render-artelux.fmorais.chatgpt.site): abas 01 Levantamento · 02
-Projeto visual · 03 Apresentação, "Elementos da obra" à esquerda e
-"Propriedades" à direita. Não há tela de lista nem formulário à parte; sem
+Projeto visual · 03 Apresentação. No **Levantamento**, o layout aprovado em
+06/10 usa largura total, Propriedades na horizontal e fotos por área abaixo.
+O seletor **Elemento da obra** e **Novo elemento** ficam em Propriedades;
+Aplicar, Duplicar e Excluir continuam disponíveis. As outras abas preservam
+suas colunas e o cabeçalho permanece igual. Não há tela de lista nem formulário à parte; sem
 projeto, o painel abre com o exemplo do protótipo. Funções sem lugar no
 protótipo (elementos e medidas, máscaras, geração, versões, catálogo, PDF,
 orçamento, Minha conta) abrem como janelas por cima do painel. Não crie telas fora do protótipo sem
 combinar com o dono do produto.
+
+**Versão aprovada e publicada:** `eb12598`, em 06/10/2026. O
+[PR #20](https://github.com/moraisfdigital-blip/Estudio-Render/pull/20) está aberto,
+sem merge; a `main` ainda não contém esta alteração. Retomar pela worktree
+`D:\SET UP NOVO\orca\workspaces\estudio-render\levantamento-layout`.
+[Captura publicada](docs/evidencias/levantamento-2026-10-06/enbypro-publicado.jpg).
 
 ## Arquitetura
 

@@ -1,6 +1,6 @@
 # Render Artelux — Plano por fatias verticais
 
-> **Status:** contrato aprovado para planejamento. **Não executar código** até o frontend visual ser definido fora deste repo e o Owner autorizar a Fase 1.
+> **Documento histórico de planejamento.** A implementação já foi autorizada e publicada. O estado atual e o Levantamento horizontal aprovado em 06/10/2026 estão em [RETOMAR-ENBYPRO.md](RETOMAR-ENBYPRO.md). As fases abaixo preservam o contrato original; referências antigas de layout não substituem a versão aprovada.
 >
 > Tickets Linear: projeto [Estudio Render](https://linear.app/francisco-morais/project/estudio-render-ca20ba9bbf4d), títulos com prefixo `[REN]`. Time Linear: Francisco Morais (`FRA`). O prefixo `[REN]` vive no título porque a key do time não é `REN`.
 
