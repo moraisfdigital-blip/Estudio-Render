@@ -51,7 +51,7 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 - Cabeçalho, logo, nome do projeto, ações superiores, abas, tema, Minha conta e Sair preservados. Projeto visual e Apresentação mantêm o layout anterior. Em telas menores, propriedades em duas ou uma coluna.
 - Foram movidos os mesmos controles, preservando handlers e contratos de API. Aprovação do usuário após o deploy: **“certinho”**. [Captura publicada](evidencias/levantamento-2026-10-06/enbypro-publicado.jpg).
 - Rotas: `/` decide (último projeto usado → `/projeto/:id/levantamento`; nenhum → `/estudio/levantamento`). Rotas antigas (`/projetos`, `/projeto/novo`, `/projeto/:id/editar`) caem na entrada. Telas `DashboardPage`, `ProjectFormPage`, `ProjectDetailPage`, `SurveyPanel`, `AppShell`, `StepNav`, `TrilhaEtapas`, `pickers` foram removidas.
-- Funções sem lugar no protótipo viraram **janelas por cima do painel** (`JanelaPainel`): Catálogo de materiais (botão no painel Propriedades), Apresentação aprovada e PDF, Quantitativo e orçamento (aba 03) — além das já existentes Máscaras, Gerar proposta com IA, Versões.
+- Funções sem lugar no protótipo viraram **janelas por cima do painel** (`JanelaPainel`): Catálogo de materiais (botão no painel Propriedades), Apresentação aprovada e PDF, Quantitativo e orçamento (aba 03) — além das já existentes Máscaras, Renderizar projeto (antes "Gerar proposta com IA"), Versões.
 - **Telas antigas apagadas (04/10, PR #19, autorizado pelo usuário):** não existe mais "Ferramentas do projeto", a página `/materiais` nem o cabeçalho antigo. O que só existia nelas foi para a barra da aba 02: **Elementos e medidas** (cadastro com medida conferida, que alimenta o orçamento), **Foto original** e **Remover foto**.
 - Não propor nem criar tela que não exista no protótipo sem mostrar a referência e perguntar. O usuário se irritou com painéis inventados.
 
@@ -61,6 +61,20 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 - Trocar o e-mail de login (para passar a conta ao cliente): "Minha conta" → e-mail novo → link vai **para o e-mail novo** → `/confirmar-email?token=` → só então o login muda. Nome muda na hora.
 - Links: uso único, 60 min, só o SHA-256 no banco (`password_resets`), pedido novo anula o anterior, URL sempre de `PUBLIC_BASE_URL`. Trocar senha/e-mail encerra as sessões abertas.
 - **Envio de e-mail ligado (04/10, 22h30):** `EMAIL_PROVIDER=resend`, remetente `ENBY PRO <nao-responda@enbypro.com>`, domínio verificado no Resend (região sa-east-1). DNS: TXT `resend._domainkey` (DKIM), CNAME `rsend` → `rsend-sae1.forge.rmta.net`, CNAME `send` → `send.forge.rmta.net`, TXT `_dmarc` = `v=DMARC1; p=none;`. Chave do Resend só no `.env` do servidor (cópia local do usuário em `Downloads/N8N/CLAUDE/projetos/apy resend enby pro.txt`). Teste real: link de senha entregue no Gmail do usuário (status `delivered`). Sem envio configurado (`EMAIL_PROVIDER=none`), a tela avisa em vez de fingir que enviou.
+
+## Orientação de uso (15/10/2026)
+
+- Botão **"Como usar"** na barra do painel (ao lado de Minha conta) abre a janela `ComoUsar.tsx` com o passo a passo (criar projeto → fotografar → calibrar → montar → elementos → máscaras → renderizar → versões → apresentação) e as dicas de qualidade. **Ao mudar o fluxo, atualizar esse texto junto.**
+- Dicas curtas no lugar (classe `guide-hint`): foto de frente na biblioteca, "use a maior medida" na calibração, e o aviso do render na aba 02.
+- O botão de geração foi renomeado para **"Renderizar projeto"** (janela "Render do projeto", "Renderizar de novo"), a pedido do usuário.
+
+## Próxima entrega combinada: render com escala garantida
+
+O usuário aprovou (15/10) e é a próxima tarefa grande. Problema do cliente: IA de imagem distorce e não respeita medidas. Desenho combinado:
+1. A ferramenta **desenha os elementos sobre a foto em escala exata** (calibração px/m + medidas do projeto + cores/texto do estudo da aba 02) — a "prévia".
+2. A IA recebe a prévia e faz **só o acabamento realista** (luz, sombra, textura); prompt proíbe mudar formas/tamanhos.
+3. A ferramenta **confere** o resultado contra a prévia dentro da máscara; acima da tolerância, recusa e avisa.
+Hoje a geração NÃO usa o estudo visual (cores/superfícies/texto da aba 02) — só foto, máscara e specs do catálogo. Limite a comunicar: calibração de uma medida por foto; foto muito de lado (perspectiva) perde precisão.
 
 ## Pendências (em ordem)
 

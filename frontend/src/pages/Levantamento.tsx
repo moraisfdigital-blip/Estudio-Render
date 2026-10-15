@@ -11,6 +11,7 @@ import ProjetosDialog from '../components/ProjetosDialog'
 import JanelaPainel from '../components/JanelaPainel'
 import CatalogPage from './CatalogPage'
 import MinhaConta from '../components/MinhaConta'
+import ComoUsar from '../components/ComoUsar'
 import { useAuth } from '../auth/context'
 import { useEffect, useRef, useState } from 'react'
 import type { Area, Photo, SurveyElement } from '../api/client'
@@ -32,7 +33,7 @@ const VISUAL_HTML = `
 <nav class="stages" aria-label="Etapas do projeto"><button class="active" data-tab="survey">01 <span>Levantamento</span></button><button data-tab="design">02 <span>Projeto visual</span></button><button data-tab="presentation">03 <span>Apresentação</span></button></nav>
 <div id="loadStatus" role="status"></div><main><aside class="left"><div class="section-title">ESTRUTURA DO PROJETO</div><h2>Elementos da obra</h2><p class="muted">Selecione um elemento para definir suas dimensões e acabamento.</p><div id="elements"></div><button class="add-element" id="addElement">＋ Novo elemento</button><div class="side-note"><span>REFERÊNCIA DO LOCAL</span><button id="uploadSide">＋ Adicionar fotografia</button><p>A foto original permanece como referência do levantamento.</p></div><div class="side-bottom"><span>Unidade do projeto</span><b>Metros (m)</b><small>Vista frontal proporcional</small></div></aside>
 <section class="workspace"><div class="work-head"><div><span class="eyebrow" id="workEyebrow">LEVANTAMENTO</span><h1 id="workTitle">A base do projeto.</h1></div><div class="view-tools" hidden><div class="segmented" id="viewMode"><button class="active" data-view="elevation">Elevação</button><button data-view="photo">Sobre a foto</button></div><button id="dimensions" aria-pressed="true">Cotas visíveis</button><button id="resetView">Ajustar vista</button></div></div><div class="project-progress" id="projectProgress"><button class="active" data-go="survey"><span>01</span><div><b>Foto do local</b><small id="photoStatus">Adicionar fotografia</small></div></button><button data-go="survey"><span>02</span><div><b>Definir escala</b><small id="scaleStatus">Aguardando foto</small></div></button><button data-go="design"><span>03</span><div><b>Montar projeto</b><small id="elementStatus">4 elementos de exemplo</small></div></button><button data-go="presentation"><span>04</span><div><b>Apresentar</b><small id="presentationStatus">Pendente</small></div></button></div>
-<section id="survey"><div class="survey-project"><div><span class="step-kicker">PROJETO ATUAL</span><h2 id="surveyProjectTitle">Posto Horizonte</h2><p id="surveyProjectMeta">Cliente e endereço ainda não informados.</p></div><button id="editProject">Editar dados</button></div><div class="photo-library"><div class="library-head"><div><span class="step-kicker">ETAPA 01 · LEVANTAMENTO FOTOGRÁFICO</span><h2>Fotos organizadas por área</h2><p>Adicione todas as vistas necessárias e calibre cada imagem separadamente.</p></div><div class="library-actions"><button id="addArea">＋ Nova área</button><button class="primary" id="uploadMain">＋ Adicionar fotos</button></div></div><div class="area-select-row"><label>Área das próximas fotos<select id="uploadArea"><option>Fachada principal</option><option>Lateral</option><option>Totem e acesso</option></select></label><small>JPG, PNG ou WebP · até 15 MB por imagem</small></div><div id="photoAreas" class="photo-areas"></div></div><div class="upload-box" id="uploadBox"><span class="step-kicker">NENHUMA FOTO ADICIONADA</span><h2>Comece pela fachada principal.</h2><p>A imagem real será usada para calibrar a escala e posicionar a nova identidade visual.</p><button class="primary" id="uploadEmpty">Selecionar fotografias</button></div><div id="calibration" hidden><div class="calibration-title"><div><span class="step-kicker">ETAPA 02 · ESCALA DA FOTOGRAFIA</span><h2 id="activePhotoName">Fotografia selecionada</h2></div><span id="activePhotoArea" class="area-badge">Fachada principal</span></div><div class="calibration-layout"><div class="photo-stage calibration-stage" id="calibrationStage"><img id="surveyPhoto" alt="Fotografia enviada do local"><svg id="calibrationOverlay" aria-label="Pontos usados para calibrar a fotografia"></svg><div class="stage-hint" id="stageHint">Clique no primeiro ponto da medida conhecida</div></div><aside class="calibration-panel"><span class="section-title">CALIBRAÇÃO DA ESCALA</span><h2>Uma medida conhecida</h2><p>Marque na foto as duas extremidades de uma medida conferida no local.</p><div class="calibration-points"><span id="pointA">Ponto A · aguardando</span><span id="pointB">Ponto B · aguardando</span></div><label>Distância real <span>m</span><input id="referenceDistance" placeholder="Informe a medida real" type="number" min="0.1" step="0.01" value=""></label><button id="calibrate" class="primary wide" disabled>Calibrar fotografia</button><button id="clearCalibration" class="wide">Marcar novamente</button><div class="calibration-result" id="calibrationResult">A escala ainda não foi definida.</div><button id="saveMeasurement" class="wide" disabled>Salvar medida desta foto</button><button id="usePhoto" class="wide" disabled>Usar no projeto visual →</button></aside></div></div></section>
+<section id="survey"><div class="survey-project"><div><span class="step-kicker">PROJETO ATUAL</span><h2 id="surveyProjectTitle">Posto Horizonte</h2><p id="surveyProjectMeta">Cliente e endereço ainda não informados.</p></div><button id="editProject">Editar dados</button></div><div class="photo-library"><div class="library-head"><div><span class="step-kicker">ETAPA 01 · LEVANTAMENTO FOTOGRÁFICO</span><h2>Fotos organizadas por área</h2><p>Adicione todas as vistas necessárias e calibre cada imagem separadamente.</p><p class="hint guide-hint">Fotografe de frente para a fachada, com ela inteira no quadro, boa luz e sem zoom digital. Foto muito de lado perde precisão de medida.</p></div><div class="library-actions"><button id="addArea">＋ Nova área</button><button class="primary" id="uploadMain">＋ Adicionar fotos</button></div></div><div class="area-select-row"><label>Área das próximas fotos<select id="uploadArea"><option>Fachada principal</option><option>Lateral</option><option>Totem e acesso</option></select></label><small>JPG, PNG ou WebP · até 15 MB por imagem</small></div><div id="photoAreas" class="photo-areas"></div></div><div class="upload-box" id="uploadBox"><span class="step-kicker">NENHUMA FOTO ADICIONADA</span><h2>Comece pela fachada principal.</h2><p>A imagem real será usada para calibrar a escala e posicionar a nova identidade visual.</p><button class="primary" id="uploadEmpty">Selecionar fotografias</button></div><div id="calibration" hidden><div class="calibration-title"><div><span class="step-kicker">ETAPA 02 · ESCALA DA FOTOGRAFIA</span><h2 id="activePhotoName">Fotografia selecionada</h2></div><span id="activePhotoArea" class="area-badge">Fachada principal</span></div><div class="calibration-layout"><div class="photo-stage calibration-stage" id="calibrationStage"><img id="surveyPhoto" alt="Fotografia enviada do local"><svg id="calibrationOverlay" aria-label="Pontos usados para calibrar a fotografia"></svg><div class="stage-hint" id="stageHint">Clique no primeiro ponto da medida conhecida</div></div><aside class="calibration-panel"><span class="section-title">CALIBRAÇÃO DA ESCALA</span><h2>Uma medida conhecida</h2><p>Marque na foto as duas extremidades de uma medida conferida no local.</p><p class="hint guide-hint">Use a maior medida que você conferiu (ex.: largura da testeira). Quanto maior, mais precisa fica a escala.</p><div class="calibration-points"><span id="pointA">Ponto A · aguardando</span><span id="pointB">Ponto B · aguardando</span></div><label>Distância real <span>m</span><input id="referenceDistance" placeholder="Informe a medida real" type="number" min="0.1" step="0.01" value=""></label><button id="calibrate" class="primary wide" disabled>Calibrar fotografia</button><button id="clearCalibration" class="wide">Marcar novamente</button><div class="calibration-result" id="calibrationResult">A escala ainda não foi definida.</div><button id="saveMeasurement" class="wide" disabled>Salvar medida desta foto</button><button id="usePhoto" class="wide" disabled>Usar no projeto visual →</button></aside></div></div></section>
 <div id="design" hidden><div id="elevationView"><div class="drawing-board"><div class="board-label">ELEVAÇÃO FRONTAL <span>Estudo dimensional</span></div><svg id="drawing" role="img" aria-label="Elevação frontal do projeto com dimensões proporcionais"></svg><div class="board-bottom"><span id="extent"></span><span>Dimensões do exemplo, editáveis</span></div></div></div><div id="photoView" hidden><div class="surface-toolbar" id="surfaceToolbar"><div class="tool-group"><button id="markSurface" class="active-tool">⌖ Marcar área</button><button id="finishSurface" disabled>Concluir contorno</button><button id="undoSurface" disabled>Desfazer ponto</button><button id="clearSurface" disabled>Excluir área</button></div><div class="surface-status"><span></span><b id="surfaceStatus">Clique nos cantos da área que receberá ACM</b></div></div><div class="photo-stage composition-stage" id="compositionStage"><img id="compositionPhoto" alt="Fotografia de referência do projeto"><svg id="compositionOverlay" aria-label="Áreas de acabamento e projeto proporcional aplicados sobre a fotografia"></svg><div class="empty-photo" id="emptyPhoto"><b>Adicione e calibre uma fotografia</b><span>Depois você poderá marcar as áreas que receberão ACM.</span><button id="addPhotoFromDesign">Ir para levantamento</button></div></div></div><div class="under-board"><div><b id="selectionSummary">Testeira principal</b><span id="measureSummary"></span></div><label class="opacity-control" id="opacityControl" hidden>Opacidade <input type="range" min="20" max="100" value="82" id="overlayOpacity"><output id="opacityValue">82%</output></label><label class="zoom">Zoom <input type="range" min="70" max="150" value="100" id="zoom"><output id="zoomValue">100%</output></label></div></div>
 <section id="presentation" hidden><div class="presentation-intro"><span class="step-kicker">ESTUDO DE COMUNICAÇÃO VISUAL</span><h2 id="presentationName"></h2><p id="presentationClient"></p><p>Simulação visual para avaliação de cores, materiais e composição.</p></div><div id="presentationPhotos"></div><h2>Elevação e dimensões</h2><div id="presentationDrawing" class="drawing-board"></div><div class="presentation-specs"><h2>Materiais e medidas</h2><div class="table-scroll"><table><thead><tr><th>Elemento / área</th><th>Material e acabamento</th><th>Cor</th><th>Dimensões</th><th>Conferência</th></tr></thead><tbody id="presentationMaterials"></tbody></table></div></div><div class="presentation-actions"><button id="exportSvg" class="primary">Baixar elevação SVG</button><button id="print">Imprimir estudo / PDF</button></div><p class="muted">Estudo visual — não constitui detalhamento de fabricação ou montagem.</p></section>
 <footer><span>Estudo visual · salve a composição antes de sair</span><span id="stateNote">Sem medidas verificadas</span></footer></section>
@@ -170,7 +171,7 @@ type VisualPoint = { x: number; y: number };
 type VisualSurface = { id: string; name: string; points: VisualPoint[]; material: string; finish: string; color: string; colorName: string; opacity: number; preserveOpenings: boolean };
 type VisualPhoto = { id: string; name: string; area: string; url: string; width: number; height: number; points: VisualPoint[]; referenceDistance: number; pixelsPerMeter: number | null; origin: VisualPoint | null; saved: boolean; surfaces: VisualSurface[]; records?: SurveyElement[] };
 type PhotoAction = 'mascaras' | 'proposta' | 'versoes' | 'elementos' | 'original' | 'remover';
-type Janela = 'catalogo' | 'pdf' | 'orcamento' | 'conta';
+type Janela = 'catalogo' | 'pdf' | 'orcamento' | 'conta' | 'ajuda';
 type VisualBridge = { onJanela: (nome: Janela) => void; project: Project | null; onTab: (tab: string) => void; onPhotoAction: (id: string, action: PhotoAction) => void; onProject: (project: Project) => void; onProjects: () => void };
 type VisualController = { setTab: (tab: string) => void; reload: () => Promise<void>; destroy: () => void };
 
@@ -234,6 +235,13 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     themeButton.style.cssText = 'align-self:center;margin-left:auto;font-size:12px;padding:6px 10px';
     themeButton.onclick = () => themeAction.current();
     body.querySelector('.stages')!.append(themeButton);
+    const helpButton = window.document.createElement('button');
+    helpButton.id = 'howTo';
+    helpButton.textContent = 'Como usar';
+    helpButton.title = 'Passo a passo da ferramenta';
+    helpButton.style.cssText = 'align-self:center;margin-left:8px;font-size:12px;padding:6px 10px';
+    helpButton.onclick = () => setJanela('ajuda');
+    body.querySelector('.stages')!.append(helpButton);
     const accountButton = window.document.createElement('button');
     accountButton.id = 'myAccount';
     accountButton.textContent = 'Minha conta';
@@ -257,7 +265,7 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
     refreshTheme();
     const observer = new MutationObserver(refreshTheme);
     observer.observe(window.document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
-    style.textContent += DARK_VISUAL_CSS + SURVEY_LAYOUT_CSS + DESIGN_LAYOUT_CSS + PRESENTATION_LAYOUT_CSS;
+    style.textContent += DARK_VISUAL_CSS + SURVEY_LAYOUT_CSS + DESIGN_LAYOUT_CSS + PRESENTATION_LAYOUT_CSS + GUIDE_CSS;
     shadow.replaceChildren(style, body);
     const instance = mountVisual(body, tabRef.current, {
       project: projectId ? projectRef.current : null,
@@ -284,6 +292,7 @@ export default function Levantamento({ projectId }: { projectId?: string }) {
   useEffect(() => { controller.current?.setTab(tab); }, [tab]);
   return <>
     {actionError && <div role="alert" className="p-3 text-bad">{actionError}</div>}
+    {janela === 'ajuda' && <JanelaPainel rotulo="Orientação" titulo="Como usar a ferramenta" onClose={() => setJanela(null)}><ComoUsar /></JanelaPainel>}
     {janela === 'conta' && <JanelaPainel rotulo="Configurações" titulo="Minha conta" onClose={() => setJanela(null)}><MinhaConta /></JanelaPainel>}
     {janela === 'catalogo' && <JanelaPainel rotulo="Material e acabamento" titulo="Catálogo de materiais" onClose={() => { setJanela(null); void controller.current?.reload(); }}><CatalogPage canManage={ehOwner} /></JanelaPainel>}
     {janela === 'pdf' && projectId && <JanelaPainel rotulo="Apresentação" titulo="Apresentação aprovada e PDF" onClose={() => setJanela(null)}><PresentationPanel projectId={projectId} emJanela /></JanelaPainel>}
@@ -1489,7 +1498,7 @@ async function reload() {
 const proposalActions = window.document.createElement('div');
 proposalActions.className = 'surface-toolbar';
 proposalActions.setAttribute('aria-label','Proposta e aprovação');
-for (const [label,action] of [['Elementos e medidas','elementos'],['Máscaras e proteção','mascaras'],['Gerar proposta com IA','proposta'],['Versões e aprovação','versoes'],['Foto original','original'],['Remover foto','remover']] as const) {
+for (const [label,action] of [['Elementos e medidas','elementos'],['Máscaras e proteção','mascaras'],['Renderizar projeto','proposta'],['Versões e aprovação','versoes'],['Foto original','original'],['Remover foto','remover']] as const) {
   const button = window.document.createElement('button');
   button.textContent = label;
   if (action==='proposta') button.className='primary';
@@ -1500,6 +1509,10 @@ for (const [label,action] of [['Elementos e medidas','elementos'],['Máscaras e 
   proposalActions.append(button);
 }
 $('#design').prepend(proposalActions);
+const renderHint = window.document.createElement('p');
+renderHint.className = 'hint guide-hint render-hint';
+renderHint.textContent = 'Renderizar projeto: fora da área marcada em Máscaras a foto original é preservada. Dentro dela a IA dá o acabamento realista e pode errar detalhes — confira; as medidas oficiais são as do projeto.';
+proposalActions.after(renderHint);
 const deliveryButton = window.document.createElement('button');
 deliveryButton.textContent = 'Apresentação aprovada e PDF';
 deliveryButton.className = 'primary';
@@ -1775,4 +1788,11 @@ const PRESENTATION_LAYOUT_CSS = `
 .presentation-layout #referenceColor>button{margin-top:0!important}
 @media(max-width:1150px){.presentation-layout main{grid-template-columns:minmax(0,1fr) 250px}}
 @media(max-width:850px){.presentation-layout main{grid-template-columns:1fr}}
+`;
+
+// Dicas de uso no lugar (pedido do usuário em 15/10/2026).
+const GUIDE_CSS = `
+.guide-hint{margin:8px 0 0;color:#727d80}
+.render-hint{margin:10px 2px 16px;font-size:12px}
+.dark-ui .guide-hint{color:#9aa6aa}
 `;
