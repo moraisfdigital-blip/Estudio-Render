@@ -185,4 +185,8 @@ async def spa(full_path: str):
     if full_path and candidate.is_file() and candidate.is_relative_to(dist.resolve()):
         return FileResponse(candidate)
 
-    return FileResponse(index_html)
+    # A página principal muda a cada publicação e aponta para os arquivos de
+    # /assets (que têm o hash no nome e podem ficar em cache). Sem isto o
+    # navegador guardava o index.html antigo e só via a versão nova com
+    # Ctrl+F5. `no-cache` = pode guardar, mas confere com o servidor antes.
+    return FileResponse(index_html, headers={"Cache-Control": "no-cache"})
