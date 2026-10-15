@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   errorMessage,
   fetchGeneratedImageBlob,
+  fetchGuideBlob,
   fetchPhotoBlob,
   generateProposal,
   getGenerationConfig,
@@ -9,6 +10,7 @@ import {
   type Comparison,
   type Photo,
   type Proposal,
+  type ScaleCheck,
 } from '../api/client'
 import { Button, ErrorNotice, Loading } from '../components/ui'
 import { useResource } from '../hooks/useResource'
@@ -31,7 +33,7 @@ const numberFormat = new Intl.NumberFormat('pt-BR')
 const dateTimeFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
 /** Qual imagem carregar. O tipo decide a rota; ambas exigem token. */
-type Fonte = { tipo: 'original' | 'gerada'; id: string } | null
+type Fonte = { tipo: 'original' | 'gerada' | 'previa'; id: string } | null
 
 /**
  * Baixa um blob autenticado e devolve object URL, revogando ao trocar.
@@ -62,7 +64,11 @@ function useBlobUrl(fonte: Fonte) {
     void (async () => {
       try {
         const blob =
-          tipo === 'original' ? await fetchPhotoBlob(id) : await fetchGeneratedImageBlob(id)
+          tipo === 'original'
+            ? await fetchPhotoBlob(id)
+            : tipo === 'previa'
+              ? await fetchGuideBlob(id)
+              : await fetchGeneratedImageBlob(id)
         if (!alive) return
         objectUrl = URL.createObjectURL(blob)
         setCarregado({ chave, url: objectUrl, erro: null })
@@ -148,6 +154,8 @@ export default function ProposalDialog({
   const original = useBlobUrl({ tipo: 'original', id: photo.id })
   const geradaId = comparacao?.generated?.id ?? null
   const gerada = useBlobUrl(geradaId ? { tipo: 'gerada', id: geradaId } : null)
+  const temPrevia = Boolean(comparacao?.generated?.guide_url)
+  const previa = useBlobUrl(geradaId && temPrevia ? { tipo: 'previa', id: geradaId } : null)
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -207,7 +215,7 @@ export default function ProposalDialog({
 
         {resource.kind === 'ready' && comparacao && (
           <div className="mt-4 flex flex-col gap-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className={`grid gap-4 ${temPrevia ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
               <figure className="flex flex-col gap-2">
                 <figcaption className="text-xs tracking-wide text-ink-dim uppercase">
                   Original
@@ -222,6 +230,23 @@ export default function ProposalDialog({
                   />
                 )}
               </figure>
+
+              {temPrevia && (
+                <figure className="flex flex-col gap-2">
+                  <figcaption className="text-xs tracking-wide text-ink-dim uppercase">
+                    Prévia em escala
+                  </figcaption>
+                  {previa.erro && <ErrorNotice message={previa.erro} />}
+                  {!previa.erro && !previa.url && <Loading label="Carregando prévia…" />}
+                  {previa.url && (
+                    <img
+                      src={previa.url}
+                      alt="Prévia em escala: peças desenhadas no tamanho da calibração"
+                      className="w-full rounded-lg border border-line"
+                    />
+                  )}
+                </figure>
+              )}
 
               <figure className="flex flex-col gap-2">
                 <figcaption className="text-xs tracking-wide text-ink-dim uppercase">
@@ -282,6 +307,8 @@ export default function ProposalDialog({
               )}
             </div>
 
+            {comparacao.generated && <Conferencia check={comparacao.generated.scale_check} />}
+
             {comparacao.generated && comparacao.proposal && (
               <div className="flex flex-col gap-3">
                 <div className="rounded-md border border-line bg-surface p-3">
@@ -308,6 +335,58 @@ export default function ProposalDialog({
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+
+/**
+ * Resultado da conferência de escala, em linguagem de quem usa.
+ *
+ * Com prévia: o contorno das peças é o da calibração (a IA não consegue
+ * aumentar nem diminuir), e cada peça teve a cor conferida. Sem prévia: a
+ * escala não é garantida, e a tela diz o que fazer para garantir.
+ */
+function Conferencia({ check }: { check: ScaleCheck | null }) {
+  if (!check || check.modo === 'livre') {
+    return (
+      <div role="status" className="rounded-md border border-warn bg-warn-soft p-3 text-sm text-ink">
+        <p className="font-medium">Escala não garantida neste render</p>
+        <p className="mt-1 text-xs text-ink-soft">
+          Para o tamanho das peças sair exato, calibre esta foto (aba 01) e monte as peças do
+          projeto sobre ela (aba 02 › Sobre a foto). Depois clique em "Renderizar de novo".
+        </p>
+      </div>
+    )
+  }
+  const problemas = check.pecas.filter((peca) => !peca.ok)
+  const nenhuma = check.pecas.length > 0 && check.pecas.every((peca) => peca.cobertura < 0.6)
+  return (
+    <div
+      role="status"
+      className={`rounded-md border p-3 text-sm text-ink ${check.ok ? 'border-good bg-good-soft' : 'border-warn bg-warn-soft'}`}
+    >
+      <p className="font-medium">
+        {nenhuma
+          ? 'Nenhuma peça foi renderizada — confira os avisos'
+          : check.ok
+            ? 'Escala garantida pela calibração'
+            : 'Escala garantida — confira os avisos'}
+      </p>
+      <p className="mt-1 text-xs text-ink-soft">
+        O contorno e o tamanho de cada peça são os da prévia, calculados pela calibração
+        {check.pixels_por_metro ? ` (${check.pixels_por_metro.toLocaleString('pt-BR')} pixels por metro)` : ''}.
+        A IA só deu o acabamento: o que ela desenhou fora do contorno foi descartado.
+      </p>
+      {problemas.length > 0 && (
+        <ul className="mt-2 list-disc pl-5 text-xs text-ink">
+          {problemas.map((peca) => (
+            <li key={peca.nome}>
+              <b>{peca.nome}</b>: {peca.aviso}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -68,13 +68,17 @@ Nunca mexer em containers, volumes, `.env` ou cron do DeskcommCRM. Se o CRM atua
 - Dicas curtas no lugar (classe `guide-hint`): foto de frente na biblioteca, "use a maior medida" na calibração, e o aviso do render na aba 02.
 - O botão de geração foi renomeado para **"Renderizar projeto"** (janela "Render do projeto", "Renderizar de novo"), a pedido do usuário.
 
-## Próxima entrega combinada: render com escala garantida
+## Render com escala garantida (15/10/2026)
 
-O usuário aprovou (15/10) e é a próxima tarefa grande. Problema do cliente: IA de imagem distorce e não respeita medidas. Desenho combinado:
-1. A ferramenta **desenha os elementos sobre a foto em escala exata** (calibração px/m + medidas do projeto + cores/texto do estudo da aba 02) — a "prévia".
-2. A IA recebe a prévia e faz **só o acabamento realista** (luz, sombra, textura); prompt proíbe mudar formas/tamanhos.
-3. A ferramenta **confere** o resultado contra a prévia dentro da máscara; acima da tolerância, recusa e avisa.
-Hoje a geração NÃO usa o estudo visual (cores/superfícies/texto da aba 02) — só foto, máscara e specs do catálogo. Limite a comunicar: calibração de uma medida por foto; foto muito de lado (perspectiva) perde precisão.
+Pedido do usuário: a IA distorce e não respeita medidas. Como funciona agora (`backend/app/core/scale_guide.py` + `api/routers/proposals.py`):
+1. **Prévia em escala:** o servidor desenha sobre a foto as peças do estudo da aba 02 (retângulos em metros → pixels pela calibração, origem no ponto mais à esquerda/baixo da calibração) e as superfícies marcadas (polígonos), com cor e texto.
+2. **IA só no acabamento:** o OpenRouter recebe foto original, prévia e máscara, com instrução de copiar posições, contornos, tamanhos, cores e textos.
+3. **Escala travada:** do resultado da IA só entra o que cai dentro do contorno das peças da prévia **e** da máscara de intervenção (`compose_locked(restrict=...)`).
+4. **Conferência** (`scale_check` na imagem gerada): por peça, cobertura dentro da área liberada (mín. 60%) e diferença de cor média vs prevista (tolerância 110 RGB). A tela mostra "Escala garantida", avisos, ou "Nenhuma peça foi renderizada".
+5. Sem calibração ou sem peças no estudo → **modo livre** (como antes) e a tela avisa "Escala não garantida neste render".
+- A prévia fica gravada como arquivo derivado (`guide_storage_key`) e aparece na janela de render (`GET /api/generated-images/{id}/guide`).
+- Limites honestos: letras pequenas ainda podem sair imperfeitas (não há OCR); calibração de uma medida por foto, foto muito de lado perde precisão; sombras que a IA desenhar fora do contorno são cortadas.
+- Testes: `backend/tests/test_render_escala.py` (7) — prévia, tamanho exato pela calibração, texto/medidas no pedido, peça fora da máscara, modo livre, login.
 
 ## Pendências (em ordem)
 

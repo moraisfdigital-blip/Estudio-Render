@@ -865,6 +865,17 @@ export type GeneratedImage = {
   changed_pixels: number
   provider: string
   created_at: string
+  /** Prévia em escala usada como referência (null = render sem escala garantida). */
+  guide_url: string | null
+  scale_check: ScaleCheck | null
+}
+
+/** Conferência do render contra a prévia em escala, peça a peça. */
+export type ScaleCheck = {
+  modo: 'escala' | 'livre'
+  ok: boolean | null
+  pixels_por_metro: number | null
+  pecas: { nome: string; cobertura: number; diferenca_cor: number | null; ok: boolean; aviso: string }[]
 }
 
 export type Proposal = {
@@ -908,6 +919,13 @@ export async function getComparison(photoId: string): Promise<Comparison> {
 }
 
 /** Mesma razão do original: a rota exige token, e `<img src>` não manda header. */
+export async function fetchGuideBlob(imageId: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/generated-images/${imageId}/guide`, {
+    responseType: 'blob',
+  })
+  return data
+}
+
 export async function fetchGeneratedImageBlob(imageId: string): Promise<Blob> {
   const { data } = await api.get<Blob>(`/generated-images/${imageId}`, {
     responseType: 'blob',
