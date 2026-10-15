@@ -179,7 +179,7 @@ export default function ProposalDialog({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Proposta visual de ${photo.original_filename}`}
+      aria-label={`Render do projeto: ${photo.original_filename}`}
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-4 sm:p-8"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose()
@@ -188,7 +188,7 @@ export default function ProposalDialog({
       <div className="w-full max-w-6xl rounded-xl border border-line bg-app p-5 shadow-2xl">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-ink">Proposta visual</h2>
+            <h2 className="text-lg font-semibold text-ink">Render do projeto</h2>
             <p className="truncate text-sm text-ink-dim" title={photo.original_filename}>
               {photo.original_filename}
             </p>
@@ -225,12 +225,12 @@ export default function ProposalDialog({
 
               <figure className="flex flex-col gap-2">
                 <figcaption className="text-xs tracking-wide text-ink-dim uppercase">
-                  Proposta gerada
+                  Render
                 </figcaption>
                 {/* Estado vazio: foto sem proposta é normal, não erro. */}
                 {!comparacao.generated && (
                   <div className="flex h-full min-h-40 flex-col items-center justify-center rounded-lg border border-dashed border-line p-4 text-center">
-                    <p className="text-sm text-ink-soft">Ainda não gerada</p>
+                    <p className="text-sm text-ink-soft">Ainda não renderizado</p>
                     <p className="mt-1 text-xs text-ink-dim">
                       A geração altera apenas as áreas marcadas como intervenção. O resto da foto
                       continua exatamente como está.
@@ -244,7 +244,7 @@ export default function ProposalDialog({
                 {gerada.url && (
                   <img
                     src={gerada.url}
-                    alt="Proposta visual gerada"
+                    alt="Render do projeto"
                     className="w-full rounded-lg border border-line"
                   />
                 )}
@@ -268,10 +268,10 @@ export default function ProposalDialog({
             <div className="flex flex-wrap items-center gap-3">
               <Button type="button" onClick={() => void gerar()} disabled={gerando || generation.resource.kind !== 'ready' || !generation.resource.data.ready}>
                 {gerando
-                  ? 'Gerando…'
+                  ? 'Renderizando…'
                   : comparacao.generated
-                    ? 'Gerar outra proposta'
-                    : 'Gerar proposta'}
+                    ? 'Renderizar de novo'
+                    : 'Renderizar projeto'}
               </Button>
               {comparacao.proposal_count > 0 && (
                 <span className="text-xs text-ink-dim">
