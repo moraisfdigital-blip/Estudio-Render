@@ -70,8 +70,10 @@ const PASSOS: Passo[] = [
     titulo: 'Renderize o projeto',
     onde: 'Aba 02 › Renderizar projeto',
     itens: [
-      <>Tudo o que está <b>fora</b> da área marcada sai idêntico à foto original — o render não mexe na arquitetura.</>,
-      <>Dentro da área, a IA pode errar detalhes (letras, tamanho da placa). <b>Confira sempre</b>: as medidas oficiais são as do projeto, não as da imagem.</>,
+      <>Antes do render, monte as peças <b>sobre a foto</b> (aba 02 › Sobre a foto) e salve o estudo. A ferramenta desenha uma <b>prévia em escala</b> com as medidas da calibração.</>,
+      <>A IA só dá o acabamento realista. O <b>tamanho e o contorno</b> de cada peça são os da prévia: o que a IA desenhar fora disso é descartado.</>,
+      <>Tudo o que está <b>fora</b> da área marcada em Máscaras sai idêntico à foto original. Peça fora dessa área não é renderizada — a tela avisa.</>,
+      <>Leia a <b>conferência</b> abaixo do render: "Escala garantida" quando está tudo certo, ou os avisos do que conferir. Letras pequenas ainda podem sair imperfeitas: confira o texto.</>,
       'Se não gostar, clique em "Renderizar de novo". Há um limite de renders por hora.',
     ],
   },

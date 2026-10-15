@@ -7,6 +7,7 @@ contornar o Architecture Lock pedindo "ignore a máscara" por parâmetro.
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -32,6 +33,7 @@ class PromptOut(BaseModel):
     protecao: list[str] = Field(default_factory=list)
     pecas: list[PromptPieceOut] = Field(default_factory=list)
     escala: str | None = None
+    previa: list[str] = Field(default_factory=list)
 
 
 class GeneratedImageOut(BaseModel):
@@ -49,6 +51,9 @@ class GeneratedImageOut(BaseModel):
     changed_pixels: int
     provider: str
     created_at: datetime
+    # Prévia em escala (imagem de referência) e conferência do resultado.
+    guide_url: str | None = None
+    scale_check: dict[str, Any] | None = None
 
 
 class ProposalOut(BaseModel):

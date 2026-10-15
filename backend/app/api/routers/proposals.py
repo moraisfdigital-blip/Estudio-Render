@@ -46,7 +46,7 @@ from app.api.routers.elements import catalog_index_for
 from app.api.routers.masks import get_mask_doc
 from app.api.routers.photos import get_photo_doc
 from app.api.routers.projects import get_project_doc
-from app.core import imaging, media, prompt_engine
+from app.core import imaging, media, prompt_engine, scale_guide
 from app.core.clock import as_utc
 from app.core.config import get_settings
 from app.core.db import get_db
@@ -99,6 +99,8 @@ def _generated_out(doc: dict[str, Any]) -> GeneratedImageOut:
         changed_pixels=doc["changed_pixels"],
         provider=doc["provider"],
         created_at=as_utc(doc["created_at"]),
+        guide_url=f"/api/generated-images/{image_id}/guide" if doc.get("guide_storage_key") else None,
+        scale_check=doc.get("scale_check"),
     )
 
 
@@ -112,6 +114,7 @@ def _prompt_out(prompt: dict[str, Any]) -> PromptOut:
         protecao=sections.get("protecao", []),
         pecas=sections.get("pecas", []),
         escala=sections.get("escala"),
+        previa=sections.get("previa", []),
     )
 
 
@@ -218,6 +221,25 @@ async def create_proposal(
         calibration=calibration,
     )
 
+    original_path = media.resolve(photo["storage_key"])
+    original_bytes = original_path.read_bytes()
+    layers = (mask_doc or {}).get("layers", [])
+    tamanho = imaging.size_of(original_bytes)
+
+    # Prévia em escala: as peças do estudo desenhadas no tamanho da calibração.
+    previa = scale_guide.build(
+        original_bytes=original_bytes,
+        study=projeto.get("visual_study"),
+        photo_id=photo_id,
+        calibration=calibration,
+    )
+    if previa is not None:
+        linhas = previa.descricao()
+        prompt["sections"]["previa"] = linhas
+        prompt["text"] += (
+            "\n\nPeças da prévia em escala (copie exatamente):\n- " + "\n- ".join(linhas)
+        )
+
     adapter = get_image_gen_adapter()
     if adapter.name == "openrouter":
         from app.core.generation_budget import reserve
@@ -235,11 +257,6 @@ async def create_proposal(
     proposals = get_db()[proposal_model.PROPOSALS]
     proposal_id = (await proposals.insert_one(proposal_doc)).inserted_id
 
-    original_path = media.resolve(photo["storage_key"])
-    original_bytes = original_path.read_bytes()
-    layers = (mask_doc or {}).get("layers", [])
-    tamanho = imaging.size_of(original_bytes)
-
     try:
         resultado = await adapter.generate(
             GenerationRequest(
@@ -249,6 +266,7 @@ async def create_proposal(
                 size=tamanho,
                 layers=layers,
                 colors=_colors_of(elements, catalogo),
+                guide_png=previa.imagem_png if previa else None,
             )
         )
     except ImageGenError as erro:
@@ -266,7 +284,14 @@ async def create_proposal(
         original_bytes=original_bytes,
         candidate_bytes=resultado.image_bytes,
         layers=layers,
+        restrict=previa.contorno if previa else None,
     )
+    if previa is not None:
+        conferencia = scale_guide.check(
+            previa, composta, imaging.allowed_mask(layers, tamanho)
+        )
+    else:
+        conferencia = dict(scale_guide.SEM_PREVIA)
 
     stored = await media.write_once(
         key=media.build_derived_key(
@@ -277,6 +302,18 @@ async def create_proposal(
         chunks=media.single_chunk(composta),
         max_bytes=get_settings().max_upload_mb * 1024 * 1024,
     )
+
+    guide_key = None
+    if previa is not None:
+        guide_key = (await media.write_once(
+            key=media.build_derived_key(
+                original_key=photo["storage_key"],
+                derived_uid=uuid.uuid4().hex,
+                extension="png",
+            ),
+            chunks=media.single_chunk(previa.imagem_png),
+            max_bytes=get_settings().max_upload_mb * 1024 * 1024,
+        )).key
 
     largura, altura = imaging.size_of(composta)
     imagem_doc = scope.stamp(
@@ -292,6 +329,8 @@ async def create_proposal(
             changed_pixels=alterados,
             provider=resultado.provider,
             created_by=str(user["_id"]),
+            guide_storage_key=guide_key,
+            scale_check=conferencia,
         )
     )
     imagem_id = (
@@ -390,3 +429,20 @@ async def get_generated_image(
         content_disposition_type="inline",
         headers={"ETag": etag, "Cache-Control": "private, max-age=3600"},
     )
+
+
+@router.get("/generated-images/{image_id}/guide")
+async def get_generated_image_guide(image_id: str, scope: CurrentScope) -> Response:
+    """A prévia em escala usada como referência neste render."""
+    oid = parse_object_id(image_id, detail=IMAGE_NOT_FOUND)
+    doc = await get_db()[proposal_model.GENERATED_IMAGES].find_one(scope.filter(_id=oid))
+    if doc is None or not doc.get("guide_storage_key"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=IMAGE_NOT_FOUND)
+    try:
+        path = media.resolve(doc["guide_storage_key"])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE) from None
+    if not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=FILE_GONE)
+    return FileResponse(path, media_type="image/png", content_disposition_type="inline",
+                        headers={"Cache-Control": "private, max-age=3600"})

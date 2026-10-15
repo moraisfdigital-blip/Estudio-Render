@@ -55,6 +55,10 @@ class GenerationRequest:
     layers: list[dict[str, Any]] = field(default_factory=list)
     # Cores vindas do catálogo (Fase 7), na ordem em que as peças aparecem.
     colors: list[str] = field(default_factory=list)
+    # Prévia em escala (core/scale_guide): a foto com as peças do estudo já
+    # desenhadas no tamanho da calibração. Quando existe, é a referência de
+    # forma, tamanho, cor e texto; o provedor só dá o acabamento.
+    guide_png: bytes | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +92,10 @@ class MockImageGenAdapter(ImageGenAdapter):
     name = "mock"
 
     async def generate(self, request: GenerationRequest) -> GenerationResult:
+        # Com prévia em escala, o "acabamento" do mock é a própria prévia:
+        # determinístico e fiel, o que deixa o teste conferir o recorte.
+        if request.guide_png is not None:
+            return GenerationResult(image_bytes=request.guide_png, provider=self.name)
         imagem = Image.open(io.BytesIO(request.original_bytes)).convert("RGB")
         desenho = ImageDraw.Draw(imagem)
 

@@ -94,6 +94,7 @@ def compose_locked(
     original_bytes: bytes,
     candidate_bytes: bytes,
     layers: list[dict[str, Any]],
+    restrict: Image.Image | None = None,
 ) -> tuple[bytes, int]:
     """Aplica o candidato sobre o original **só** na área permitida.
 
@@ -111,6 +112,10 @@ def compose_locked(
         candidato = candidato.resize(original.size)
 
     permitido = allowed_mask(layers, original.size)
+    if restrict is not None:
+        # Prévia em escala: além da máscara, só o contorno das peças. É o que
+        # garante o tamanho — o que a IA pintar fora dele é descartado.
+        permitido = ImageChops.multiply(permitido, restrict)
 
     resultado = original.copy()
     resultado.paste(candidato, (0, 0), permitido)

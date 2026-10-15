@@ -34,17 +34,33 @@ class OpenRouterImageGenAdapter(ImageGenAdapter):
             return {"type": "image_url", "image_url": {
                 "url": "data:image/png;base64," + base64.b64encode(data).decode("ascii")}}
 
-        payload = {
-            "model": settings.openrouter_image_model,
-            "prompt": request.prompt + (
+        if request.guide_png is not None:
+            instrucao = (
+                "\nReferências, nesta ordem: (1) a fotografia original; (2) a PRÉVIA EM ESCALA, "
+                "que é a mesma foto com as peças do projeto já desenhadas na posição e no tamanho "
+                "exatos, calculados pela calibração; (3) a máscara. Reproduza a prévia: mesmas "
+                "posições, mesmos contornos, mesmos tamanhos, mesmas cores e os textos exatamente "
+                "como escritos, letra por letra. Não mova, não aumente, não diminua e não acrescente "
+                "peças. Seu trabalho é só o acabamento fotorrealista: material (ACM, acrílico), "
+                "brilho, luz, sombra e integração com a foto. Altere somente a área branca da "
+                "máscara; preserve enquadramento e perspectiva da fotografia original. Não desenhe "
+                "a máscara no resultado."
+            )
+            referencias = [clean.getvalue(), request.guide_png, request.mask_png]
+        else:
+            instrucao = (
                 "\nA primeira referência é a fotografia original; a segunda é a máscara. "
                 "Altere somente a área branca da máscara. Preserve enquadramento, "
                 "perspectiva e dimensões da primeira imagem. Não desenhe a máscara "
                 "no resultado. Não invente medidas. Gere uma proposta fotorrealista."
-            ),
+            )
+            referencias = [clean.getvalue(), request.mask_png]
+        payload = {
+            "model": settings.openrouter_image_model,
+            "prompt": request.prompt + instrucao,
             "n": 1,
             "output_format": "png",
-            "input_references": [reference(clean.getvalue()), reference(request.mask_png)],
+            "input_references": [reference(item) for item in referencias],
         }
         limit = settings.openrouter_max_response_mb * 1024 * 1024
         try:

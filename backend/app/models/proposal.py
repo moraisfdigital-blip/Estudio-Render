@@ -105,6 +105,8 @@ def new_generated_image_doc(
     changed_pixels: int,
     provider: str,
     created_by: str,
+    guide_storage_key: str | None = None,
+    scale_check: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "photo_id": photo_id,
@@ -122,4 +124,8 @@ def new_generated_image_doc(
         "provider": provider,
         "created_by": created_by,
         "created_at": utcnow(),
+        # Prévia em escala usada como referência (None = modo livre) e a
+        # conferência peça a peça feita sobre o resultado.
+        "guide_storage_key": guide_storage_key,
+        "scale_check": scale_check,
     }
