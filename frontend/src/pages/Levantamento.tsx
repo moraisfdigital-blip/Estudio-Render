@@ -1480,6 +1480,9 @@ async function reload() {
     $('.area-select-row small').textContent = limits.accepted_labels.join(', ') + ' · até ' + limits.max_upload_mb + ' MB por imagem';
     renderPhotoLibrary();
     if (activePhotoId && photos.some(p=>p.id === activePhotoId)) loadActivePhoto(activePhotoId);
+    // Sem foto lembrada, a primeira fica selecionada: os botões da aba 02
+    // (elementos, máscaras, render, versões) dependem de uma foto ativa.
+    else if (photos.length) loadActivePhoto(photos[0].id);
     else { activePhotoId = null; $('#calibration').hidden = true; $('#compositionPhoto').removeAttribute('src'); }
     $('#loadStatus').textContent = '';
     setTab(currentTab); drawPhotoOverlay();
@@ -1503,7 +1506,8 @@ for (const [label,action] of [['Elementos e medidas','elementos'],['Máscaras e 
   button.textContent = label;
   if (action==='proposta') button.className='primary';
   button.onclick = () => {
-    if (!activePhotoId) { notify('Selecione uma fotografia no levantamento para continuar.'); setTab('survey'); return; }
+    if (!activePhotoId && photos.length) loadActivePhoto(photos[0].id);
+    if (!activePhotoId) { notify('Adicione uma fotografia no levantamento para continuar.'); setTab('survey'); return; }
     bridge.onPhotoAction(activePhotoId,action);
   };
   proposalActions.append(button);
