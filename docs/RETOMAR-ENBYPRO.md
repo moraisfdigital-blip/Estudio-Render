@@ -80,6 +80,11 @@ Pedido do usuário: a IA distorce e não respeita medidas. Como funciona agora (
 - Limites honestos: letras pequenas ainda podem sair imperfeitas (não há OCR); calibração de uma medida por foto, foto muito de lado perde precisão; sombras que a IA desenhar fora do contorno são cortadas.
 - Testes: `backend/tests/test_render_escala.py` (7) — prévia, tamanho exato pela calibração, texto/medidas no pedido, peça fora da máscara, modo livre, login.
 
+## Correções de 15/10/2026
+
+- **Botões da aba 02 voltavam para a aba 01** quando nenhuma foto estava selecionada (a foto ativa só vinha do estudo salvo). Agora, com fotos no projeto, a primeira é selecionada automaticamente (PR #23, release `40589bb`).
+- **Versão nova só aparecia com Ctrl+F5**: o `index.html` saía sem `Cache-Control`. Agora sai com `no-cache` (PR #24, release `01307dd`). Para conferir use GET (`curl -D - -o /dev/null https://enbypro.com/`); o app não responde HEAD (405), o que não afeta navegador.
+
 ## Pendências (em ordem)
 
 1. Confirmar que o limite de gasto da chave OpenRouter foi salvo (US$ 10/semana estava sendo configurado); **trocar a chave antes de 03/11/2026**.
