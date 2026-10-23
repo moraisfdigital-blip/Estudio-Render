@@ -10,5 +10,5 @@ email-validator==2.3.0
 # polígonos da máscara e compor o resultado do provedor só na área permitida é
 # o que impede a geração de alterar a arquitetura. Vale para o mock e para o
 # provedor real (que recebe a máscara como PNG).
-pillow==12.3.0
+pillow==13.0.0
 httpx==0.28.1
